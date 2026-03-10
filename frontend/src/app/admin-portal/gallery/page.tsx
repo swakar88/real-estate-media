@@ -8,6 +8,13 @@ import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/Scroll
 export default function AdminGallery() {
   const [images, setImages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [formData, setFormData] = useState({
+    title: "",
+    category: "interior",
+    image_url: "",
+    featured: false
+  });
 
   useEffect(() => {
     fetchGallery();
@@ -44,6 +51,32 @@ export default function AdminGallery() {
     }
   };
 
+  const handleAddSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem("access_token");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/gallery/`, {
+        method: "POST",
+        headers: { 
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(formData)
+      });
+      
+      if (res.ok) {
+        const newImg = await res.json();
+        setImages([newImg, ...images]);
+        setShowAddModal(false);
+        setFormData({ title: "", category: "interior", image_url: "", featured: false });
+      } else {
+        alert("Failed to create image. Make sure the URL is valid.");
+      }
+    } catch (err) {
+      console.error("Failed to submit", err);
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <ScrollReveal>
@@ -53,7 +86,10 @@ export default function AdminGallery() {
             <p className="text-muted-foreground">Manage the public showcase images on your website.</p>
           </div>
           
-          <button className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 text-sm font-medium rounded-md hover:bg-primary/90 transition-colors">
+          <button 
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 text-sm font-medium rounded-md hover:bg-primary/90 transition-colors"
+          >
              <Plus className="w-4 h-4" /> Add Image
           </button>
         </div>
@@ -103,6 +139,63 @@ export default function AdminGallery() {
         <div className="text-center py-20 bg-card border border-border/50 border-dashed rounded-xl">
           <h3 className="text-lg font-medium mb-1">No Gallery Images</h3>
           <p className="text-muted-foreground text-sm">Upload high-res photos to display on the public portfolio page.</p>
+        </div>
+      )}
+
+      {/* Add Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-card w-full max-w-md rounded-xl shadow-lg border border-border/50 p-6 animate-in zoom-in-95 duration-200">
+            <h2 className="text-xl font-bold mb-4">Add New Image</h2>
+            <form onSubmit={handleAddSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Title</label>
+                <input 
+                  type="text" required
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                  placeholder="e.g. Modern Kitchen"
+                  value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})}
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-1">Category</label>
+                <select 
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                  value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}
+                >
+                  <option value="interior">Interior</option>
+                  <option value="exterior">Exterior</option>
+                  <option value="twilight">Twilight</option>
+                  <option value="aerial">Aerial & Drone</option>
+                  <option value="commercial">Commercial</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Image URL</label>
+                <input 
+                  type="url" required
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                  placeholder="https://images.unsplash.com/..."
+                  value={formData.image_url} onChange={e => setFormData({...formData, image_url: e.target.value})}
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input 
+                  type="checkbox" id="featured"
+                  checked={formData.featured} onChange={e => setFormData({...formData, featured: e.target.checked})}
+                />
+                <label htmlFor="featured" className="text-sm font-medium">Feature on Homepage</label>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6">
+                <button type="button" onClick={() => setShowAddModal(false)} className="px-4 py-2 text-sm font-medium bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80">Cancel</button>
+                <button type="submit" className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90">Save Image</button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>
