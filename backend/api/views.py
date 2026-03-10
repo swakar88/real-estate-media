@@ -52,6 +52,44 @@ class BookingRequestViewSet(viewsets.ModelViewSet):
             return [AllowAny()] # Public can create
         return [IsAuthenticated()] # Only admin can view/edit
 
+    def perform_update(self, serializer):
+        # Check if the status is changing to 'confirmed'
+        instance = self.get_object()
+        new_status = serializer.validated_data.get('status', instance.status)
+        
+        # If transitioning to confirmed
+        if instance.status != 'confirmed' and new_status == 'confirmed':
+            super().perform_update(serializer)
+            
+            # The user requested skipping full account creation/emailing for now,
+            # but ClientShoot requires a User foreign key.
+            # We will create a dormant User account for the client so the database constraint passes.
+            client_user, created = User.objects.get_or_create(
+                email=instance.email,
+                defaults={
+                    'username': instance.email.split('@')[0] + str(instance.id),
+                    'first_name': instance.first_name,
+                    'last_name': instance.last_name,
+                }
+            )
+            if created:
+                client_user.set_unusable_password()
+                client_user.save()
+            
+            # Extract date from property details or use a placeholder
+            from django.utils import timezone
+            
+            # Create the ClientShoot
+            ClientShoot.objects.create(
+                client=client_user,
+                property_address=instance.property_details[:300], # Trucate safely
+                shoot_date=timezone.now().date(), # Default to today, admin can edit later
+                status='editing',
+                notes=f"Auto-generated from Booking #{instance.id}\nPackage: {instance.package_interest}\nContact: {instance.phone}"
+            )
+        else:
+            super().perform_update(serializer)
+
 class ClientShootViewSet(viewsets.ReadOnlyModelViewSet):
     """
     API endpoint that allows clients to view their shoots.
