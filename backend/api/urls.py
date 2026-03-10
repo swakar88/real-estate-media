@@ -11,5 +11,6 @@ router.register(r'shoots', views.ClientShootViewSet, basename='shoots')
 
 urlpatterns = [
     path('me/', views.CurrentUserView.as_view(), name='current_user'),
+    path('stripe/webhook/', views.stripe_webhook, name='stripe-webhook'),
     path('', include(router.urls)),
 ]

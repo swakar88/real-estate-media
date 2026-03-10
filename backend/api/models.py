@@ -83,12 +83,23 @@ class ClientShoot(models.Model):
         ('archived', 'Archived'),
     ]
 
+    PAYMENT_CHOICES = [
+        ('unpaid', 'Unpaid'),
+        ('paid', 'Paid'),
+    ]
+
     client = models.ForeignKey(User, on_delete=models.CASCADE, related_name='shoots')
     property_address = models.CharField(max_length=300)
     shoot_date = models.DateField()
     delivery_link = models.URLField(max_length=500, blank=True, null=True, help_text="Dropbox or Google Drive link")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='editing')
     notes = models.TextField(blank=True)
+    
+    # Invoicing / Stripe Fields
+    amount_due = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, help_text="Total amount for the shoot")
+    payment_status = models.CharField(max_length=20, choices=PAYMENT_CHOICES, default='unpaid')
+    stripe_payment_link = models.URLField(max_length=1000, blank=True, null=True, help_text="Generated Stripe Checkout Session URL")
+    
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
