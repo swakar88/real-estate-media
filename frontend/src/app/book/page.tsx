@@ -3,6 +3,8 @@ import Footer from "@/components/Footer";
 import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/ScrollReveal";
 import BookingForm from "@/components/BookingForm";
 
+export const dynamic = 'force-dynamic';
+
 async function getPackages() {
   try {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/packages/`, { cache: 'no-store' });
