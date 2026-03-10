@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Service, GalleryImage, Package, BookingRequest, ClientShoot
+from .models import Service, GalleryImage, Package, BookingRequest, ClientShoot, Photographer, PhotographerSlot
 
 @admin.register(Service)
 class ServiceAdmin(admin.ModelAdmin):
@@ -29,3 +29,17 @@ class ClientShootAdmin(admin.ModelAdmin):
     list_display = ('property_address', 'client', 'shoot_date', 'status')
     list_filter = ('status', 'shoot_date')
     search_fields = ('property_address', 'client__username', 'client__email')
+
+
+@admin.register(Photographer)
+class PhotographerAdmin(admin.ModelAdmin):
+    list_display = ('user', 'phone', 'is_active')
+    search_fields = ('user__username', 'user__first_name', 'user__last_name', 'user__email')
+    list_filter = ('is_active',)
+
+
+@admin.register(PhotographerSlot)
+class PhotographerSlotAdmin(admin.ModelAdmin):
+    list_display = ('photographer', 'date', 'time_slot', 'is_booked')
+    list_filter = ('date', 'is_booked', 'photographer')
+    search_fields = ('photographer__user__username', 'date')

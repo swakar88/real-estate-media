@@ -8,13 +8,15 @@ from django.http import HttpResponse
 import stripe
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
-from .models import Service, GalleryImage, Package, BookingRequest, ClientShoot
+from .models import Service, GalleryImage, Package, BookingRequest, ClientShoot, Photographer, PhotographerSlot
 from .serializers import (
     ServiceSerializer,
     GalleryImageSerializer,
     PackageSerializer,
     BookingRequestSerializer,
-    ClientShootSerializer
+    ClientShootSerializer,
+    PhotographerSerializer,
+    PhotographerSlotSerializer
 )
 
 class ServiceViewSet(viewsets.ReadOnlyModelViewSet):
@@ -57,6 +59,24 @@ class BookingRequestViewSet(viewsets.ModelViewSet):
         if self.action == 'create':
             return [AllowAny()] # Public can create
         return [IsAuthenticated()] # Only admin can view/edit
+
+    def perform_create(self, serializer):
+        # Auto-assign an available photographer if requested
+        instance = serializer.save()
+        if instance.shoot_date and instance.time_slot:
+            # Try to find an available photographer slot
+            slot = PhotographerSlot.objects.filter(
+                date=instance.shoot_date,
+                time_slot=instance.time_slot,
+                is_booked=False,
+                photographer__is_active=True
+            ).first()
+
+            if slot:
+                slot.is_booked = True
+                slot.save()
+                instance.assigned_photographer = slot.photographer
+                instance.save()
 
     def perform_update(self, serializer):
         # Check if the status is changing to 'confirmed'
@@ -161,6 +181,63 @@ class ClientShootViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+class PhotographerSlotViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for photographers to manage their availability slots.
+    """
+    serializer_class = PhotographerSlotSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        # Admins can see all slots, photographers only see theirs
+        if self.request.user.is_staff:
+            return PhotographerSlot.objects.all()
+        try:
+            photographer = self.request.user.photographer_profile
+            return PhotographerSlot.objects.filter(photographer=photographer)
+        except Photographer.DoesNotExist:
+            return PhotographerSlot.objects.none()
+
+    def perform_create(self, serializer):
+        photographer = self.request.user.photographer_profile
+        serializer.save(photographer=photographer)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_availability(request):
+    """
+    Returns available time slots grouped by date.
+    Finds dates/times that have at least one unbooked photographer.
+    """
+    import datetime
+    from django.utils import timezone
+    
+    start_date_str = request.GET.get('start_date')
+    if start_date_str:
+        start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date()
+    else:
+        start_date = timezone.now().date()
+        
+    end_date = start_date + datetime.timedelta(days=30)
+    
+    # Get all unbooked slots in the next 30 days
+    slots = PhotographerSlot.objects.filter(
+        date__gte=start_date,
+        date__lte=end_date,
+        is_booked=False,
+        photographer__is_active=True
+    ).values('date', 'time_slot').distinct().order_by('date', 'time_slot')
+    
+    availability = {}
+    for slot in slots:
+        date_str = slot['date'].strftime('%Y-%m-%d')
+        if date_str not in availability:
+            availability[date_str] = []
+        availability[date_str].append(slot['time_slot'])
+        
+    return Response(availability)
+
+
 class CurrentUserView(views.APIView):
     """
     API endpoint to fetch the currently authenticated user's details.
@@ -168,6 +245,7 @@ class CurrentUserView(views.APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        is_photo = hasattr(request.user, 'photographer_profile')
         serializer = {
             'id': request.user.id,
             'username': request.user.username,
@@ -175,6 +253,7 @@ class CurrentUserView(views.APIView):
             'first_name': request.user.first_name,
             'last_name': request.user.last_name,
             'is_staff': request.user.is_staff,
+            'is_photographer': is_photo,
         }
         return Response(serializer)
 

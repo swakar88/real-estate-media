@@ -8,8 +8,10 @@ router.register(r'gallery', views.GalleryImageViewSet)
 router.register(r'packages', views.PackageViewSet)
 router.register(r'bookings', views.BookingRequestViewSet)
 router.register(r'shoots', views.ClientShootViewSet, basename='shoots')
+router.register(r'photographer/slots', views.PhotographerSlotViewSet, basename='photographer-slots')
 
 urlpatterns = [
+    path('availability/', views.get_availability, name='get_availability'),
     path('me/', views.CurrentUserView.as_view(), name='current_user'),
     path('stripe/webhook/', views.stripe_webhook, name='stripe-webhook'),
     path('', include(router.urls)),

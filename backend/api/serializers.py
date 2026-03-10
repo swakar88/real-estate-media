@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Service, GalleryImage, Package, BookingRequest, ClientShoot
+from .models import Service, GalleryImage, Package, BookingRequest, ClientShoot, Photographer, PhotographerSlot
 
 class ServiceSerializer(serializers.ModelSerializer):
     class Meta:
@@ -29,3 +29,23 @@ class ClientShootSerializer(serializers.ModelSerializer):
         model = ClientShoot
         fields = '__all__'
         read_only_fields = ['client']
+
+
+class PhotographerSerializer(serializers.ModelSerializer):
+    user_email = serializers.EmailField(source='user.email', read_only=True)
+    first_name = serializers.CharField(source='user.first_name', read_only=True)
+    last_name = serializers.CharField(source='user.last_name', read_only=True)
+
+    class Meta:
+        model = Photographer
+        fields = '__all__'
+        read_only_fields = ['user']
+
+
+class PhotographerSlotSerializer(serializers.ModelSerializer):
+    photographer_name = serializers.CharField(source='photographer.user.get_full_name', read_only=True)
+
+    class Meta:
+        model = PhotographerSlot
+        fields = '__all__'
+        read_only_fields = ['photographer']

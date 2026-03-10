@@ -15,7 +15,9 @@ export default function BookingForm({ packages }: { packages: any[] }) {
     email: "",
     phone: "",
     packageId: "",
-    propertyDetails: ""
+    propertyDetails: "",
+    shootDate: "",
+    timeSlot: ""
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -38,8 +40,10 @@ export default function BookingForm({ packages }: { packages: any[] }) {
           last_name: formData.lastName,
           email: formData.email,
           phone: formData.phone,
-          package_id: formData.packageId === "custom" || !formData.packageId ? null : formData.packageId,
+          package_interest: formData.packageId === "custom" || !formData.packageId ? null : parseInt(formData.packageId, 10),
           property_details: formData.propertyDetails,
+          shoot_date: formData.shootDate || null,
+          time_slot: formData.timeSlot || null,
           status: "pending"
         })
       });
@@ -175,6 +179,35 @@ export default function BookingForm({ packages }: { packages: any[] }) {
            className="w-full bg-background border border-border/60 rounded-md px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none" 
            placeholder="123 Main St... Briefly describe the property size and preferred shoot date." 
          />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-2">
+           <label htmlFor="shootDate" className="text-sm font-medium">Preferred Date</label>
+           <input 
+             type="date" 
+             id="shootDate" 
+             value={formData.shootDate}
+             onChange={handleChange}
+             className="w-full bg-background border border-border/60 rounded-md px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" 
+           />
+        </div>
+        <div className="space-y-2">
+           <label htmlFor="timeSlot" className="text-sm font-medium">Preferred Time</label>
+           <select 
+             id="timeSlot" 
+             value={formData.timeSlot}
+             onChange={handleChange}
+             className="w-full bg-background border border-border/60 rounded-md px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+           >
+              <option value="">Any Time</option>
+              <option value="09:00">9:00 AM</option>
+              <option value="11:00">11:00 AM</option>
+              <option value="13:00">1:00 PM</option>
+              <option value="15:00">3:00 PM</option>
+              <option value="17:00">5:00 PM</option>
+           </select>
+        </div>
       </div>
 
       <div className="pt-4">

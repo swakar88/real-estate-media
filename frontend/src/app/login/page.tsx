@@ -29,12 +29,26 @@ export default function Login() {
       const data = await res.json();
 
       if (res.ok) {
-        // Store tokens securely (localStorage for this demo)
         localStorage.setItem("access_token", data.access);
         localStorage.setItem("refresh_token", data.refresh);
         
-        // Redirect to dashboard
-        router.push("/dashboard");
+        // Fetch user profile to see roles
+        const userRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/me/`, {
+          headers: { "Authorization": `Bearer ${data.access}` }
+        });
+        
+        if (userRes.ok) {
+          const userData = await userRes.json();
+          if (userData.is_staff) {
+             router.push("/admin-portal/shoots");
+          } else if (userData.is_photographer) {
+             router.push("/photographer-portal");
+          } else {
+             router.push("/dashboard");
+          }
+        } else {
+          router.push("/dashboard");
+        }
       } else {
         // Handle Django DRF SimpleJWT error messages
         setError(data.detail || "Invalid username or password.");

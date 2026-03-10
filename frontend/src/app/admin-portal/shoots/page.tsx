@@ -174,24 +174,8 @@ export default function AdminShoots() {
                        {shoot.stripe_payment_link ? (
                          <div className="flex flex-col gap-2 mt-1">
                            <div className="flex justify-between items-center bg-muted/30 p-2 rounded-md border border-border/50">
-                             <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Amount Due</span>
-                             <span className="text-lg font-bold">${shoot.amount_due}</span>
-                           </div>
-                           <div className="grid grid-cols-2 gap-2">
-                             <button
-                               onClick={() => navigator.clipboard.writeText(shoot.stripe_payment_link)}
-                               className="text-xs font-medium py-2 bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-md transition-colors"
-                             >
-                               Copy Link
-                             </button>
-                             <a 
-                               href={shoot.stripe_payment_link} 
-                               target="_blank" 
-                               rel="noopener noreferrer" 
-                               className="text-xs font-medium py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-center transition-colors shadow-sm"
-                             >
-                               Open Checkout
-                             </a>
+                             <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Invoice Generated</span>
+                             <span className="text-lg font-bold text-green-500">Sent</span>
                            </div>
                          </div>
                        ) : (

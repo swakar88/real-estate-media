@@ -32,7 +32,7 @@ export default function Footer() {
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>14702 W 90th Ter</li>
               <li>Lenexa, KS 66215</li>
-              <li><a href="mailto:info@jukemediakc.com" className="hover:text-primary transition-colors">info@jukemediakc.com</a></li>
+              <li><a href="mailto:info@kcrealestatemedia.com" className="hover:text-primary transition-colors">info@kcrealestatemedia.com</a></li>
               <li><a href="tel:9136095811" className="hover:text-primary transition-colors">Tel: 913-609-5811</a></li>
             </ul>
           </div>

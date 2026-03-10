@@ -138,12 +138,23 @@ export default function Dashboard() {
                        )}
 
                        <div className="mt-auto pt-4 border-t border-border/40">
-                         {shoot.delivery_link ? (
+                         {shoot.payment_status === 'unpaid' && shoot.stripe_payment_link ? (
+                           <a 
+                             href={shoot.stripe_payment_link}
+                             className="w-full py-2.5 bg-primary text-primary-foreground rounded-md font-bold flex justify-center items-center hover:bg-primary/90 transition-all text-sm shadow-md"
+                           >
+                              Pay Invoice (${shoot.amount_due}) ↗
+                           </a>
+                         ) : shoot.payment_status === 'unpaid' ? (
+                           <button disabled className="w-full py-2.5 bg-muted text-muted-foreground rounded-md font-medium text-sm border border-border/50 cursor-not-allowed">
+                              Awaiting Invoice...
+                           </button>
+                         ) : shoot.delivery_link ? (
                            <a 
                              href={shoot.delivery_link} 
                              target="_blank" 
                              rel="noopener noreferrer"
-                             className="w-full py-2.5 bg-primary/10 text-primary border border-primary/20 rounded-md font-medium flex justify-center items-center hover:bg-primary hover:text-primary-foreground transition-all text-sm"
+                             className="w-full py-2.5 bg-green-500/10 text-green-500 border border-green-500/20 rounded-md font-bold flex justify-center items-center hover:bg-green-500 hover:text-white transition-all text-sm"
                            >
                               Download Media ↗
                            </a>

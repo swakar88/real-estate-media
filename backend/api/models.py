@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+import datetime
 
 class Service(models.Model):
     CATEGORY_CHOICES = [
@@ -54,6 +55,39 @@ class Package(models.Model):
         return f"{self.name} (${self.price})"
 
 
+class Photographer(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='photographer_profile')
+    phone = models.CharField(max_length=20, blank=True)
+    bio = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"Photographer: {self.user.get_full_name() or self.user.username}"
+
+
+class PhotographerSlot(models.Model):
+    TIME_SLOTS = [
+        ('09:00', '9:00 AM'),
+        ('11:00', '11:00 AM'),
+        ('13:00', '1:00 PM'),
+        ('15:00', '3:00 PM'),
+        ('17:00', '5:00 PM'),
+    ]
+
+    photographer = models.ForeignKey(Photographer, on_delete=models.CASCADE, related_name='slots')
+    date = models.DateField()
+    time_slot = models.CharField(max_length=10, choices=TIME_SLOTS)
+    is_booked = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('photographer', 'date', 'time_slot')
+        ordering = ['date', 'time_slot']
+
+    def __str__(self):
+        return f"{self.photographer} - {self.date} {self.get_time_slot_display()} ({'Booked' if self.is_booked else 'Available'})"
+
+
 class BookingRequest(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Pending Confirmation'),
@@ -68,6 +102,12 @@ class BookingRequest(models.Model):
     phone = models.CharField(max_length=20)
     package_interest = models.ForeignKey(Package, on_delete=models.SET_NULL, null=True, blank=True)
     property_details = models.TextField()
+    
+    # New scheduling fields
+    shoot_date = models.DateField(null=True, blank=True)
+    time_slot = models.CharField(max_length=10, choices=PhotographerSlot.TIME_SLOTS, null=True, blank=True)
+    assigned_photographer = models.ForeignKey(Photographer, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_bookings')
+    
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
