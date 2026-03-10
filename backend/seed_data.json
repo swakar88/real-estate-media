@@ -173,6 +173,9 @@
       "delivery_link": "https://google.com/",
       "status": "delivered",
       "notes": "Beautiful twilight shots! Here is your download link.",
+      "amount_due": null,
+      "payment_status": "unpaid",
+      "stripe_payment_link": null,
       "created_at": "2026-03-09T04:40:52.454Z"
     }
   },
@@ -186,6 +189,9 @@
       "delivery_link": null,
       "status": "editing",
       "notes": "",
+      "amount_due": null,
+      "payment_status": "unpaid",
+      "stripe_payment_link": null,
       "created_at": "2026-03-09T04:40:52.463Z"
     }
   },
