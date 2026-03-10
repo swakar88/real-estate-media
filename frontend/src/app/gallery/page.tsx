@@ -3,6 +3,8 @@ import Footer from "@/components/Footer";
 import { ScrollReveal } from "@/components/ScrollReveal";
 import GalleryGrid from "@/components/GalleryGrid";
 
+export const dynamic = 'force-dynamic';
+
 async function getGalleryImages() {
   try {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/gallery/`, { cache: 'no-store' });
