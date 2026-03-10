@@ -143,7 +143,7 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 # CORS Configuration for Next.js
 CORS_ALLOW_ALL_ORIGINS = DEBUG  # True in dev, False in production
 if not DEBUG:
-    CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',')
+    CORS_ALLOWED_ORIGINS = [origin.strip() for origin in os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',') if origin.strip()]
 
 # Media Files Configuration
 import os
