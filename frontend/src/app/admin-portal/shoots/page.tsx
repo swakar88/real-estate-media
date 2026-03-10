@@ -7,6 +7,9 @@ import { ScrollReveal } from "@/components/ScrollReveal";
 export default function AdminShoots() {
   const [shoots, setShoots] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showInvoiceModal, setShowInvoiceModal] = useState<number | null>(null);
+  const [amountDue, setAmountDue] = useState("");
+  const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
     fetchShoots();
@@ -25,6 +28,41 @@ export default function AdminShoots() {
       console.error("Failed to fetch shoots", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGenerateInvoice = async (shootId: number) => {
+    if (!amountDue) return;
+    setGenerating(true);
+    
+    try {
+      const token = localStorage.getItem("access_token");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/shoots/${shootId}/generate-invoice/`, {
+        method: "POST",
+        headers: { 
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ amount_due: amountDue })
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        // Optimistically update the shoot in state
+        setShoots(shoots.map(s => s.id === shootId ? {
+           ...s, 
+           amount_due: amountDue, 
+           stripe_payment_link: data.stripe_payment_link 
+        } : s));
+        setShowInvoiceModal(null);
+        setAmountDue("");
+      } else {
+        alert("Failed to generate invoice");
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setGenerating(false);
     }
   };
 
@@ -58,7 +96,7 @@ export default function AdminShoots() {
                       {shoot.status}
                     </span>
                     <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
-                       <button className="text-muted-foreground hover:text-primary transition-colors">
+                        <button className="text-muted-foreground hover:text-primary transition-colors">
                           <Edit className="w-4 h-4" />
                        </button>
                        <button className="text-muted-foreground hover:text-destructive transition-colors">
@@ -97,6 +135,50 @@ export default function AdminShoots() {
           </div>
           <h3 className="text-lg font-medium mb-1">No Active Shoots</h3>
           <p className="text-muted-foreground text-sm max-w-sm mb-6">Create a new client shoot to assign delivery links directly to an agent's dashboard.</p>
+        </div>
+      )}
+
+      {/* Invoice Modal */}
+      {showInvoiceModal && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-card w-full max-w-sm rounded-xl shadow-lg border border-border/50 p-6 animate-in zoom-in-95 duration-200">
+            <h2 className="text-xl font-bold mb-2">Create Invoice</h2>
+            <p className="text-muted-foreground text-sm mb-6">Enter the final amount due for this shoot. We will generate a secure Stripe Payment link.</p>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Amount Due ($)</label>
+                <input 
+                  type="number" 
+                  step="0.01"
+                  required
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  placeholder="e.g. 250.00"
+                  value={amountDue} 
+                  onChange={e => setAmountDue(e.target.value)}
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6">
+                <button 
+                  type="button" 
+                  onClick={() => setShowInvoiceModal(null)} 
+                  className="px-4 py-2 text-sm font-medium bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80"
+                  disabled={generating}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => handleGenerateInvoice(showInvoiceModal)} 
+                  className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50"
+                  disabled={!amountDue || generating}
+                >
+                  {generating ? "Generating..." : "Create Link"}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
