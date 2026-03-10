@@ -162,6 +162,32 @@ export default function AdminShoots() {
                          <span className="text-muted-foreground italic">Not provided yet</span>
                        )}
                     </div>
+                    
+                    <div className="flex flex-col mt-4 pt-4 border-t border-border/40">
+                       <div className="flex justify-between items-center mb-2">
+                         <span className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Payment Status</span>
+                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${shoot.payment_status === 'paid' ? 'bg-green-500/10 text-green-500' : 'bg-destructive/10 text-destructive'}`}>
+                           {shoot.payment_status || 'unpaid'}
+                         </span>
+                       </div>
+                       
+                       {shoot.stripe_payment_link ? (
+                         <div className="flex flex-col gap-1">
+                           <span className="text-xl font-bold">${shoot.amount_due}</span>
+                           <a href={shoot.stripe_payment_link} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:underline break-all bg-blue-500/10 p-2 rounded mt-1 line-clamp-2" title={shoot.stripe_payment_link}>
+                             {shoot.stripe_payment_link}
+                           </a>
+                           <span className="text-[10px] text-muted-foreground mt-1 text-center">Copy this link to send to client</span>
+                         </div>
+                       ) : (
+                         <button 
+                           onClick={() => setShowInvoiceModal(shoot.id)}
+                           className="w-full mt-2 py-2 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground border border-primary/20 rounded font-medium text-sm transition-colors"
+                         >
+                           Generate Invoice
+                         </button>
+                       )}
+                    </div>
                  </div>
               </div>
            ))}
