@@ -10,6 +10,13 @@ export default function AdminShoots() {
   const [showInvoiceModal, setShowInvoiceModal] = useState<number | null>(null);
   const [amountDue, setAmountDue] = useState("");
   const [generating, setGenerating] = useState(false);
+  
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addFormData, setAddFormData] = useState({
+    property_address: "",
+    shoot_date: new Date().toISOString().split('T')[0]
+  });
+  const [adding, setAdding] = useState(false);
 
   useEffect(() => {
     fetchShoots();
@@ -28,6 +35,34 @@ export default function AdminShoots() {
       console.error("Failed to fetch shoots", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAddSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAdding(true);
+    try {
+      const token = localStorage.getItem("access_token");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/shoots/`, {
+        method: "POST",
+        headers: { 
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(addFormData)
+      });
+      if (res.ok) {
+        const newShoot = await res.json();
+        setShoots([newShoot, ...shoots]);
+        setShowAddModal(false);
+        setAddFormData({ property_address: "", shoot_date: new Date().toISOString().split('T')[0] });
+      } else {
+        alert("Failed to create shoot");
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setAdding(false);
     }
   };
 
@@ -75,7 +110,10 @@ export default function AdminShoots() {
             <p className="text-muted-foreground">Manage agent portal access links and shoot status.</p>
           </div>
           
-          <button className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 text-sm font-medium rounded-md hover:bg-primary/90 transition-colors">
+          <button 
+             onClick={() => setShowAddModal(true)}
+             className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 text-sm font-medium rounded-md hover:bg-primary/90 transition-colors"
+          >
              <Plus className="w-4 h-4" /> New Shoot Delivery
           </button>
         </div>
@@ -178,6 +216,55 @@ export default function AdminShoots() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Shoot Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-card w-full max-w-md rounded-xl shadow-lg border border-border/50 p-6 animate-in zoom-in-95 duration-200">
+            <h2 className="text-xl font-bold mb-4">Create New Shoot</h2>
+            <form onSubmit={handleAddSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Property Address</label>
+                <input 
+                  type="text" required
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  placeholder="e.g. 123 Main St, Leawood KS"
+                  value={addFormData.property_address} 
+                  onChange={e => setAddFormData({...addFormData, property_address: e.target.value})}
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-1">Shoot Date</label>
+                <input 
+                  type="date" required
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  value={addFormData.shoot_date} 
+                  onChange={e => setAddFormData({...addFormData, shoot_date: e.target.value})}
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6">
+                <button 
+                  type="button" 
+                  onClick={() => setShowAddModal(false)} 
+                  className="px-4 py-2 text-sm font-medium bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80"
+                  disabled={adding}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50"
+                  disabled={adding || !addFormData.property_address}
+                >
+                  {adding ? "Creating..." : "Create Shoot"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

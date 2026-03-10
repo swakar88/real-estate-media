@@ -109,6 +109,10 @@ class ClientShootViewSet(viewsets.ModelViewSet):
             return ClientShoot.objects.all().order_by('-created_at')
         return ClientShoot.objects.filter(client=self.request.user).order_by('-created_at')
 
+    def perform_create(self, serializer):
+        # Attach the shoot to the requesting admin (or user) by default
+        serializer.save(client=self.request.user)
+
     @action(detail=True, methods=['post'], url_path='generate-invoice')
     def generate_invoice(self, request, pk=None):
         shoot = self.get_object()
