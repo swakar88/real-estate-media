@@ -148,8 +148,10 @@ export default function AdminShoots() {
                  
                  <div className="space-y-3 pt-4 border-t border-border/40 text-sm">
                     <div className="flex flex-col">
-                       <span className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Client User ID</span>
-                       <span className="font-medium">{shoot.client}</span>
+                       <span className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Client</span>
+                       <span className="font-medium">
+                         {shoot.client_name ? `${shoot.client_name} (ID: ${shoot.client})` : `User ID: ${shoot.client}`}
+                       </span>
                     </div>
                     
                     <div className="flex flex-col">

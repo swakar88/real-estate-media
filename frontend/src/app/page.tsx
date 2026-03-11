@@ -4,7 +4,20 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/ScrollReveal";
 
-export default function Home() {
+async function getSiteMedia() {
+  try {
+    // Revalidate every minute or use 'no-store' if we want instant updates
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/site-media/?format=dict`, { cache: 'no-store' });
+    if (!res.ok) return {};
+    return res.json();
+  } catch (err) {
+    return {};
+  }
+}
+
+export default async function Home() {
+  const media = await getSiteMedia();
+  
   return (
     <div className="flex min-h-screen flex-col">
       <Navbar />
@@ -15,7 +28,7 @@ export default function Home() {
           {/* Background Element */}
           <div className="absolute inset-0 bg-background z-0">
              <Image 
-                src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80" 
+                src={media.home_hero_bg || "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80"} 
                 alt="Luxury Real Estate Background" 
                 fill 
                 className="object-cover opacity-40 mix-blend-luminosity brightness-50" 
@@ -71,7 +84,7 @@ export default function Home() {
               <StaggerItem>
                 <div className="group relative overflow-hidden rounded-xl border border-border/50 bg-card p-1 hover:border-primary/50 transition-colors duration-300 h-full">
                   <div className="h-48 rounded-lg bg-muted flex items-center justify-center overflow-hidden relative">
-                     <Image src="https://images.unsplash.com/photo-1600607687931-ceeb66d11362?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="Real Estate Media" fill className="object-cover transition-transform duration-700 group-hover:scale-105" />
+                     <Image src={media.home_service_1 || "https://images.unsplash.com/photo-1600607687931-ceeb66d11362?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"} alt="Real Estate Media" fill className="object-cover transition-transform duration-700 group-hover:scale-105" />
                      <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent z-10 transition-opacity duration-300 group-hover:opacity-80"></div>
                      <h3 className="absolute bottom-4 left-4 z-20 text-xl font-bold">Real Estate Media</h3>
                   </div>
@@ -86,7 +99,7 @@ export default function Home() {
               <StaggerItem>
                 <div className="group relative overflow-hidden rounded-xl border border-border/50 bg-card p-1 hover:border-primary/50 transition-colors duration-300 h-full">
                   <div className="h-48 rounded-lg bg-muted flex items-center justify-center overflow-hidden relative">
-                     <Image src="https://images.unsplash.com/photo-1497366216548-37526070297c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="Business Marketing" fill className="object-cover transition-transform duration-700 group-hover:scale-105" />
+                     <Image src={media.home_service_2 || "https://images.unsplash.com/photo-1497366216548-37526070297c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"} alt="Business Marketing" fill className="object-cover transition-transform duration-700 group-hover:scale-105" />
                      <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent z-10 transition-opacity duration-300 group-hover:opacity-80"></div>
                      <h3 className="absolute bottom-4 left-4 z-20 text-xl font-bold">Business Marketing</h3>
                   </div>
@@ -101,7 +114,7 @@ export default function Home() {
               <StaggerItem>
                 <div className="group relative overflow-hidden rounded-xl border border-border/50 bg-card p-1 hover:border-primary/50 transition-colors duration-300 h-full">
                   <div className="h-48 rounded-lg bg-muted flex items-center justify-center overflow-hidden relative">
-                     <Image src="https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="Portrait & Aerial" fill className="object-cover transition-transform duration-700 group-hover:scale-105" />
+                     <Image src={media.home_service_3 || "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"} alt="Portrait & Aerial" fill className="object-cover transition-transform duration-700 group-hover:scale-105" />
                      <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent z-10 transition-opacity duration-300 group-hover:opacity-80"></div>
                      <h3 className="absolute bottom-4 left-4 z-20 text-xl font-bold">Portrait & Aerial</h3>
                   </div>

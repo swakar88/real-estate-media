@@ -13,6 +13,8 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
+
   useEffect(() => {
     const fetchDashboardData = async () => {
       const token = localStorage.getItem("access_token");
@@ -39,6 +41,29 @@ export default function Dashboard() {
 
         const userData = await userRes.json();
         setUser(userData);
+
+        // Check for Stripe payment redirect
+        const urlParams = new URLSearchParams(window.location.search);
+        const sessionId = urlParams.get('session_id');
+        const paymentStatus = urlParams.get('payment');
+        
+        if (paymentStatus === 'success' && sessionId) {
+           try {
+              await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/shoots/verify-payment/`, {
+                 method: 'POST',
+                 headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                 },
+                 body: JSON.stringify({ session_id: sessionId })
+              });
+              setPaymentSuccess(true);
+              // Clean up the URL so it doesn't trigger again on refresh
+              window.history.replaceState({}, document.title, window.location.pathname);
+           } catch (err) {
+              console.error("Failed to verify payment:", err);
+           }
+        }
 
         // Fetch user's shoots
         const shootsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/shoots/`, {
@@ -105,6 +130,13 @@ export default function Dashboard() {
           {error && (
             <div className="bg-destructive/15 text-destructive p-4 rounded-md mb-8 border border-destructive/20">
               {error}
+            </div>
+          )}
+
+          {paymentSuccess && (
+            <div className="bg-green-500/15 text-green-500 p-4 rounded-md mb-8 border border-green-500/20 font-medium flex items-center gap-2">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+              Payment successful! Your media delivery links are now unlocked.
             </div>
           )}
 

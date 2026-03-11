@@ -2,13 +2,14 @@ from rest_framework import viewsets, views, status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated, AllowAny
+from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.models import User
 from django.conf import settings
 from django.http import HttpResponse
 import stripe
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
-from .models import Service, GalleryImage, Package, BookingRequest, ClientShoot, Photographer, PhotographerSlot
+from .models import Service, GalleryImage, Package, BookingRequest, ClientShoot, Photographer, PhotographerSlot, SiteMedia
 from .serializers import (
     ServiceSerializer,
     GalleryImageSerializer,
@@ -16,7 +17,8 @@ from .serializers import (
     BookingRequestSerializer,
     ClientShootSerializer,
     PhotographerSerializer,
-    PhotographerSlotSerializer
+    PhotographerSlotSerializer,
+    SiteMediaSerializer
 )
 
 class ServiceViewSet(viewsets.ReadOnlyModelViewSet):
@@ -59,8 +61,26 @@ class BookingRequestViewSet(viewsets.ModelViewSet):
         if self.action == 'create':
             return [AllowAny()] # Public can create
         return [IsAuthenticated()] # Only admin can view/edit
-
     def perform_create(self, serializer):
+        from django.contrib.auth.models import User
+        from django.utils import timezone
+        
+        # Determine client user based on authenticated session or create one
+        client_user = None
+        if self.request.user.is_authenticated:
+            client_user = self.request.user
+        else:
+            email = serializer.validated_data.get('email')
+            if email:
+                client_user, _ = User.objects.get_or_create(
+                    email=email,
+                    defaults={
+                        'username': email.split('@')[0],
+                        'first_name': serializer.validated_data.get('first_name', ''),
+                        'last_name': serializer.validated_data.get('last_name', ''),
+                    }
+                )
+
         # Auto-assign an available photographer if requested
         instance = serializer.save()
         if instance.shoot_date and instance.time_slot:
@@ -76,7 +96,19 @@ class BookingRequestViewSet(viewsets.ModelViewSet):
                 slot.is_booked = True
                 slot.save()
                 instance.assigned_photographer = slot.photographer
+                instance.status = 'confirmed' # Auto-confirm
                 instance.save()
+                
+                # Automatically generate the ClientShoot so it appears in photographer portal
+                if client_user:
+                    ClientShoot.objects.create(
+                        client=client_user,
+                        property_address=instance.property_details[:300],
+                        shoot_date=instance.shoot_date,
+                        photographer=instance.assigned_photographer,
+                        status='scheduled',
+                        notes=f"Auto-generated from Booking #{instance.id}\nPackage: {instance.package_interest}\nContact: {instance.phone}"
+                    )
 
     def perform_update(self, serializer):
         # Check if the status is changing to 'confirmed'
@@ -109,9 +141,10 @@ class BookingRequestViewSet(viewsets.ModelViewSet):
             ClientShoot.objects.create(
                 client=client_user,
                 property_address=instance.property_details[:300], # Trucate safely
-                shoot_date=timezone.now().date(), # Default to today, admin can edit later
-                status='editing',
-                notes=f"Auto-generated from Booking #{instance.id}\nPackage: {instance.package_interest}\nContact: {instance.phone}"
+                shoot_date=instance.shoot_date or timezone.now().date(),
+                photographer=instance.assigned_photographer,
+                status='scheduled',
+                notes=f"Auto-generated from Booking #{instance.id}\nPackage: {instance.package_interest}\nContact: {instance.phone}\nPhotographer: {instance.assigned_photographer}"
             )
         else:
             super().perform_update(serializer)
@@ -127,6 +160,15 @@ class ClientShootViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         if self.request.user.is_staff:
             return ClientShoot.objects.all().order_by('-created_at')
+            
+        # Photographers see shoots assigned to them
+        try:
+            if hasattr(self.request.user, 'photographer_profile') and self.request.user.photographer_profile.is_active:
+                return ClientShoot.objects.filter(photographer=self.request.user.photographer_profile).order_by('shoot_date')
+        except Exception:
+            pass
+            
+        # Standard clients see their own shoots
         return ClientShoot.objects.filter(client=self.request.user).order_by('-created_at')
 
     def perform_create(self, serializer):
@@ -149,37 +191,70 @@ class ClientShootViewSet(viewsets.ModelViewSet):
             shoot.amount_due = amount_due
             shoot.save()
             
-            # Create Stripe Checkout Session
-            session = stripe.checkout.Session.create(
-                payment_method_types=['card'],
-                line_items=[{
-                    'price_data': {
-                        'currency': 'usd',
-                        'product_data': {
-                            'name': f'Real Estate Media Services: {shoot.property_address}',
-                            'description': 'Photography & Media Package',
-                        },
-                        'unit_amount': int(float(amount_due) * 100), # Stripe expects cents
-                    },
-                    'quantity': 1,
-                }],
-                mode='payment',
-                metadata={'shoot_id': shoot.id},
-                # In a real app we'd redirect to a success/cancel page on the frontend
-                success_url=f"{settings.CORS_ALLOWED_ORIGINS[0]}/dashboard?payment=success" if settings.CORS_ALLOWED_ORIGINS else "http://localhost:3000/dashboard?payment=success",
-                cancel_url=f"{settings.CORS_ALLOWED_ORIGINS[0]}/dashboard?payment=cancelled" if settings.CORS_ALLOWED_ORIGINS else "http://localhost:3000/dashboard?payment=cancelled",
-            )
+            # Mock Stripe for local development without actual API keys
+            if getattr(settings, 'STRIPE_SECRET_KEY', 'sk_test_placeholder') == 'sk_test_placeholder':
+                session_url = "https://checkout.stripe.com/pay/cs_test_mock123_please_add_real_key"
+            else:
+                    # Safely fallback to localhost if CORS origins are not explicitly defined in settings
+                    base_url = settings.CORS_ALLOWED_ORIGINS[0] if hasattr(settings, 'CORS_ALLOWED_ORIGINS') and settings.CORS_ALLOWED_ORIGINS else "http://localhost:3000"
+                    
+                    session = stripe.checkout.Session.create(
+                        payment_method_types=['card'],
+                        line_items=[{
+                            'price_data': {
+                                'currency': 'usd',
+                                'product_data': {
+                                    'name': f'Real Estate Media Services: {shoot.property_address}',
+                                    'description': 'Photography & Media Package',
+                                },
+                                'unit_amount': int(float(amount_due) * 100), # Stripe expects cents
+                            },
+                            'quantity': 1,
+                        }],
+                        mode='payment',
+                        metadata={'shoot_id': shoot.id},
+                        success_url=f"{base_url}/dashboard?payment=success&session_id={{CHECKOUT_SESSION_ID}}",
+                        cancel_url=f"{base_url}/dashboard?payment=cancelled",
+                    )
+                    session_url = session.url
             
-            shoot.stripe_payment_link = session.url
+            shoot.stripe_payment_link = session_url
             shoot.save()
             
             return Response({
                 "detail": "Invoice generated successfully",
-                "stripe_payment_link": session.url
+                "stripe_payment_link": session_url
             })
             
         except Exception as e:
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=['post'], url_path='verify-payment')
+    def verify_payment(self, request):
+        """
+        Manually verifies a Stripe checkout session and updates the shoot's payment status.
+        Helpful as a fallback when local webhooks cannot be reached.
+        """
+        session_id = request.data.get('session_id')
+        if not session_id:
+            return Response({"detail": "session_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            if session_id.startswith('cs_test_mock'):
+                return Response({"detail": "Mock session ignored"}, status=status.HTTP_200_OK)
+
+            session = stripe.checkout.Session.retrieve(session_id)
+            if session.payment_status == 'paid':
+                shoot_id = session.get('metadata', {}).get('shoot_id')
+                if shoot_id:
+                    shoot = ClientShoot.objects.get(id=shoot_id)
+                    shoot.payment_status = 'paid'
+                    shoot.save()
+                    return Response({"detail": "Payment verified", "status": "paid"})
+            return Response({"detail": "Payment not completed"}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 class PhotographerSlotViewSet(viewsets.ModelViewSet):
     """
@@ -195,12 +270,96 @@ class PhotographerSlotViewSet(viewsets.ModelViewSet):
         try:
             photographer = self.request.user.photographer_profile
             return PhotographerSlot.objects.filter(photographer=photographer)
-        except Photographer.DoesNotExist:
+        except Exception:
             return PhotographerSlot.objects.none()
 
     def perform_create(self, serializer):
-        photographer = self.request.user.photographer_profile
+        if self.request.user.is_staff and 'photographer_id' in self.request.data:
+            try:
+                photographer = Photographer.objects.get(id=self.request.data['photographer_id'])
+            except Photographer.DoesNotExist:
+                pass # Fallback to below if not found or handled differently
+        else:
+            photographer = self.request.user.photographer_profile
+            
         serializer.save(photographer=photographer)
+
+class PhotographerViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint that allows admins to view and manage photographers.
+    """
+    queryset = Photographer.objects.all().order_by('user__first_name')
+    serializer_class = PhotographerSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        if not self.request.user.is_staff:
+            return Photographer.objects.none()
+        return super().get_queryset()
+
+    @action(detail=False, methods=['get'], permission_classes=[AllowAny])
+    def public(self, request):
+        """Public endpoint to list all active photographers for the team page."""
+        photographers = Photographer.objects.filter(is_active=True).order_by('user__first_name')
+        serializer = self.get_serializer(photographers, many=True)
+        return Response(serializer.data)
+
+    def perform_create(self, serializer):
+        from django.contrib.auth.models import User
+        data = self.request.data
+        # Generate a username if not provided
+        base_username = data.get('username') or data.get('first_name', 'photographer').lower() + str(User.objects.count() + 1)
+        
+        user = User.objects.create_user(
+            username=base_username,
+            email=data.get('email', f"{base_username}@example.com"),
+            password=data.get('password', 'kcmedia123!'),
+            first_name=data.get('first_name', ''),
+            last_name=data.get('last_name', '')
+        )
+        serializer.save(user=user)
+        
+    def perform_destroy(self, instance):
+        # Soft delete: mark as inactive to preserve history
+        instance.is_active = False
+        instance.save()
+        # Also disable login
+        instance.user.is_active = False
+        instance.user.save()
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def register_user(request):
+    """
+    Register a new Client user account and return JWT tokens.
+    """
+    data = request.data
+    email = data.get('email')
+    password = data.get('password')
+    first_name = data.get('first_name', '')
+    last_name = data.get('last_name', '')
+
+    if not email or not password:
+        return Response({'detail': 'Email and password are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if User.objects.filter(email=email).exists() or User.objects.filter(username=email).exists():
+        return Response({'detail': 'An account with that email already exists.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        user = User.objects.create_user(
+            username=email, # Use email as username
+            email=email,
+            password=password,
+            first_name=first_name,
+            last_name=last_name
+        )
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+        }, status=status.HTTP_201_CREATED)
+    except Exception as e:
+        return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -245,7 +404,17 @@ class CurrentUserView(views.APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        is_photo = hasattr(request.user, 'photographer_profile')
+        is_photo = False
+        photo_id = None
+        photo_url = None
+        try:
+            if hasattr(request.user, 'photographer_profile') and request.user.photographer_profile.is_active:
+                is_photo = True
+                photo_id = request.user.photographer_profile.id
+                photo_url = request.user.photographer_profile.profile_image_url
+        except Exception:
+            pass
+            
         serializer = {
             'id': request.user.id,
             'username': request.user.username,
@@ -254,8 +423,31 @@ class CurrentUserView(views.APIView):
             'last_name': request.user.last_name,
             'is_staff': request.user.is_staff,
             'is_photographer': is_photo,
+            'photographer_id': photo_id,
+            'profile_image_url': photo_url
         }
         return Response(serializer)
+
+    def patch(self, request):
+        user = request.user
+        data = request.data
+        
+        # Update Base User fields
+        if 'first_name' in data: user.first_name = data['first_name']
+        if 'last_name' in data: user.last_name = data['last_name']
+        user.save()
+
+        # Update Photographer Profile
+        if hasattr(user, 'photographer_profile'):
+            if 'profile_image_url' in data:
+                user.photographer_profile.profile_image_url = data['profile_image_url']
+            if 'bio' in data:
+                user.photographer_profile.bio = data['bio']
+            if 'phone' in data:
+                user.photographer_profile.phone = data['phone']
+            user.photographer_profile.save()
+
+        return self.get(request)
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -297,3 +489,38 @@ def stripe_webhook(request):
                 pass
 
     return HttpResponse(status=200)
+
+class SiteMediaViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for viewing and editing dynamic site media URLs.
+    Public can GET. Admins can POST/PUT/PATCH/DELETE.
+    """
+    queryset = SiteMedia.objects.all().order_by('id')
+    serializer_class = SiteMediaSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    lookup_field = 'key'
+
+    def list(self, request, *args, **kwargs):
+        # Allow returning as a dict of {key: url} for optimal frontend consumption
+        queryset = self.get_queryset()
+        if request.query_params.get('format') == 'dict':
+            return Response({item.key: item.url for item in queryset})
+        return super().list(request, *args, **kwargs)
+
+    def perform_create(self, serializer):
+        if not self.request.user.is_staff:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Only admins can modify site media")
+        serializer.save()
+
+    def perform_update(self, serializer):
+        if not self.request.user.is_staff:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Only admins can modify site media")
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        if not self.request.user.is_staff:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Only admins can modify site media")
+        instance.delete()

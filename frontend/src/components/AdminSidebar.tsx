@@ -1,0 +1,45 @@
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { FolderGit2, Users, Calendar, LayoutDashboard, Camera } from "lucide-react";
+
+export default function AdminSidebar() {
+  const pathname = usePathname();
+  
+  const navItems = [
+    { name: "Overview", href: "/admin-portal", icon: LayoutDashboard },
+    { name: "Bookings", href: "/admin-portal/bookings", icon: Calendar },
+    { name: "Shoots & Deliveries", href: "/admin-portal/shoots", icon: Camera },
+    { name: "Photographers", href: "/admin-portal/photographers", icon: Users },
+    { name: "Gallery Assets", href: "/admin-portal/gallery", icon: FolderGit2 },
+  ];
+
+  return (
+    <aside className="w-64 flex-shrink-0 hidden md:block border-r border-border/40 bg-card/30 min-h-[calc(100vh-[72px])] pt-8 px-4">
+      <div className="mb-8 px-4">
+        <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Admin Portal</h2>
+      </div>
+      
+      <nav className="space-y-1">
+        {navItems.map((item) => {
+          const isActive = pathname === item.href;
+          const Icon = item.icon;
+          
+          return (
+            <Link 
+              key={item.href} 
+              href={item.href}
+              className={`flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-md transition-colors ${
+                isActive 
+                  ? "bg-primary/10 text-primary" 
+                  : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+              }`}
+            >
+              <Icon className={`w-4 h-4 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
+              {item.name}
+            </Link>
+          );
+        })}
+      </nav>
+    </aside>
+  );
+}

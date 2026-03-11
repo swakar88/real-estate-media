@@ -10,7 +10,9 @@ import {
   Camera, 
   LogOut,
   Menu,
-  X
+  X,
+  Users,
+  MonitorPlay
 } from "lucide-react";
 
 export default function AdminLayout({
@@ -80,7 +82,9 @@ export default function AdminLayout({
     { name: "Overview", href: "/admin-portal", icon: LayoutDashboard },
     { name: "Bookings", href: "/admin-portal/bookings", icon: CalendarCheck },
     { name: "Client Shoots", href: "/admin-portal/shoots", icon: Camera },
-    { name: "Gallery", href: "/admin-portal/gallery", icon: ImageIcon },
+    { name: "Photographers", href: "/admin-portal/photographers", icon: Users },
+    { name: "Portfolio", href: "/admin-portal/gallery", icon: ImageIcon },
+    { name: "Site Media", href: "/admin-portal/site-media", icon: MonitorPlay },
   ];
 
   return (

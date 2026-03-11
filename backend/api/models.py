@@ -59,6 +59,7 @@ class Photographer(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='photographer_profile')
     phone = models.CharField(max_length=20, blank=True)
     bio = models.TextField(blank=True)
+    profile_image_url = models.URLField(max_length=500, blank=True, null=True, help_text="Unsplash URL or remote path")
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
@@ -118,6 +119,7 @@ class BookingRequest(models.Model):
 
 class ClientShoot(models.Model):
     STATUS_CHOICES = [
+        ('scheduled', 'Scheduled / Upcoming'),
         ('editing', 'In Post-Production'),
         ('delivered', 'Delivered (Ready for Download)'),
         ('archived', 'Archived'),
@@ -132,8 +134,9 @@ class ClientShoot(models.Model):
     property_address = models.CharField(max_length=300)
     shoot_date = models.DateField()
     delivery_link = models.URLField(max_length=500, blank=True, null=True, help_text="Dropbox or Google Drive link")
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='editing')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='scheduled')
     notes = models.TextField(blank=True)
+    photographer = models.ForeignKey(Photographer, on_delete=models.SET_NULL, null=True, blank=True, related_name='client_shoots')
     
     # Invoicing / Stripe Fields
     amount_due = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, help_text="Total amount for the shoot")
@@ -144,3 +147,19 @@ class ClientShoot(models.Model):
 
     def __str__(self):
         return f"{self.property_address} ({self.client.username})"
+
+class SiteMedia(models.Model):
+    """
+    Stores image and video URLs for the frontend website (Home, About, Services, etc.)
+    Allows admins to swap out site assets dynamically without redeploying.
+    """
+    key = models.CharField(max_length=100, unique=True, help_text="A unique identifier for the frontend component, e.g., 'home_hero_video'")
+    title = models.CharField(max_length=200, help_text="A human-readable title for the admin portal")
+    url = models.URLField(max_length=1000, help_text="The full URL to the media file (e.g., Unsplash, Cloudinary, S3)")
+    media_type = models.CharField(max_length=20, choices=[('image', 'Image'), ('video', 'Video')], default='image')
+    description = models.TextField(blank=True, help_text="Optional description of where this is used")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.title} ({self.key})"
+

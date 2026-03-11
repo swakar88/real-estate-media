@@ -1,13 +1,61 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { CheckCircle2 } from "lucide-react";
+import { StaggerContainer, StaggerItem, ScrollReveal } from "@/components/ScrollReveal";
 
 export default function BookingForm({ packages }: { packages: any[] }) {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
+  const [availableSlots, setAvailableSlots] = useState<Record<string, string[]>>({});
+  const [fetchingSlots, setFetchingSlots] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    // Check authentication and prefill data
+    const token = localStorage.getItem("access_token");
+    if (token) {
+      setIsAuthenticated(true);
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/me/`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      })
+      .then(res => res.json())
+      .then(data => {
+         setFormData(prev => ({
+           ...prev,
+           firstName: data.first_name || "",
+           lastName: data.last_name || "",
+           email: data.email || ""
+         }));
+      })
+      .catch(() => setIsAuthenticated(false));
+    } else {
+      setIsAuthenticated(false);
+    }
+
+    // Fetch Slots
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/availability/`)
+      .then(res => res.json())
+      .then(data => {
+        setAvailableSlots(data);
+        setFetchingSlots(false);
+      })
+      .catch(err => {
+        console.error("Failed to fetch slots", err);
+        setFetchingSlots(false);
+      });
+  }, []);
+
+  const formatTime = (time: string) => {
+    if (!time) return "";
+    const [hours, minutes] = time.split(':');
+    const h = parseInt(hours, 10);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    return `${h12}:${minutes} ${ampm}`;
+  };
   
   const [formData, setFormData] = useState({
     firstName: "",
@@ -19,6 +67,14 @@ export default function BookingForm({ packages }: { packages: any[] }) {
     shootDate: "",
     timeSlot: ""
   });
+
+  const handlePackageSelect = (pkgId: string) => {
+    setFormData(prev => ({ ...prev, packageId: pkgId }));
+    const formElement = document.getElementById("booking-form-section");
+    if (formElement) {
+      formElement.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.id]: e.target.value });
@@ -68,17 +124,18 @@ export default function BookingForm({ packages }: { packages: any[] }) {
         <div className="w-16 h-16 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
           <CheckCircle2 className="w-8 h-8" />
         </div>
-        <h3 className="text-2xl font-bold mb-4">Request Received!</h3>
+        <h3 className="text-2xl font-bold mb-4">Your Booking is confirmed.</h3>
         <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-          We have successfully received your booking request. Our team will review the details and contact you shortly to confirm the appointment.
+          The Photographer will be on site by {formData.shootDate} at {formatTime(formData.timeSlot)}.
         </p>
         
-        <div className="bg-card border border-border/50 rounded-xl p-6 shadow-sm border-dashed">
-          <h4 className="font-bold mb-2">Want to track your deliverables?</h4>
-          <p className="text-sm text-muted-foreground mb-4">Create an agency account to easily track the status of this shoot and securely download your high-res media when it's ready.</p>
+        <div className="bg-card border border-border/50 rounded-xl p-6 shadow-sm border-dashed mb-6">
+          <p className="text-sm text-muted-foreground mb-4">
+            Login to your account to cancel or reschedule :)
+          </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-             <Link href="/login" className="px-6 py-2 bg-primary text-primary-foreground font-medium rounded-md hover:bg-primary/90 transition-colors text-sm">
-               Create Account / Login
+             <Link href={isAuthenticated ? "/dashboard" : "/login"} className="px-6 py-2 bg-primary text-primary-foreground font-medium rounded-md hover:bg-primary/90 transition-colors text-sm">
+               Manage Booking
              </Link>
              <button onClick={() => setSuccess(false)} className="px-6 py-2 border border-border bg-background hover:bg-muted font-medium rounded-md transition-colors text-sm">
                Book Another
@@ -89,13 +146,84 @@ export default function BookingForm({ packages }: { packages: any[] }) {
     );
   }
 
+  if (isAuthenticated === false) {
+    return (
+      <div className="text-center py-12 max-w-xl mx-auto">
+        <div className="bg-muted/40 border border-border/50 rounded-2xl p-8 shadow-sm">
+          <h3 className="text-2xl font-bold mb-4">Account Required</h3>
+          <p className="text-muted-foreground mb-8">
+            Please create an account or log in to schedule a shoot. This allows you to easily track the status of your booking, process invoices, and securely download your high-res media when it's ready.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link href="/login" className="px-8 py-3 bg-primary text-primary-foreground font-bold rounded-md hover:bg-primary/90 transition-colors shadow-md hover:shadow-lg">
+              Create Account / Login
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <form onSubmit={handleSubmit} className="max-w-3xl mx-auto space-y-6">
-      {error && (
-        <div className="p-4 bg-destructive/10 text-destructive border border-destructive/20 rounded-md text-sm font-medium text-center">
-          {error}
+    <div className="w-full max-w-5xl mx-auto">
+      {/* Packages Grid */}
+      {packages && packages.length > 0 ? (
+        <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-20 md:mb-32">
+          {packages.map((pkg: any) => (
+            <StaggerItem key={pkg.id}>
+              <div className={`flex flex-col rounded-2xl bg-card p-8 shadow-sm hover:shadow-lg transition-shadow h-full relative ${pkg.is_popular ? 'border-2 border-primary shadow-lg transform md:-translate-y-4' : 'border border-border/50'}`}>
+                {pkg.is_popular && (
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-primary text-primary-foreground px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider whitespace-nowrap">
+                    Most Popular
+                  </div>
+                )}
+                
+                <h3 className="text-2xl font-bold mb-2">{pkg.name}</h3>
+                <div className="mb-6">
+                  <span className="text-4xl font-extrabold">${pkg.price}</span>
+                </div>
+                <ul className="space-y-3 mb-8 flex-1 text-sm text-muted-foreground">
+                  {pkg.features?.map((feature: string, i: number) => (
+                    <li key={i} className="flex items-start gap-2">
+                       <span className="text-primary shrink-0 mt-0.5">✓</span> 
+                       <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+                <button 
+                  type="button"
+                  onClick={() => handlePackageSelect(pkg.id.toString())}
+                  className={`w-full py-3 rounded-md font-medium transition-colors ${pkg.is_popular ? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-md hover:shadow-lg' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}
+                >
+                  {formData.packageId === pkg.id.toString() ? "Selected" : "Select Package"}
+                </button>
+              </div>
+            </StaggerItem>
+          ))}
+        </StaggerContainer>
+      ) : (
+        <div className="text-center py-10 mb-20 bg-muted/30 rounded-2xl border border-border/50">
+            <p className="text-muted-foreground">Loading packages...</p>
         </div>
       )}
+
+      {/* Booking Form Layout */}
+      {/* Booking Form Layout */}
+      <ScrollReveal delay={0.3}>
+        <div id="booking-form-section" className="rounded-2xl border border-border/50 bg-card p-8 md:p-12 shadow-sm">
+           <div className="text-center mb-10">
+             <h2 className="text-3xl font-bold mb-4">Schedule Your Shoot</h2>
+             <p className="text-muted-foreground max-w-xl mx-auto">
+               Fill out the form below to request a time, or give us a call directly. We'll confirm your slot within 2 hours.
+             </p>
+           </div>
+           
+           <form onSubmit={handleSubmit} className="space-y-6">
+             {error && (
+                <div className="p-4 bg-destructive/10 text-destructive border border-destructive/20 rounded-md text-sm font-medium text-center">
+                  {error}
+                </div>
+             )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
@@ -187,25 +315,34 @@ export default function BookingForm({ packages }: { packages: any[] }) {
            <input 
              type="date" 
              id="shootDate" 
+             required
+             min={new Date().toISOString().split('T')[0]} // disable past dates
              value={formData.shootDate}
-             onChange={handleChange}
+             onChange={(e) => {
+                handleChange(e);
+                setFormData(prev => ({ ...prev, shootDate: e.target.value, timeSlot: "" })); // Reset time when date changes
+             }}
              className="w-full bg-background border border-border/60 rounded-md px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" 
            />
         </div>
         <div className="space-y-2">
-           <label htmlFor="timeSlot" className="text-sm font-medium">Preferred Time</label>
+           <label htmlFor="timeSlot" className="text-sm font-medium">Available Time Slots</label>
            <select 
              id="timeSlot" 
+             required
              value={formData.timeSlot}
              onChange={handleChange}
-             className="w-full bg-background border border-border/60 rounded-md px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+             disabled={!formData.shootDate || fetchingSlots}
+             className="w-full bg-background border border-border/60 rounded-md px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
            >
-              <option value="">Any Time</option>
-              <option value="09:00">9:00 AM</option>
-              <option value="11:00">11:00 AM</option>
-              <option value="13:00">1:00 PM</option>
-              <option value="15:00">3:00 PM</option>
-              <option value="17:00">5:00 PM</option>
+              <option value="">
+                {fetchingSlots ? "Loading slots..." : 
+                 !formData.shootDate ? "Select a date first" : 
+                 !availableSlots[formData.shootDate]?.length ? "No slots available" : "Select an available time"}
+              </option>
+              {formData.shootDate && availableSlots[formData.shootDate]?.map(slot => (
+                 <option key={slot} value={slot}>{formatTime(slot)}</option>
+              ))}
            </select>
         </div>
       </div>
@@ -219,6 +356,13 @@ export default function BookingForm({ packages }: { packages: any[] }) {
            {loading ? "Submitting Request..." : "Submit Booking Request →"}
          </button>
       </div>
+
+      <p className="text-xs text-center text-muted-foreground mt-4">
+         By submitting this form, you agree to our Terms of Service and Cancellation Policy.
+      </p>
     </form>
+    </div>
+    </ScrollReveal>
+    </div>
   );
 }

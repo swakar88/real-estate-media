@@ -24,9 +24,12 @@ SECRET_KEY = 'django-insecure-^l4kw%bg4+z2))wbu2(c)=x*gjh1jm*z8^*ubc4g8d*7liw*nk
 
 import os
 import dj_database_url
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
+DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
 
@@ -144,6 +147,8 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 CORS_ALLOW_ALL_ORIGINS = DEBUG  # True in dev, False in production
 if not DEBUG:
     CORS_ALLOWED_ORIGINS = [origin.strip() for origin in os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',') if origin.strip()]
+    if not CORS_ALLOWED_ORIGINS:
+        CORS_ALLOWED_ORIGINS = ['http://localhost:3000', 'http://127.0.0.1:3000']
 
 # Media Files Configuration
 # Media Files Configuration

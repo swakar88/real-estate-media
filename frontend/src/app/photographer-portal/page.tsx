@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import AdminSidebar from "@/components/AdminSidebar";
 import { Calendar, Plus, Trash2 } from "lucide-react";
 
 export default function PhotographerPortal() {
@@ -31,7 +32,7 @@ export default function PhotographerPortal() {
         headers: { "Authorization": `Bearer ${token}` }
       });
       const userData = await userRes.json();
-      if (!userData.is_photographer) {
+      if (!userData.is_photographer && !userData.is_staff) {
         return router.push("/dashboard");
       }
       setUser(userData);
@@ -42,7 +43,11 @@ export default function PhotographerPortal() {
       });
       if (slotsRes.ok) setSlots(await slotsRes.json());
 
-      // Future: Fetch assigned bookings
+      // Fetch assigned bookings (ClientShoots)
+      const shootsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/shoots/`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (shootsRes.ok) setShoots(await shootsRes.json());
     } catch (err) {
       console.error(err);
     } finally {
@@ -86,17 +91,125 @@ export default function PhotographerPortal() {
     }
   };
 
+  const updateShoot = async (shootId: number, status: string, delivery_link?: string) => {
+    const token = localStorage.getItem("access_token");
+    try {
+      const payload: any = { status };
+      if (delivery_link !== undefined) payload.delivery_link = delivery_link;
+
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/shoots/${shootId}/`, {
+        method: "PATCH",
+        headers: { 
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+      
+      if (res.ok) {
+        setShoots(shoots.map(s => s.id === shootId ? { ...s, status, delivery_link: delivery_link || s.delivery_link } : s));
+      } else {
+        alert("Failed to update shoot.");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const updateProfileImage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const token = localStorage.getItem("access_token");
+    const input = document.getElementById('profileImg') as HTMLInputElement;
+    if (!input || !input.value) return;
+
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/me/`, {
+        method: "PATCH",
+        headers: { 
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ profile_image_url: input.value })
+      });
+      if (res.ok) {
+        const updatedUser = await res.json();
+        setUser(updatedUser);
+        alert("Profile image updated successfully!");
+      } else {
+        alert("Failed to update profile image.");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   if (loading) return null;
 
+  // Determine the default profile image string, falling back to local files for seeded users
+  const firstNameLower = (user?.first_name || user?.username || '').split(' ')[0].toLowerCase();
+  const localFallback = ['aarav', 'neha', 'rohan', 'priya'].includes(firstNameLower) 
+    ? `/team/${firstNameLower}.png` 
+    : `https://ui-avatars.com/api/?name=${user?.first_name}+${user?.last_name}&background=random`;
+  
+  const profileImgSrc = user?.profile_image_url || localFallback;
+
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col bg-background">
       <Navbar />
-      <main className="flex-1 pt-24 pb-20 bg-background container mx-auto px-4 md:px-8 max-w-5xl">
-        <h1 className="text-3xl font-bold mb-8">Photographer Portal</h1>
+      
+      <div className={`flex flex-1 ${user?.is_staff ? 'pt-[72px]' : ''}`}>
+        {user?.is_staff && <AdminSidebar />}
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Availability Manager */}
-          <div className="bg-card p-6 rounded-xl border border-border/50 shadow-sm">
+        <main className={`flex-1 p-6 md:p-10 container mx-auto max-w-5xl ${!user?.is_staff ? 'pt-24 pb-20' : ''}`}>
+          <div className="flex justify-between items-end mb-8">
+            <h1 className="text-3xl font-bold">Photographer Portal</h1>
+            <div className="flex items-center gap-4 bg-muted/30 p-2 pr-4 rounded-full border border-border/40">
+              <img 
+                src={profileImgSrc} 
+                alt="Profile" 
+                className="w-10 h-10 rounded-full object-cover border border-border"
+              />
+              <span className="font-medium text-sm">Welcome, {user?.first_name || user?.username}!</span>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Left Column: Profile & Availability */}
+            <div className="space-y-8">
+              
+              {/* Profile Image Manager */}
+              <div className="bg-card p-6 rounded-xl border border-border/50 shadow-sm flex flex-col sm:flex-row gap-6 items-start">
+                <div className="w-24 h-24 sm:w-32 sm:h-32 shrink-0 rounded-xl overflow-hidden border border-border/60 shadow-inner bg-muted">
+                  <img 
+                    src={profileImgSrc} 
+                    alt="Profile Preview" 
+                    className="w-full h-full object-cover"
+                    onError={(e) => { e.currentTarget.src = `https://ui-avatars.com/api/?name=${user?.first_name}+${user?.last_name}&background=random` }}
+                  />
+                </div>
+                
+                <div className="flex-1 w-full">
+                  <h2 className="text-lg font-bold mb-1">Profile Photo</h2>
+                  <p className="text-xs text-muted-foreground mb-4">This photo will be displayed on the public About page.</p>
+                  
+                  <form onSubmit={updateProfileImage} className="flex gap-2 items-end">
+                    <div className="flex-1 space-y-1">
+                      <label className="text-xs font-semibold text-muted-foreground">Unsplash or Image URL</label>
+                      <input 
+                        type="url" 
+                        id="profileImg"
+                        placeholder="https://images.unsplash.com/..." 
+                        defaultValue={user?.profile_image_url || ""}
+                        className="w-full bg-background border border-border/60 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" 
+                      />
+                    </div>
+                    <button type="submit" className="bg-primary text-primary-foreground px-4 py-2 rounded-md font-medium text-sm hover:bg-primary/90">Save</button>
+                  </form>
+                </div>
+              </div>
+
+              {/* Availability Manager */}
+              <div className="bg-card p-6 rounded-xl border border-border/50 shadow-sm">
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2"><Calendar className="w-5 h-5"/> Manage Availability</h2>
             <form onSubmit={addSlot} className="flex gap-4 mb-6 items-end">
               <div className="flex-1 space-y-1">
@@ -138,9 +251,78 @@ export default function PhotographerPortal() {
               ))}
             </div>
           </div>
+          </div>
+
+          {/* Right Column: Assigned Shoots */}
+          <div className="bg-card p-6 rounded-xl border border-border/50 shadow-sm">
+            <h2 className="text-xl font-bold mb-6 flex items-center gap-2">My Assigned Shoots</h2>
+
+            <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
+              {shoots.length === 0 && <p className="text-sm text-muted-foreground italic">No shoots assigned yet.</p>}
+              
+              {shoots.map(shoot => (
+                <div key={shoot.id} className="bg-background border border-border/40 p-4 rounded-xl flex flex-col gap-4 shadow-sm">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="font-bold text-primary truncate max-w-[200px] md:max-w-xs">{shoot.property_address}</h3>
+                      <p className="text-xs text-muted-foreground mt-1">Scheduled Date: <span className="font-semibold text-foreground">{shoot.shoot_date}</span></p>
+                    </div>
+                    <div>
+                      <span className={`text-xs font-bold px-2 py-1 rounded capitalize ${
+                        shoot.status === 'delivered' ? 'bg-green-500/10 text-green-500' : 'bg-amber-500/10 text-amber-500'
+                      }`}>
+                        {shoot.status.replace('_', ' ')}
+                      </span>
+                    </div>
+                  </div>
+
+                  {shoot.notes && (
+                    <div className="text-xs text-muted-foreground bg-muted/30 p-2 rounded-md whitespace-pre-wrap">
+                      {shoot.notes}
+                    </div>
+                  )}
+
+                  {shoot.status !== 'delivered' && (
+                    <div className="pt-3 border-t border-border/40">
+                      <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Deliver Media</label>
+                      <div className="flex gap-2">
+                        <input 
+                          type="url" 
+                          placeholder="Paste Dropbox/Drive Link..." 
+                          className="flex-1 bg-background border border-border/60 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                          id={`link-${shoot.id}`}
+                          defaultValue={shoot.delivery_link || ""}
+                        />
+                        <button 
+                          onClick={() => {
+                            const link = (document.getElementById(`link-${shoot.id}`) as HTMLInputElement)?.value;
+                            if (link) updateShoot(shoot.id, 'delivered', link);
+                            else alert("Please paste a valid media link.");
+                          }}
+                          className="bg-primary text-primary-foreground px-4 py-2 rounded-md font-medium text-sm hover:bg-primary/90 transition-colors"
+                        >
+                          Mark Complete
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {shoot.status === 'delivered' && shoot.delivery_link && (
+                    <div className="pt-3 border-t border-border/40 text-sm">
+                      <span className="text-muted-foreground mr-2">Delivered Link:</span>
+                      <a href={shoot.delivery_link} target="_blank" rel="noreferrer" className="text-primary hover:underline font-medium break-all">
+                        {shoot.delivery_link}
+                      </a>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
-      </main>
-      <Footer />
+        </main>
+      </div>
+      {!user?.is_staff && <Footer />}
     </div>
   );
 }

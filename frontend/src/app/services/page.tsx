@@ -4,7 +4,19 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/ScrollReveal";
 
-export default function Services() {
+async function getSiteMedia() {
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/site-media/?format=dict`, { cache: 'no-store' });
+    if (!res.ok) return {};
+    return res.json();
+  } catch (err) {
+    return {};
+  }
+}
+
+export default async function Services() {
+  const media = await getSiteMedia();
+  
   return (
     <div className="flex min-h-screen flex-col">
       <Navbar />
@@ -37,7 +49,7 @@ export default function Services() {
               <StaggerItem>
                 <div className="rounded-xl border border-border/50 bg-card overflow-hidden h-full">
                   <div className="h-48 bg-muted flex items-center justify-center relative overflow-hidden group-hover:scale-105 transition-transform duration-500">
-                    <Image src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="Day to Dusk real estate editing" fill className="object-cover" />
+                    <Image src={media.services_dusk || "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"} alt="Day to Dusk real estate editing" fill className="object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-background/90 to-transparent z-10"></div>
                     <span className="z-20 font-semibold text-lg text-rose-300">Twilight Conversion</span>
                   </div>
@@ -53,7 +65,7 @@ export default function Services() {
               <StaggerItem>
                 <div className="rounded-xl border border-border/50 bg-card overflow-hidden h-full">
                   <div className="h-48 bg-muted flex items-center justify-center relative overflow-hidden group-hover:scale-105 transition-transform duration-500">
-                    <Image src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="Decluttered room editing" fill className="object-cover" />
+                    <Image src={media.services_staging || "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"} alt="Decluttered room editing" fill className="object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-background/90 to-transparent z-10"></div>
                     <span className="z-20 font-semibold text-lg text-rose-300">Virtual Staging</span>
                   </div>
@@ -69,7 +81,7 @@ export default function Services() {
               <StaggerItem>
                 <div className="rounded-xl border border-border/50 bg-card overflow-hidden h-full">
                   <div className="h-48 bg-muted flex items-center justify-center relative overflow-hidden group-hover:scale-105 transition-transform duration-500">
-                    <Image src="https://images.unsplash.com/photo-1588880331179-bc9b93a8cb65?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="Lush green grass editing" fill className="object-cover" />
+                    <Image src={media.services_grass || "https://images.unsplash.com/photo-1588880331179-bc9b93a8cb65?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"} alt="Lush green grass editing" fill className="object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-background/90 to-transparent z-10"></div>
                     <span className="z-20 font-semibold text-lg text-rose-300">Green Grass Edit</span>
                   </div>
@@ -112,7 +124,7 @@ export default function Services() {
                </ScrollReveal>
                <ScrollReveal direction="right" delay={0.2} className="flex-1 w-full relative">
                  <div className="aspect-video bg-muted rounded-xl overflow-hidden border border-border/50 flex items-center justify-center relative group shadow-2xl">
-                    <Image src="https://images.unsplash.com/photo-1628611225249-6c4c9258dcc0?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80" alt="Cinematic Drone Aerial" fill className="object-cover transition-transform duration-700 group-hover:scale-105" />
+                    <Image src={media.services_drone || "https://images.unsplash.com/photo-1628611225249-6c4c9258dcc0?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80"} alt="Cinematic Drone Aerial" fill className="object-cover transition-transform duration-700 group-hover:scale-105" />
                     <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors duration-300 flex items-center justify-center">
                        <div className="w-16 h-16 rounded-full bg-background/80 backdrop-blur flex items-center justify-center text-primary group-hover:scale-110 transition-transform cursor-pointer shadow-lg border border-primary/20">
                           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8 ml-1">

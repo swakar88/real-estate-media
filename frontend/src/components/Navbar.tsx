@@ -1,6 +1,25 @@
+"use client";
+
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
 
 export default function Navbar() {
+  const router = useRouter();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    // Check auth status on mount
+    const token = localStorage.getItem('access_token');
+    setIsLoggedIn(!!token);
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    setIsLoggedIn(false);
+    router.push('/login');
+  };
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-20 items-center justify-between px-4 md:px-8">
@@ -13,9 +32,19 @@ export default function Navbar() {
           <Link href="/about" className="transition-colors hover:text-primary">About Us</Link>
         </nav>
         <div className="flex items-center space-x-4">
-          <Link href="/login" className="hidden md:inline-flex text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
-            Login
-          </Link>
+          {isLoggedIn ? (
+            <button 
+              onClick={handleLogout}
+              className="hidden md:inline-flex text-sm font-medium text-destructive hover:text-destructive/80 transition-colors"
+            >
+              Logout
+            </button>
+          ) : (
+            <Link href="/login" className="hidden md:inline-flex text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+              Login
+            </Link>
+          )}
+          
           <Link href="/book" className="hidden md:inline-flex h-10 items-center justify-center rounded-md bg-primary px-8 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50">
             Book Online
           </Link>
