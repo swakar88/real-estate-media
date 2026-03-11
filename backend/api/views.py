@@ -374,18 +374,48 @@ class PhotographerViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         from django.contrib.auth.models import User
-        data = self.request.data
-        # Generate a username if not provided
-        base_username = data.get('username') or data.get('first_name', 'photographer').lower() + str(User.objects.count() + 1)
+        from django.core.signing import TimestampSigner
+        from .utils.email_utils import send_photographer_invite_email
+        from django.conf import settings
         
+        data = self.request.data
+        email = data.get('email')
+        first_name = data.get('first_name', '')
+        last_name = data.get('last_name', '')
+        
+        # We can leave username blank since our EmailBackend allows email login, 
+        # or generate a fallback username. We'll generate a fallback for DB unique constraints.
+        base_username = data.get('username') or first_name.lower() + str(User.objects.count() + 1)
+        
+        # Create user but inactive with unusable password
         user = User.objects.create_user(
             username=base_username,
-            email=data.get('email', f"{base_username}@example.com"),
-            password=data.get('password', 'kcmedia123!'),
-            first_name=data.get('first_name', ''),
-            last_name=data.get('last_name', '')
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            is_active=False
         )
-        serializer.save(user=user)
+        user.set_unusable_password()
+        user.save()
+        
+        # Create photographer profile
+        photographer = serializer.save(user=user)
+        
+        # Generate token
+        signer = TimestampSigner()
+        token = signer.sign_object({'user_id': user.id})
+        
+        # Determine frontend URL
+        # For local dev, NextJS is usually on 3000
+        frontend_url = 'http://localhost:3000' if settings.DEBUG else 'https://kcmedia-frontend.vercel.app'
+        invite_link = f"{frontend_url}/photographer-signup?token={token}"
+        
+        # Send Email
+        send_photographer_invite_email(
+            email=email,
+            name=first_name,
+            invite_link=invite_link
+        )
         
     def perform_destroy(self, instance):
         # Soft delete: mark as inactive to preserve history
@@ -394,6 +424,47 @@ class PhotographerViewSet(viewsets.ModelViewSet):
         # Also disable login
         instance.user.is_active = False
         instance.user.save()
+
+    @action(detail=False, methods=['post'], permission_classes=[AllowAny], url_path='accept-invite')
+    def accept_invite(self, request):
+        from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
+        from django.contrib.auth.models import User
+        from rest_framework_simplejwt.tokens import RefreshToken
+        
+        token = request.data.get('token')
+        password = request.data.get('password')
+        
+        if not token or not password:
+            return Response({"detail": "Token and password are required."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        signer = TimestampSigner()
+        try:
+            # Token expires in 7 days (604800 seconds)
+            token_data = signer.unsign_object(token, max_age=604800)
+            user_id = token_data.get('user_id')
+            user = User.objects.get(id=user_id)
+            
+            # Set password and activate
+            user.set_password(password)
+            user.is_active = True
+            user.save()
+            
+            # Since they are active now, return JWT tokens to log them in automatically
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                'detail': 'Account activated and password set successfully.',
+                'access': str(refresh.access_token),
+                'refresh': str(refresh)
+            }, status=status.HTTP_200_OK)
+            
+        except SignatureExpired:
+            return Response({"detail": "Invitation link has expired."}, status=status.HTTP_400_BAD_REQUEST)
+        except BadSignature:
+            return Response({"detail": "Invalid invitation link."}, status=status.HTTP_400_BAD_REQUEST)
+        except User.DoesNotExist:
+            return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"detail": "An error occurred."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
 @permission_classes([AllowAny])

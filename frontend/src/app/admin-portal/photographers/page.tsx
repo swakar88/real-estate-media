@@ -421,7 +421,7 @@ export default function AdminPhotographers() {
               </div>
 
               <div className="bg-muted/30 p-3 rounded border border-border/50 mb-2">
-                <p className="text-xs text-muted-foreground">The photographer's generated password will default to: <strong className="text-foreground">kcmedia123!</strong></p>
+                <p className="text-xs text-muted-foreground">An email invitation will be automatically sent via Resend with a secure sign-up link for the photographer to set their own password.</p>
               </div>
 
               <div className="flex justify-end gap-3 mt-6">
