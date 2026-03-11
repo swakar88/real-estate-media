@@ -182,7 +182,10 @@ export default function AdminShoots() {
                          </div>
                        ) : (
                          <button 
-                           onClick={() => setShowInvoiceModal(shoot.id)}
+                           onClick={() => {
+                             setShowInvoiceModal(shoot.id);
+                             setAmountDue(shoot.amount_due ? shoot.amount_due.toString() : "");
+                           }}
                            className="w-full mt-2 py-2 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground border border-primary/20 rounded font-medium text-sm transition-colors"
                          >
                            Generate Invoice

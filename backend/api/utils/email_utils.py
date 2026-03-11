@@ -44,3 +44,73 @@ def send_photographer_invite_email(email, name, invite_link):
     except Exception as e:
         print(f"Failed to send invite email to {email}: {e}")
         return False
+
+def _send_mocked_email(subject, html_content):
+    resend.api_key = os.environ.get('RESEND_API_KEY')
+    if not resend.api_key:
+        print("Warning: RESEND_API_KEY is not set. Email not sent.")
+        return False
+    from_email = os.environ.get('RESEND_FROM_EMAIL', 'onboarding@resend.dev')
+    to_email = "swakar88@gmail.com" # MOCKED FOR TESTING
+
+    try:
+        response = resend.Emails.send({
+            "from": from_email,
+            "to": to_email,
+            "subject": subject,
+            "html": html_content
+        })
+        print(f"Email '{subject}' sent successfully to {to_email}. Resend ID: {response.get('id')}")
+        return True
+    except Exception as e:
+        print(f"Failed to send email '{subject}' to {to_email}: {e}")
+        return False
+
+def send_booking_created_emails(booking, customer_email, photographer_email, photographer_name):
+    # Admin
+    _send_mocked_email(
+        subject=f"New Booking Received - {booking.property_details[:50]}",
+        html_content=f"<h3>New Booking Received</h3><p>A new booking was received for {booking.property_details}.</p>"
+    )
+    # Customer
+    _send_mocked_email(
+        subject="Booking Confirmation - KC Real Estate Media",
+        html_content=f"<h3>Booking Confirmation</h3><p>Your booking for {booking.property_details[:50]} has been confirmed!</p>"
+    )
+    # Photographer
+    if photographer_email:
+        _send_mocked_email(
+            subject=f"New Shoot Assigned - {booking.shoot_date}",
+            html_content=f"<h3>New Shoot Assigned</h3><p>Hi {photographer_name}, you have a new shoot at {booking.property_details} on {booking.shoot_date}.</p>"
+        )
+
+def send_content_uploaded_emails(shoot_address):
+    # Admin
+    _send_mocked_email(
+        subject=f"Shoot Media Uploaded - {shoot_address[:50]}",
+        html_content=f"<h3>Media Uploaded</h3><p>The photographer has uploaded media for {shoot_address}.</p>"
+    )
+    # Customer
+    _send_mocked_email(
+        subject="Your Media is Ready!",
+        html_content=f"<h3>Media Ready</h3><p>The media for {shoot_address} is ready! Please await your invoice if not already paid.</p>"
+    )
+
+def send_invoice_generated_email(shoot_address, payment_link):
+    # Customer
+    _send_mocked_email(
+        subject=f"Invoice for Your Recent Shoot - {shoot_address[:50]}",
+        html_content=f"<h3>Invoice Ready</h3><p>Please pay your invoice for {shoot_address} by clicking <a href='{payment_link}'>here to checkout</a>.</p>"
+    )
+
+def send_payment_confirmed_emails(shoot_address, dashboard_link):
+    # Admin
+    _send_mocked_email(
+        subject=f"Payment Received - {shoot_address[:50]}",
+        html_content=f"<h3>Payment Confirmed</h3><p>Payment received for {shoot_address}.</p>"
+    )
+    # Customer
+    _send_mocked_email(
+        subject="Payment Receipt & Media Download Link",
+        html_content=f"<h3>Payment Confirmed</h3><p>Thank you! You can now download your media <a href='{dashboard_link}'>here on your dashboard</a>.</p>"
+    )

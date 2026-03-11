@@ -107,8 +107,15 @@ class BookingRequestViewSet(viewsets.ModelViewSet):
                         shoot_date=instance.shoot_date,
                         photographer=instance.assigned_photographer,
                         status='scheduled',
+                        amount_due=instance.package_interest.price if instance.package_interest else None,
                         notes=f"Auto-generated from Booking #{instance.id}\nPackage: {instance.package_interest}\nContact: {instance.phone}"
                     )
+
+                # SEND MOCKED EMAILS
+                from .utils.email_utils import send_booking_created_emails
+                phot_email = instance.assigned_photographer.user.email if instance.assigned_photographer and hasattr(instance.assigned_photographer, 'user') else None
+                phot_name = instance.assigned_photographer.user.first_name if instance.assigned_photographer and hasattr(instance.assigned_photographer, 'user') else ""
+                send_booking_created_emails(instance, instance.email, phot_email, phot_name)
 
     def perform_update(self, serializer):
         # Check if the status is changing to 'confirmed'
@@ -144,8 +151,15 @@ class BookingRequestViewSet(viewsets.ModelViewSet):
                 shoot_date=instance.shoot_date or timezone.now().date(),
                 photographer=instance.assigned_photographer,
                 status='scheduled',
+                amount_due=instance.package_interest.price if instance.package_interest else None,
                 notes=f"Auto-generated from Booking #{instance.id}\nPackage: {instance.package_interest}\nContact: {instance.phone}\nPhotographer: {instance.assigned_photographer}"
             )
+
+            # SEND MOCKED EMAILS
+            from .utils.email_utils import send_booking_created_emails
+            phot_email = instance.assigned_photographer.user.email if instance.assigned_photographer and hasattr(instance.assigned_photographer, 'user') else None
+            phot_name = instance.assigned_photographer.user.first_name if instance.assigned_photographer and hasattr(instance.assigned_photographer, 'user') else ""
+            send_booking_created_emails(instance, instance.email, phot_email, phot_name)
         else:
             super().perform_update(serializer)
 
@@ -174,6 +188,15 @@ class ClientShootViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         # Attach the shoot to the requesting admin (or user) by default
         serializer.save(client=self.request.user)
+
+    def perform_update(self, serializer):
+        instance = self.get_object()
+        old_status = instance.status
+        updated_instance = serializer.save()
+        
+        if old_status != 'delivered' and updated_instance.status == 'delivered':
+            from .utils.email_utils import send_content_uploaded_emails
+            send_content_uploaded_emails(updated_instance.property_address)
 
     @action(detail=True, methods=['post'], url_path='generate-invoice')
     def generate_invoice(self, request, pk=None):
@@ -220,6 +243,10 @@ class ClientShootViewSet(viewsets.ModelViewSet):
             
             shoot.stripe_payment_link = session_url
             shoot.save()
+
+            # SEND INVOICE EMAILS
+            from .utils.email_utils import send_invoice_generated_email
+            send_invoice_generated_email(shoot.property_address, session_url)
             
             return Response({
                 "detail": "Invoice generated successfully",
@@ -250,6 +277,11 @@ class ClientShootViewSet(viewsets.ModelViewSet):
                     shoot = ClientShoot.objects.get(id=shoot_id)
                     shoot.payment_status = 'paid'
                     shoot.save()
+                    
+                    from .utils.email_utils import send_payment_confirmed_emails
+                    from django.conf import settings
+                    base_url = settings.CORS_ALLOWED_ORIGINS[0] if hasattr(settings, 'CORS_ALLOWED_ORIGINS') and settings.CORS_ALLOWED_ORIGINS else "http://localhost:3000"
+                    send_payment_confirmed_emails(shoot.property_address, f"{base_url}/dashboard")
                     return Response({"detail": "Payment verified", "status": "paid"})
             return Response({"detail": "Payment not completed"}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
@@ -624,6 +656,11 @@ def stripe_webhook(request):
                 shoot = ClientShoot.objects.get(id=shoot_id)
                 shoot.payment_status = 'paid'
                 shoot.save()
+                
+                from .utils.email_utils import send_payment_confirmed_emails
+                from django.conf import settings
+                base_url = settings.CORS_ALLOWED_ORIGINS[0] if hasattr(settings, 'CORS_ALLOWED_ORIGINS') and settings.CORS_ALLOWED_ORIGINS else "http://localhost:3000"
+                send_payment_confirmed_emails(shoot.property_address, f"{base_url}/dashboard")
             except ClientShoot.DoesNotExist:
                 pass
 
