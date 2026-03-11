@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { ScrollReveal } from "@/components/ScrollReveal";
 
-export default function PhotographerSignup() {
+function SignupForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
@@ -48,7 +48,6 @@ export default function PhotographerSignup() {
       const data = await res.json();
 
       if (res.ok) {
-        // Save tokens and redirect to photographer portal
         localStorage.setItem("access_token", data.access);
         if (data.refresh) localStorage.setItem("refresh_token", data.refresh);
         
@@ -65,6 +64,69 @@ export default function PhotographerSignup() {
   };
 
   return (
+    <div className="rounded-2xl border border-border/50 bg-card p-8 md:p-10 shadow-2xl backdrop-blur-sm">
+      <div className="text-center mb-8">
+        <h1 className="text-3xl font-extrabold tracking-tight mb-2">
+          Welcome to the Team
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          Please set a secure password to activate your photographer account.
+        </p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {error && (
+          <div className="bg-destructive/15 text-destructive text-sm px-4 py-3 rounded-md border border-destructive/20 text-center font-medium">
+            {error}
+          </div>
+        )}
+        
+        <div className="space-y-2">
+          <label htmlFor="password" className="text-sm font-medium">New Password</label>
+          <input 
+            type="password" 
+            id="password" 
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full bg-background border border-border/60 rounded-md px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow" 
+            placeholder="••••••••" 
+            required
+            disabled={!token}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="confirmPassword" className="text-sm font-medium">Confirm Password</label>
+          <input 
+            type="password" 
+            id="confirmPassword" 
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            className="w-full bg-background border border-border/60 rounded-md px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow" 
+            placeholder="••••••••" 
+            required
+            disabled={!token}
+          />
+        </div>
+
+        <button 
+          type="submit" 
+          disabled={loading || !token}
+          className="w-full py-3 bg-primary text-primary-foreground font-bold rounded-md hover:bg-primary/90 transition-all shadow-md hover:shadow-lg disabled:opacity-50 flex justify-center items-center"
+        >
+          {loading ? (
+             <span className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"></span>
+          ) : (
+             "Activate Account"
+          )}
+        </button>
+      </form>
+    </div>
+  );
+}
+
+export default function PhotographerSignup() {
+  return (
     <div className="flex min-h-screen flex-col">
       <Navbar />
       
@@ -72,64 +134,9 @@ export default function PhotographerSignup() {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/10 rounded-full blur-[120px] pointer-events-none"></div>
 
         <ScrollReveal className="w-full max-w-md px-4 relative z-10">
-          <div className="rounded-2xl border border-border/50 bg-card p-8 md:p-10 shadow-2xl backdrop-blur-sm">
-            <div className="text-center mb-8">
-              <h1 className="text-3xl font-extrabold tracking-tight mb-2">
-                Welcome to the Team
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                Please set a secure password to activate your photographer account.
-              </p>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {error && (
-                <div className="bg-destructive/15 text-destructive text-sm px-4 py-3 rounded-md border border-destructive/20 text-center font-medium">
-                  {error}
-                </div>
-              )}
-              
-              <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-medium">New Password</label>
-                <input 
-                  type="password" 
-                  id="password" 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-background border border-border/60 rounded-md px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow" 
-                  placeholder="••••••••" 
-                  required
-                  disabled={!token}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="confirmPassword" className="text-sm font-medium">Confirm Password</label>
-                <input 
-                  type="password" 
-                  id="confirmPassword" 
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full bg-background border border-border/60 rounded-md px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow" 
-                  placeholder="••••••••" 
-                  required
-                  disabled={!token}
-                />
-              </div>
-
-              <button 
-                type="submit" 
-                disabled={loading || !token}
-                className="w-full py-3 bg-primary text-primary-foreground font-bold rounded-md hover:bg-primary/90 transition-all shadow-md hover:shadow-lg disabled:opacity-50 flex justify-center items-center"
-              >
-                {loading ? (
-                   <span className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"></span>
-                ) : (
-                   "Activate Account"
-                )}
-              </button>
-            </form>
-          </div>
+          <Suspense fallback={<div className="text-center py-20"><span className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></span></div>}>
+            <SignupForm />
+          </Suspense>
         </ScrollReveal>
       </main>
 
