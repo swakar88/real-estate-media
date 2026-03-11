@@ -8,6 +8,8 @@ export default function Navbar() {
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   useEffect(() => {
     // Check auth status on mount
     const token = localStorage.getItem('access_token');
@@ -18,8 +20,12 @@ export default function Navbar() {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     setIsLoggedIn(false);
+    setIsMobileMenuOpen(false);
     router.push('/login');
   };
+
+  const closeMobileMenu = () => setIsMobileMenuOpen(false);
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-20 items-center justify-between px-4 md:px-8">
@@ -48,12 +54,59 @@ export default function Navbar() {
           <Link href="/book" className="hidden md:inline-flex h-10 items-center justify-center rounded-md bg-primary px-8 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50">
             Book Online
           </Link>
-          {/* Mobile Menu Button Placeholder */}
-          <button className="md:hidden p-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-menu"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+          {/* Mobile Menu Button */}
+          <button 
+            className="md:hidden p-2 text-foreground focus:outline-none"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            aria-label="Toggle Menu"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-menu">
+              {isMobileMenuOpen ? (
+                <>
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </>
+              ) : (
+                <>
+                  <line x1="4" x2="20" y1="12" y2="12"/>
+                  <line x1="4" x2="20" y1="6" y2="6"/>
+                  <line x1="4" x2="20" y1="18" y2="18"/>
+                </>
+              )}
+            </svg>
           </button>
         </div>
       </div>
+
+      {/* Mobile Dropdown Menu */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden border-t border-border/40 bg-background absolute top-20 left-0 w-full shadow-lg">
+          <nav className="flex flex-col p-4 space-y-4 text-sm font-medium">
+            <Link href="/services" onClick={closeMobileMenu} className="transition-colors hover:text-primary p-2">Real Estate & Services</Link>
+            <Link href="/gallery" onClick={closeMobileMenu} className="transition-colors hover:text-primary p-2">Gallery & Video</Link>
+            <Link href="/about" onClick={closeMobileMenu} className="transition-colors hover:text-primary p-2">About Us</Link>
+            
+            <div className="h-px w-full bg-border/40 my-2"></div>
+            
+            {isLoggedIn ? (
+              <button 
+                onClick={handleLogout}
+                className="text-left text-destructive hover:text-destructive/80 transition-colors p-2"
+              >
+                Logout
+              </button>
+            ) : (
+              <Link href="/login" onClick={closeMobileMenu} className="text-muted-foreground hover:text-primary transition-colors p-2">
+                Login
+              </Link>
+            )}
+            
+            <Link href="/book" onClick={closeMobileMenu} className="flex h-10 items-center justify-center rounded-md bg-primary px-8 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 mt-2">
+              Book Online
+            </Link>
+          </nav>
+        </div>
+      )}
     </header>
   );
 }

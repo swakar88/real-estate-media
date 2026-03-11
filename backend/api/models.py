@@ -133,7 +133,7 @@ class ClientShoot(models.Model):
     client = models.ForeignKey(User, on_delete=models.CASCADE, related_name='shoots')
     property_address = models.CharField(max_length=300)
     shoot_date = models.DateField()
-    delivery_link = models.URLField(max_length=500, blank=True, null=True, help_text="Dropbox or Google Drive link")
+    r2_object_key = models.CharField(max_length=500, blank=True, null=True, help_text="Cloudflare R2 Object Key (e.g. orders/{id}/high-res.zip)")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='scheduled')
     notes = models.TextField(blank=True)
     photographer = models.ForeignKey(Photographer, on_delete=models.SET_NULL, null=True, blank=True, related_name='client_shoots')

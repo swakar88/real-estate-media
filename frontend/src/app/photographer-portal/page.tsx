@@ -263,8 +263,8 @@ export default function PhotographerPortal() {
               {shoots.map(shoot => (
                 <div key={shoot.id} className="bg-background border border-border/40 p-4 rounded-xl flex flex-col gap-4 shadow-sm">
                   <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-bold text-primary truncate max-w-[200px] md:max-w-xs">{shoot.property_address}</h3>
+                     <div className="truncate max-w-[200px] md:max-w-xs">
+                      <h3 className="font-bold text-primary truncate" title={shoot.property_address}>{shoot.property_address}</h3>
                       <p className="text-xs text-muted-foreground mt-1">Scheduled Date: <span className="font-semibold text-foreground">{shoot.shoot_date}</span></p>
                     </div>
                     <div>
@@ -284,35 +284,84 @@ export default function PhotographerPortal() {
 
                   {shoot.status !== 'delivered' && (
                     <div className="pt-3 border-t border-border/40">
-                      <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Deliver Media</label>
-                      <div className="flex gap-2">
+                      <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Upload Media (Direct to R2)</label>
+                      <div className="flex flex-col gap-3">
                         <input 
-                          type="url" 
-                          placeholder="Paste Dropbox/Drive Link..." 
+                          type="file" 
+                          id={`file-${shoot.id}`}
+                          accept=".zip,.rar,.mp4,.jpg,.jpeg,.png,.pdf"
                           className="flex-1 bg-background border border-border/60 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                          id={`link-${shoot.id}`}
-                          defaultValue={shoot.delivery_link || ""}
                         />
                         <button 
-                          onClick={() => {
-                            const link = (document.getElementById(`link-${shoot.id}`) as HTMLInputElement)?.value;
-                            if (link) updateShoot(shoot.id, 'delivered', link);
-                            else alert("Please paste a valid media link.");
+                          onClick={async (e) => {
+                            const btn = e.currentTarget;
+                            const fileInput = document.getElementById(`file-${shoot.id}`) as HTMLInputElement;
+                            const file = fileInput?.files?.[0];
+                            
+                            if (!file) {
+                                alert("Please select a file to upload.");
+                                return;
+                            }
+
+                            const btnOriginalText = btn.innerText;
+                            btn.innerText = "Uploading...";
+                            btn.disabled = true;
+
+                            try {
+                                const token = localStorage.getItem("access_token");
+                                
+                                // 1. Get Presigned POST URL from Django
+                                const presignRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/shoots/${shoot.id}/get-upload-url/`, {
+                                    method: "POST",
+                                    headers: {
+                                        "Authorization": `Bearer ${token}`,
+                                        "Content-Type": "application/json"
+                                    },
+                                    body: JSON.stringify({ 
+                                        file_name: file.name,
+                                        file_type: file.type || 'application/octet-stream' 
+                                    })
+                                });
+
+                                if (!presignRes.ok) throw new Error("Could not get upload credentials");
+                                const { url, fields, object_key } = await presignRes.json();
+
+                                // 2. Perform direct POST to Cloudflare R2
+                                const formData = new FormData();
+                                Object.keys(fields).forEach(key => formData.append(key, fields[key]));
+                                formData.append("file", file); // File must be the last field appended
+
+                                const uploadRes = await fetch(url, {
+                                    method: "POST",
+                                    body: formData
+                                });
+
+                                if (!uploadRes.ok) throw new Error(`R2 Upload failed. Status: ${uploadRes.status}`);
+
+                                // 3. Update the Shoot status to delivered and clear the UI
+                                await updateShoot(shoot.id, 'delivered');
+                                fileInput.value = "";
+                                alert("Media uploaded and delivered successfully!");
+
+                            } catch (error) {
+                                console.error(error);
+                                alert("Upload failed: " + (error as any).message);
+                            } finally {
+                                btn.innerText = btnOriginalText;
+                                btn.disabled = false;
+                            }
                           }}
-                          className="bg-primary text-primary-foreground px-4 py-2 rounded-md font-medium text-sm hover:bg-primary/90 transition-colors"
+                          className="bg-primary text-primary-foreground px-4 py-2 rounded-md font-medium text-sm hover:bg-primary/90 transition-colors self-start"
                         >
-                          Mark Complete
+                          Upload File
                         </button>
                       </div>
                     </div>
                   )}
                   
-                  {shoot.status === 'delivered' && shoot.delivery_link && (
+                  {shoot.status === 'delivered' && (
                     <div className="pt-3 border-t border-border/40 text-sm">
-                      <span className="text-muted-foreground mr-2">Delivered Link:</span>
-                      <a href={shoot.delivery_link} target="_blank" rel="noreferrer" className="text-primary hover:underline font-medium break-all">
-                        {shoot.delivery_link}
-                      </a>
+                      <span className="text-muted-foreground mr-2 p-2 bg-muted/40 rounded italic block">Media successfully uploaded into R2 bucket. The client will be able to download it securely from their portal once they pay the invoice for this shoot.</span>
                     </div>
                   )}
                 </div>

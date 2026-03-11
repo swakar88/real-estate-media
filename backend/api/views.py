@@ -255,6 +255,74 @@ class ClientShootViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    @action(detail=True, methods=['post'], url_path='get-upload-url')
+    def get_upload_url(self, request, pk=None):
+        """
+        Generates a direct-to-R2 presigned POST url
+        """
+        from .utils.r2_utils import generate_presigned_post
+        import uuid
+        
+        shoot = self.get_object()
+        
+        # Only admins or the assigned photographer can upload
+        is_admin = request.user.is_staff
+        is_assigned_photographer = hasattr(request.user, 'photographer_profile') and shoot.photographer == request.user.photographer_profile
+        
+        if not (is_admin or is_assigned_photographer):
+            return Response({"detail": "Not authorized to upload for this shoot."}, status=status.HTTP_403_FORBIDDEN)
+            
+        file_name = request.data.get('file_name', f"media_{uuid.uuid4().hex[:8]}.zip")
+        file_type = request.data.get('file_type', 'application/zip')
+        
+        object_key = f"orders/shoot_{shoot.id}/{file_name}"
+        
+        presigned_data = generate_presigned_post(object_key, file_type, expires_in=3600)
+        
+        if presigned_data:
+            return Response({
+                "url": presigned_data['url'],
+                "fields": presigned_data['fields'],
+                "object_key": object_key
+            })
+        return Response({"detail": "Failed to generate presigned upload url."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=True, methods=['get'], url_path='get-download-url')
+    def get_download_url(self, request, pk=None):
+        """
+        Generates a 30-day presigned GET url for the client to download their media
+        """
+        from .utils.r2_utils import generate_presigned_url
+        from django.utils import timezone
+        import datetime
+        
+        shoot = self.get_object()
+        
+        # Must be the owner or admin
+        if not (request.user.is_staff or shoot.client == request.user):
+            return Response({"detail": "Not authorized to access this media."}, status=status.HTTP_403_FORBIDDEN)
+            
+        # Verify payment
+        if shoot.payment_status != 'paid' and not request.user.is_staff:
+            return Response({"detail": "Invoice must be paid before downloading."}, status=status.HTTP_402_PAYMENT_REQUIRED)
+            
+        # Verify 30-day window
+        if not request.user.is_staff:
+            thirty_days_ago = timezone.now().date() - datetime.timedelta(days=30)
+            if shoot.shoot_date < thirty_days_ago:
+                return Response({"detail": "Download link expired. Shoots are only available for 30 days."}, status=status.HTTP_410_GONE)
+
+        if not shoot.r2_object_key:
+             return Response({"detail": "Media has not been uploaded yet."}, status=status.HTTP_404_NOT_FOUND)
+             
+        # Generate 24 hour link (they can request it as many times as they want within the 30 days)
+        presigned_url = generate_presigned_url(shoot.r2_object_key, expires_in=86400)
+        
+        if presigned_url:
+            return Response({"download_url": presigned_url})
+            
+        return Response({"detail": "Failed to generate download url."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 class PhotographerSlotViewSet(viewsets.ModelViewSet):
     """

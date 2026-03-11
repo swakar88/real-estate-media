@@ -181,15 +181,45 @@ export default function Dashboard() {
                            <button disabled className="w-full py-2.5 bg-muted text-muted-foreground rounded-md font-medium text-sm border border-border/50 cursor-not-allowed">
                               Awaiting Invoice...
                            </button>
-                         ) : shoot.delivery_link ? (
-                           <a 
-                             href={shoot.delivery_link} 
-                             target="_blank" 
-                             rel="noopener noreferrer"
+                         ) : shoot.status === 'delivered' ? (
+                           <button 
+                             onClick={async (e) => {
+                               const btn = e.currentTarget;
+                               const btnOriginalText = btn.innerText;
+                               btn.innerText = "Generating Link...";
+                               btn.disabled = true;
+                               
+                               try {
+                                   const token = localStorage.getItem("access_token");
+                                   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/shoots/${shoot.id}/get-download-url/`, {
+                                       headers: { "Authorization": `Bearer ${token}` }
+                                   });
+                                   
+                                   const data = await res.json();
+                                   if (!res.ok) throw new Error(data.detail || "Failed to generate download link");
+                                   
+                                   // Start download programmatically
+                                   btn.innerText = "Starting Download...";
+                                   const a = document.createElement('a');
+                                   a.href = data.download_url;
+                                   a.download = ""; // R2 will dictate the filename, but we indicate it is a download
+                                   a.target = "_blank";
+                                   document.body.appendChild(a);
+                                   a.click();
+                                   document.body.removeChild(a);
+                                   
+                               } catch (error) {
+                                   console.error(error);
+                                   alert((error as any).message);
+                               } finally {
+                                   btn.innerText = btnOriginalText;
+                                   btn.disabled = false;
+                               }
+                             }}
                              className="w-full py-2.5 bg-green-500/10 text-green-500 border border-green-500/20 rounded-md font-bold flex justify-center items-center hover:bg-green-500 hover:text-white transition-all text-sm"
                            >
-                              Download Media ↗
-                           </a>
+                              Download Media (Secure Link) ⬇
+                           </button>
                          ) : (
                            <button disabled className="w-full py-2.5 bg-muted text-muted-foreground rounded-md font-medium text-sm border border-border/50 cursor-not-allowed">
                               Media Processing...
