@@ -2,35 +2,76 @@ import os
 import resend
 from django.conf import settings
 
+def _get_email_template(title, content_html, button_text=None, button_url=None):
+    """
+    Returns a consistent, professional HTML layout for all system emails.
+    """
+    button_html = ""
+    if button_text and button_url:
+        button_html = f"""
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="{button_url}" style="background-color: #000; color: #fff; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px; display: inline-block;">{button_text}</a>
+        </div>
+        """
+
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <style>
+            body {{ font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }}
+            .container {{ max-width: 600px; margin: 20px auto; padding: 40px; border: 1px solid #f0f0f0; border-radius: 12px; }}
+            .header {{ text-align: center; margin-bottom: 30px; }}
+            .logo {{ font-size: 24px; font-weight: bold; letter-spacing: -1px; color: #000; text-transform: uppercase; }}
+            .content {{ font-size: 16px; color: #444; }}
+            .footer {{ margin-top: 40px; padding-top: 20px; border-top: 1px solid #f0f0f0; font-size: 12px; color: #999; text-align: center; }}
+            h1 {{ font-size: 22px; font-weight: 800; margin-bottom: 20px; color: #1a1a1a; }}
+            p {{ margin-bottom: 15px; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <div class="logo">KC REAL ESTATE MEDIA</div>
+            </div>
+            <div class="content">
+                <h1>{title}</h1>
+                {content_html}
+                {button_html}
+            </div>
+            <div class="footer">
+                &copy; 2026 KC Real Estate Media. All rights reserved.<br>
+                Professional Media Solutions for Modern Real Estate.
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+
 def send_photographer_invite_email(email, name, invite_link):
     """
     Send an email invitation to a new photographer using the Resend API.
     """
     resend.api_key = os.environ.get('RESEND_API_KEY')
-    
     if not resend.api_key:
         print("Warning: RESEND_API_KEY is not set. Email not sent.")
         return False
 
-    # In production, replace the 'from' email with a verified domain email
-    # such as 'hello@kcrealestatemedia.com'
     from_email = os.environ.get('RESEND_FROM_EMAIL', 'onboarding@resend.dev')
 
-    html_content = f"""
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
-        <h2 style="color: #333; text-align: center;">Welcome to KC Real Estate Media!</h2>
-        <p style="color: #555; font-size: 16px;">Hi {name},</p>
-        <p style="color: #555; font-size: 16px;">You have been invited to join the <strong>KC Real Estate Media</strong> team as a photographer.</p>
-        <p style="color: #555; font-size: 16px;">Please click the button below to accept your invitation, set your password, and access your portal:</p>
-        <div style="text-align: center; margin: 30px 0;">
-            <a href="{invite_link}" style="background-color: #000; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px; display: inline-block;">Accept Invitation & Set Password</a>
-        </div>
-        <p style="color: #555; font-size: 16px;">If the button doesn't work, copy and paste this link into your browser:</p>
-        <p style="color: #0066cc; font-size: 14px; word-break: break-all;"><a href="{invite_link}">{invite_link}</a></p>
-        <hr style="border: 0; border-top: 1px solid #e0e0e0; margin: 30px 0;">
-        <p style="color: #888; font-size: 12px; text-align: center;">If you didn't expect this invitation, you can simply ignore this email.</p>
-    </div>
+    content_html = f"""
+        <p>Hi {name},</p>
+        <p>You have been invited to join the <strong>KC Real Estate Media</strong> team as a photographer.</p>
+        <p>We're excited to have you on board! Please click the button below to accept your invitation, set your password, and access your photographer portal where you can manage your schedule and uploads.</p>
     """
+    
+    html_content = _get_email_template(
+        "Welcome to the Team",
+        content_html,
+        "Accept Invitation & Set Password",
+        invite_link
+    )
 
     try:
         response = resend.Emails.send({
@@ -68,49 +109,89 @@ def _send_mocked_email(subject, html_content):
 
 def send_booking_created_emails(booking, customer_email, photographer_email, photographer_name):
     # Admin
+    admin_content = f"""
+        <p>A new booking request has been received and automatically processed.</p>
+        <ul style="list-style: none; padding: 0;">
+            <li><strong>Property:</strong> {booking.property_details}</li>
+            <li><strong>Client:</strong> {booking.first_name} {booking.last_name} ({booking.email})</li>
+            <li><strong>Package:</strong> {booking.package_interest}</li>
+            <li><strong>Date:</strong> {booking.shoot_date} at {booking.time_slot}</li>
+            <li><strong>Assigned:</strong> {photographer_name or 'Unassigned'}</li>
+        </ul>
+    """
     _send_mocked_email(
         subject=f"New Booking Received - {booking.property_details[:50]}",
-        html_content=f"<h3>New Booking Received</h3><p>A new booking was received for {booking.property_details}.</p>"
+        html_content=_get_email_template("New Booking Alert", admin_content)
     )
+
     # Customer
+    customer_content = f"""
+        <p>Hi {booking.first_name},</p>
+        <p>Your booking request for <strong>{booking.property_details[:100]}</strong> has been received and confirmed!</p>
+        <p>Our photographer {photographer_name or 'will be assigned shortly'}. We look forward to capturing your property.</p>
+    """
     _send_mocked_email(
         subject="Booking Confirmation - KC Real Estate Media",
-        html_content=f"<h3>Booking Confirmation</h3><p>Your booking for {booking.property_details[:50]} has been confirmed!</p>"
+        html_content=_get_email_template("Booking Confirmed", customer_content)
     )
+
     # Photographer
     if photographer_email:
+        photog_content = f"""
+            <p>Hi {photographer_name},</p>
+            <p>A new shoot has been assigned to you.</p>
+            <p><strong>Property:</strong> {booking.property_details}</p>
+            <p><strong>Scheduled:</strong> {booking.shoot_date} at {booking.time_slot}</p>
+            <p>Please log in to your portal to view more details and upload media once the shoot is complete.</p>
+        """
         _send_mocked_email(
             subject=f"New Shoot Assigned - {booking.shoot_date}",
-            html_content=f"<h3>New Shoot Assigned</h3><p>Hi {photographer_name}, you have a new shoot at {booking.property_details} on {booking.shoot_date}.</p>"
+            html_content=_get_email_template("New Shoot Assigned", photog_content)
         )
 
 def send_content_uploaded_emails(shoot_address):
     # Admin
+    admin_content = f"<p>Media has been uploaded for the property at <strong>{shoot_address}</strong>. It is now ready for client delivery.</p>"
     _send_mocked_email(
         subject=f"Shoot Media Uploaded - {shoot_address[:50]}",
-        html_content=f"<h3>Media Uploaded</h3><p>The photographer has uploaded media for {shoot_address}.</p>"
+        html_content=_get_email_template("Media Uploaded", admin_content)
     )
+
     # Customer
+    customer_content = f"""
+        <p>Great news! The media for <strong>{shoot_address}</strong> has been processed and is ready.</p>
+        <p>You will receive an invoice shortly. Once paid, your download links will be automatically enabled on your dashboard.</p>
+    """
     _send_mocked_email(
         subject="Your Media is Ready!",
-        html_content=f"<h3>Media Ready</h3><p>The media for {shoot_address} is ready! Please await your invoice if not already paid.</p>"
+        html_content=_get_email_template("Processing Complete", customer_content)
     )
 
 def send_invoice_generated_email(shoot_address, payment_link):
     # Customer
+    content = f"""
+        <p>The invoice for your recent shoot at <strong>{shoot_address}</strong> is now ready for payment.</p>
+        <p>Please click the button below to complete your payment securely via Stripe. Your media will be available for download immediately after payment.</p>
+    """
     _send_mocked_email(
         subject=f"Invoice for Your Recent Shoot - {shoot_address[:50]}",
-        html_content=f"<h3>Invoice Ready</h3><p>Please pay your invoice for {shoot_address} by clicking <a href='{payment_link}'>here to checkout</a>.</p>"
+        html_content=_get_email_template("Invoice Ready", content, "Pay Securely via Stripe", payment_link)
     )
 
 def send_payment_confirmed_emails(shoot_address, dashboard_link):
     # Admin
+    admin_content = f"<p>Payment has been successfully received for <strong>{shoot_address}</strong>. Media access has been granted to the client.</p>"
     _send_mocked_email(
         subject=f"Payment Received - {shoot_address[:50]}",
-        html_content=f"<h3>Payment Confirmed</h3><p>Payment received for {shoot_address}.</p>"
+        html_content=_get_email_template("Payment Captured", admin_content)
     )
+
     # Customer
+    customer_content = f"""
+        <p>Thank you for your payment!</p>
+        <p>Payment for <strong>{shoot_address}</strong> has been confirmed. You can now access and download all high-resolution media directly from your dashboard.</p>
+    """
     _send_mocked_email(
         subject="Payment Receipt & Media Download Link",
-        html_content=f"<h3>Payment Confirmed</h3><p>Thank you! You can now download your media <a href='{dashboard_link}'>here on your dashboard</a>.</p>"
+        html_content=_get_email_template("Payment Successful", customer_content, "Go to Dashboard", dashboard_link)
     )

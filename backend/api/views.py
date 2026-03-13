@@ -205,14 +205,15 @@ class ClientShootViewSet(viewsets.ModelViewSet):
         if not request.user.is_staff:
             return Response({"detail": "Only admins can generate invoices."}, status=status.HTTP_403_FORBIDDEN)
             
-        amount_due = request.data.get('amount_due')
+        amount_due = request.data.get('amount_due') or shoot.amount_due
         if not amount_due:
-            return Response({"detail": "amount_due is required"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "No amount_due provided or set for this shoot."}, status=status.HTTP_400_BAD_REQUEST)
             
         try:
-            # Update the shoot amount
-            shoot.amount_due = amount_due
-            shoot.save()
+            # Update the shoot amount if explicitly provided
+            if request.data.get('amount_due'):
+                shoot.amount_due = amount_due
+                shoot.save()
             
             # Mock Stripe for local development without actual API keys
             if getattr(settings, 'STRIPE_SECRET_KEY', 'sk_test_placeholder') == 'sk_test_placeholder':
@@ -290,9 +291,9 @@ class ClientShootViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], url_path='get-upload-url')
     def get_upload_url(self, request, pk=None):
         """
-        Generates a direct-to-R2 presigned POST url
+        Generates a direct-to-R2 presigned PUT url
         """
-        from .utils.r2_utils import generate_presigned_post
+        from .utils.r2_utils import generate_presigned_put
         import uuid
         
         shoot = self.get_object()
@@ -309,12 +310,11 @@ class ClientShootViewSet(viewsets.ModelViewSet):
         
         object_key = f"orders/shoot_{shoot.id}/{file_name}"
         
-        presigned_data = generate_presigned_post(object_key, file_type, expires_in=3600)
+        upload_url = generate_presigned_put(object_key, file_type, expires_in=3600)
         
-        if presigned_data:
+        if upload_url:
             return Response({
-                "url": presigned_data['url'],
-                "fields": presigned_data['fields'],
+                "url": upload_url,
                 "object_key": object_key
             })
         return Response({"detail": "Failed to generate presigned upload url."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

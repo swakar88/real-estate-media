@@ -66,8 +66,9 @@ export default function AdminShoots() {
     }
   };
 
-  const handleGenerateInvoice = async (shootId: number) => {
-    if (!amountDue) return;
+  const handleGenerateInvoice = async (shootId: number, manualAmount?: string) => {
+    const finalAmount = manualAmount || amountDue;
+    if (!finalAmount) return;
     setGenerating(true);
     
     try {
@@ -78,7 +79,7 @@ export default function AdminShoots() {
           "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ amount_due: amountDue })
+        body: JSON.stringify({ amount_due: finalAmount })
       });
       
       if (res.ok) {
@@ -86,7 +87,7 @@ export default function AdminShoots() {
         // Optimistically update the shoot in state
         setShoots(shoots.map(s => s.id === shootId ? {
            ...s, 
-           amount_due: amountDue, 
+           amount_due: finalAmount, 
            stripe_payment_link: data.stripe_payment_link 
         } : s));
         setShowInvoiceModal(null);
@@ -173,24 +174,39 @@ export default function AdminShoots() {
                          </span>
                        </div>
                        
-                       {shoot.stripe_payment_link ? (
-                         <div className="flex flex-col gap-2 mt-1">
-                           <div className="flex justify-between items-center bg-muted/30 p-2 rounded-md border border-border/50">
-                             <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Invoice Generated</span>
-                             <span className="text-lg font-bold text-green-500">Sent</span>
-                           </div>
-                         </div>
-                       ) : (
-                         <button 
-                           onClick={() => {
-                             setShowInvoiceModal(shoot.id);
-                             setAmountDue(shoot.amount_due ? shoot.amount_due.toString() : "");
-                           }}
-                           className="w-full mt-2 py-2 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground border border-primary/20 rounded font-medium text-sm transition-colors"
-                         >
-                           Generate Invoice
-                         </button>
-                       )}
+                        {shoot.stripe_payment_link ? (
+                          <div className="flex flex-col gap-2 mt-1">
+                            <div className="flex justify-between items-center bg-muted/30 p-2 rounded-md border border-border/50">
+                              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Invoice Generated</span>
+                              <span className="text-lg font-bold text-green-500">Sent</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <button 
+                            onClick={() => {
+                              if (shoot.amount_due) {
+                                setGenerating(true);
+                                handleGenerateInvoice(shoot.id, shoot.amount_due.toString());
+                              } else {
+                                setShowInvoiceModal(shoot.id);
+                                setAmountDue("");
+                              }
+                            }}
+                            disabled={generating}
+                            className={`w-full mt-2 py-2 border rounded font-medium text-sm transition-colors flex items-center justify-center gap-2 ${
+                              generating 
+                                ? 'bg-muted text-muted-foreground cursor-not-allowed border-border' 
+                                : 'bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground border-primary/20'
+                            }`}
+                          >
+                            {generating ? (
+                              <>
+                                <span className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin"></span>
+                                Generating...
+                              </>
+                            ) : "Generate Invoice"}
+                          </button>
+                        )}
                     </div>
                  </div>
               </div>

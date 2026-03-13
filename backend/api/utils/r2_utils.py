@@ -11,27 +11,27 @@ def get_boto3_client():
         aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
         aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
         region_name=settings.AWS_S3_REGION_NAME,
+        config=boto3.session.Config(s3={'addressing_style': 'path'})
     )
 
-def generate_presigned_post(object_key, file_type, expires_in=3600):
+def generate_presigned_put(object_key, file_type, expires_in=3600):
     """
-    Generate a presigned post url for direct uploading from the browser
+    Generate a presigned PUT url for direct binary uploading from the browser
     """
     s3_client = get_boto3_client()
     try:
-        response = s3_client.generate_presigned_post(
-            Bucket=settings.AWS_STORAGE_BUCKET_NAME,
-            Key=object_key,
-            Fields={"Content-Type": file_type},
-            Conditions=[
-                {"Content-Type": file_type},
-                ["content-length-range", 0, 5000000000] # Max 5GB
-            ],
+        url = s3_client.generate_presigned_url(
+            'put_object',
+            Params={
+                'Bucket': settings.AWS_STORAGE_BUCKET_NAME,
+                'Key': object_key,
+                'ContentType': file_type
+            },
             ExpiresIn=expires_in
         )
-        return response
+        return url
     except Exception as e:
-        print(f"Error generating presigned post: {e}")
+        print(f"Error generating presigned put: {e}")
         return None
 
 def generate_presigned_url(object_key, expires_in=86400):

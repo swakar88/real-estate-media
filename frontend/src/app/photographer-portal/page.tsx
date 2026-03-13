@@ -91,11 +91,11 @@ export default function PhotographerPortal() {
     }
   };
 
-  const updateShoot = async (shootId: number, status: string, delivery_link?: string) => {
+  const updateShoot = async (shootId: number, status: string, r2_object_key?: string) => {
     const token = localStorage.getItem("access_token");
     try {
       const payload: any = { status };
-      if (delivery_link !== undefined) payload.delivery_link = delivery_link;
+      if (r2_object_key !== undefined) payload.r2_object_key = r2_object_key;
 
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/shoots/${shootId}/`, {
         method: "PATCH",
@@ -107,7 +107,7 @@ export default function PhotographerPortal() {
       });
       
       if (res.ok) {
-        setShoots(shoots.map(s => s.id === shootId ? { ...s, status, delivery_link: delivery_link || s.delivery_link } : s));
+        setShoots(shoots.map(s => s.id === shootId ? { ...s, status, r2_object_key: r2_object_key || s.r2_object_key } : s));
       } else {
         alert("Failed to update shoot.");
       }
@@ -324,27 +324,29 @@ export default function PhotographerPortal() {
                                 });
 
                                 if (!presignRes.ok) throw new Error("Could not get upload credentials");
-                                const { url, fields, object_key } = await presignRes.json();
+                                const { url, object_key } = await presignRes.json();
 
-                                // 2. Perform direct POST to Cloudflare R2
-                                const formData = new FormData();
-                                Object.keys(fields).forEach(key => formData.append(key, fields[key]));
-                                formData.append("file", file); // File must be the last field appended
-
+                                // 2. Perform direct PUT to Cloudflare R2
                                 const uploadRes = await fetch(url, {
-                                    method: "POST",
-                                    body: formData
+                                    method: "PUT",
+                                    headers: {
+                                        "Content-Type": file.type || 'application/octet-stream'
+                                    },
+                                    body: file
                                 });
 
-                                if (!uploadRes.ok) throw new Error(`R2 Upload failed. Status: ${uploadRes.status}`);
+                                if (!uploadRes.ok) {
+                                    const errorText = await uploadRes.text();
+                                    throw new Error(`R2 Upload failed. Status: ${uploadRes.status} - ${errorText}`);
+                                }
 
-                                // 3. Update the Shoot status to delivered and clear the UI
-                                await updateShoot(shoot.id, 'delivered');
+                                // 3. Update the Shoot status to delivered and save the key
+                                await updateShoot(shoot.id, 'delivered', object_key);
                                 fileInput.value = "";
                                 alert("Media uploaded and delivered successfully!");
 
                             } catch (error) {
-                                console.error(error);
+                                console.error("Photographer Upload Error:", error);
                                 alert("Upload failed: " + (error as any).message);
                             } finally {
                                 btn.innerText = btnOriginalText;
