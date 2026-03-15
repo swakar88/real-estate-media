@@ -12,7 +12,8 @@ import {
   Menu,
   X,
   Users,
-  MonitorPlay
+  MonitorPlay,
+  UserCircle
 } from "lucide-react";
 
 export default function AdminLayout({
@@ -79,10 +80,11 @@ export default function AdminLayout({
   }
 
   const navLinks = [
-    { name: "Overview", href: "/admin-portal", icon: LayoutDashboard },
+    { name: "Dashboard", href: "/admin-portal", icon: LayoutDashboard },
     { name: "Bookings", href: "/admin-portal/bookings", icon: CalendarCheck },
     { name: "Client Shoots", href: "/admin-portal/shoots", icon: Camera },
     { name: "Photographers", href: "/admin-portal/photographers", icon: Users },
+    { name: "Clients", href: "/admin-portal/clients", icon: UserCircle },
     { name: "Portfolio", href: "/admin-portal/gallery", icon: ImageIcon },
     { name: "Site Media", href: "/admin-portal/site-media", icon: MonitorPlay },
   ];

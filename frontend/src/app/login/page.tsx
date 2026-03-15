@@ -48,7 +48,7 @@ export default function Login() {
         if (userRes.ok) {
           const userData = await userRes.json();
           if (userData.is_staff) {
-             router.push("/admin-portal/shoots");
+             router.push("/admin-portal");
           } else if (userData.is_photographer) {
              router.push("/photographer-portal");
           } else {

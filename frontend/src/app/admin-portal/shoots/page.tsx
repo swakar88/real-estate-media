@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Camera, Plus, Trash2, Edit } from "lucide-react";
-import { ScrollReveal } from "@/components/ScrollReveal";
+import { Camera, Plus, Trash2, Edit, Search, Filter, ExternalLink, CreditCard, CheckCircle2, AlertCircle, Clock, DollarSign, Calendar, MapPin } from "lucide-react";
+import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/ScrollReveal";
 
 export default function AdminShoots() {
   const [shoots, setShoots] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filter, setFilter] = useState<'open' | 'delivered'>('open');
+  
   const [showInvoiceModal, setShowInvoiceModal] = useState<number | null>(null);
   const [amountDue, setAmountDue] = useState("");
   const [generating, setGenerating] = useState(false);
@@ -84,7 +87,6 @@ export default function AdminShoots() {
       
       if (res.ok) {
         const data = await res.json();
-        // Optimistically update the shoot in state
         setShoots(shoots.map(s => s.id === shootId ? {
            ...s, 
            amount_due: finalAmount, 
@@ -102,21 +104,65 @@ export default function AdminShoots() {
     }
   };
 
+  const filteredShoots = shoots
+    .filter(s => {
+      const matchesSearch = s.property_address.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            (s.client_name && s.client_name.toLowerCase().includes(searchTerm.toLowerCase()));
+      
+      const isDelivered = s.status === 'delivered';
+      const matchesFilter = filter === 'delivered' ? isDelivered : !isDelivered;
+      
+      return matchesSearch && matchesFilter;
+    })
+    .sort((a, b) => new Date(b.shoot_date).getTime() - new Date(a.shoot_date).getTime());
+
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6 pb-20">
       <ScrollReveal>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Client Shoots (Deliverables)</h1>
-            <p className="text-muted-foreground">Manage agent portal access links and shoot status.</p>
+            <h1 className="text-3xl font-bold tracking-tight">Client Shoots</h1>
+            <p className="text-muted-foreground">Manage deliveries and track payment status.</p>
           </div>
           
-          <button 
-             onClick={() => setShowAddModal(true)}
-             className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 text-sm font-medium rounded-md hover:bg-primary/90 transition-colors"
-          >
-             <Plus className="w-4 h-4" /> New Shoot Delivery
-          </button>
+          <div className="flex flex-wrap gap-4 items-center">
+             <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <input 
+                  type="text"
+                  placeholder="Search shoots..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 pr-4 py-2 border border-border/50 rounded-lg bg-card focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm w-full md:w-64 transition-all shadow-sm"
+                />
+             </div>
+
+             <div className="flex bg-muted p-1 rounded-lg self-end sm:self-auto">
+                <button 
+                  onClick={() => setFilter('open')}
+                  className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                    filter === 'open' ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Open
+                </button>
+                <button 
+                  onClick={() => setFilter('delivered')}
+                  className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                    filter === 'delivered' ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Delivered
+                </button>
+             </div>
+
+             <button 
+                onClick={() => setShowAddModal(true)}
+                className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 text-sm font-bold rounded-xl hover:bg-primary/90 transition-all shadow-md hover:shadow-lg active:scale-95"
+             >
+                <Plus className="w-4 h-4" /> New Shoot
+             </button>
+          </div>
         </div>
       </ScrollReveal>
 
@@ -124,141 +170,136 @@ export default function AdminShoots() {
         <div className="py-20 flex justify-center">
            <span className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></span>
         </div>
-      ) : shoots.length > 0 ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-           {shoots.map(shoot => (
-              <div key={shoot.id} className="bg-card border border-border/50 rounded-xl p-5 shadow-sm group">
-                 <div className="flex justify-between items-start mb-4">
-                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                      shoot.status === 'delivered' ? 'bg-green-500/20 text-green-500' : 'bg-amber-500/20 text-amber-500'
-                    }`}>
-                      {shoot.status}
-                    </span>
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
-                        <button className="text-muted-foreground hover:text-primary transition-colors">
-                          <Edit className="w-4 h-4" />
-                       </button>
-                       <button className="text-muted-foreground hover:text-destructive transition-colors">
-                          <Trash2 className="w-4 h-4" />
-                       </button>
-                    </div>
-                 </div>
-                 
-                 <h3 className="font-bold text-lg leading-tight mb-1 truncate" title={shoot.property_address}>{shoot.property_address}</h3>
-                 <p className="text-sm text-primary mb-4">{new Date(shoot.shoot_date).toLocaleDateString()}</p>
-                 
-                 <div className="space-y-3 pt-4 border-t border-border/40 text-sm">
-                    <div className="flex flex-col">
-                       <span className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Client</span>
-                       <span className="font-medium">
-                         {shoot.client_name ? `${shoot.client_name} (ID: ${shoot.client})` : `User ID: ${shoot.client}`}
-                       </span>
-                    </div>
-                    
-                    <div className="flex flex-col">
-                       <span className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Delivery Link</span>
-                       {shoot.delivery_link ? (
-                         <a href={shoot.delivery_link} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline truncate">
-                           {shoot.delivery_link}
-                         </a>
-                       ) : (
-                         <span className="text-muted-foreground italic">Not provided yet</span>
-                       )}
-                    </div>
-                    
-                    <div className="flex flex-col mt-4 pt-4 border-t border-border/40">
-                       <div className="flex justify-between items-center mb-2">
-                         <span className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Payment Status</span>
-                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${shoot.payment_status === 'paid' ? 'bg-green-500/10 text-green-500' : 'bg-destructive/10 text-destructive'}`}>
-                           {shoot.payment_status || 'unpaid'}
-                         </span>
-                       </div>
-                       
-                        {shoot.stripe_payment_link ? (
-                          <div className="flex flex-col gap-2 mt-1">
-                            <div className="flex justify-between items-center bg-muted/30 p-2 rounded-md border border-border/50">
-                              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Invoice Generated</span>
-                              <span className="text-lg font-bold text-green-500">Sent</span>
-                            </div>
-                          </div>
-                        ) : (
-                          <button 
-                            onClick={() => {
-                              if (shoot.amount_due) {
-                                setGenerating(true);
-                                handleGenerateInvoice(shoot.id, shoot.amount_due.toString());
-                              } else {
-                                setShowInvoiceModal(shoot.id);
-                                setAmountDue("");
-                              }
-                            }}
-                            disabled={generating}
-                            className={`w-full mt-2 py-2 border rounded font-medium text-sm transition-colors flex items-center justify-center gap-2 ${
-                              generating 
-                                ? 'bg-muted text-muted-foreground cursor-not-allowed border-border' 
-                                : 'bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground border-primary/20'
-                            }`}
-                          >
-                            {generating ? (
-                              <>
-                                <span className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin"></span>
-                                Generating...
-                              </>
-                            ) : "Generate Invoice"}
-                          </button>
-                        )}
-                    </div>
-                 </div>
-              </div>
-           ))}
+      ) : filteredShoots.length > 0 ? (
+        <div className="bg-card border border-border/50 rounded-2xl overflow-hidden shadow-sm">
+           <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left border-collapse">
+                 <thead>
+                    <tr className="bg-muted/50 border-b border-border/50">
+                       <th className="px-6 py-4 font-bold text-muted-foreground">Property & Date</th>
+                       <th className="px-6 py-4 font-bold text-muted-foreground">Client</th>
+                       <th className="px-6 py-4 font-bold text-muted-foreground">Status</th>
+                       <th className="px-6 py-4 font-bold text-muted-foreground">Payment</th>
+                       <th className="px-6 py-4 font-bold text-muted-foreground text-right">Actions</th>
+                    </tr>
+                 </thead>
+                 <tbody className="divide-y divide-border/40">
+                    {filteredShoots.map(shoot => (
+                       <tr key={shoot.id} className="hover:bg-muted/20 transition-colors group">
+                          <td className="px-6 py-4">
+                             <div className="font-bold text-base truncate max-w-[280px]" title={shoot.property_address}>{shoot.property_address}</div>
+                             <div className="text-xs text-primary font-medium mt-1 uppercase tracking-wider">
+                                {new Date(shoot.shoot_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                             </div>
+                          </td>
+                          <td className="px-6 py-4">
+                             <div className="font-medium text-foreground">
+                                {shoot.client_name || `User #${shoot.client}`}
+                             </div>
+                             <div className="text-[10px] text-muted-foreground mt-0.5">ID: {shoot.id}</div>
+                          </td>
+                          <td className="px-6 py-4">
+                             <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest
+                                ${shoot.status === 'delivered' ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'}
+                             `}>
+                                {shoot.status === 'delivered' ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+                                {shoot.status}
+                             </span>
+                          </td>
+                          <td className="px-6 py-4">
+                             <div className="flex flex-col gap-1.5">
+                                <span className={`inline-flex w-fit items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase ${shoot.payment_status === 'paid' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
+                                   {shoot.payment_status || 'unpaid'}
+                                </span>
+                                {shoot.amount_due && <div className="text-xs font-bold">${parseFloat(shoot.amount_due).toFixed(2)}</div>}
+                             </div>
+                          </td>
+                          <td className="px-6 py-4">
+                             <div className="flex items-center justify-end gap-2">
+                                {shoot.stripe_payment_link ? (
+                                   <a href={shoot.stripe_payment_link} target="_blank" rel="noopener noreferrer" 
+                                      className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-all" title="View Payment Link">
+                                      <CreditCard className="w-4 h-4" />
+                                   </a>
+                                ) : (
+                                   <button 
+                                      onClick={() => {
+                                         if (shoot.amount_due) handleGenerateInvoice(shoot.id, shoot.amount_due.toString());
+                                         else setShowInvoiceModal(shoot.id);
+                                      }}
+                                      className="p-2 text-muted-foreground hover:text-green-500 hover:bg-green-500/10 rounded-lg transition-all" title="Generate Invoice">
+                                      <DollarSign className="w-4 h-4" />
+                                   </button>
+                                )}
+                                
+                                {shoot.delivery_link && (
+                                   <a href={shoot.delivery_link} target="_blank" rel="noopener noreferrer" 
+                                      className="p-2 text-muted-foreground hover:text-blue-500 hover:bg-blue-500/10 rounded-lg transition-all" title="View Delivery">
+                                      <ExternalLink className="w-4 h-4" />
+                                   </a>
+                                )}
+
+                                <div className="w-px h-4 bg-border/50 mx-1 hidden sm:block"></div>
+
+                                <button className="p-2 text-muted-foreground hover:text-primary transition-colors opacity-40 group-hover:opacity-100">
+                                   <Edit className="w-4 h-4" />
+                                </button>
+                                <button className="p-2 text-muted-foreground hover:text-destructive transition-colors opacity-40 group-hover:opacity-100">
+                                   <Trash2 className="w-4 h-4" />
+                                </button>
+                             </div>
+                          </td>
+                       </tr>
+                    ))}
+                 </tbody>
+              </table>
+           </div>
         </div>
       ) : (
-        <div className="text-center py-20 bg-card border border-border/50 border-dashed rounded-xl flex flex-col items-center">
-          <div className="w-16 h-16 bg-muted/50 rounded-full flex items-center justify-center mb-4">
-            <Camera className="w-8 h-8 text-muted-foreground/50" />
+        <div className="text-center py-24 bg-card border border-border/50 border-dashed rounded-3xl flex flex-col items-center">
+          <div className="w-16 h-16 bg-muted/50 rounded-2xl flex items-center justify-center mb-4">
+            <Camera className="w-8 h-8 text-muted-foreground/30" />
           </div>
-          <h3 className="text-lg font-medium mb-1">No Active Shoots</h3>
-          <p className="text-muted-foreground text-sm max-w-sm mb-6">Create a new client shoot to assign delivery links directly to an agent's dashboard.</p>
+          <h3 className="text-xl font-bold mb-1">No {filter} shoots found</h3>
+          <p className="text-muted-foreground text-sm max-w-sm mx-auto">Create a new client shoot or adjust your filters.</p>
         </div>
       )}
 
       {/* Invoice Modal */}
       {showInvoiceModal && (
         <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-card w-full max-w-sm rounded-xl shadow-lg border border-border/50 p-6 animate-in zoom-in-95 duration-200">
+          <div className="bg-card w-full max-w-sm rounded-2xl shadow-2xl border border-border/50 p-6 animate-in zoom-in-95 duration-200">
             <h2 className="text-xl font-bold mb-2">Create Invoice</h2>
-            <p className="text-muted-foreground text-sm mb-6">Enter the final amount due for this shoot. We will generate a secure Stripe Payment link.</p>
+            <p className="text-muted-foreground text-xs mb-6 uppercase tracking-widest font-bold">Stripe Integration</p>
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Amount Due ($)</label>
-                <input 
-                  type="number" 
-                  step="0.01"
-                  required
-                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                  placeholder="e.g. 250.00"
-                  value={amountDue} 
-                  onChange={e => setAmountDue(e.target.value)}
-                />
+                <label className="block text-xs font-bold uppercase tracking-wider mb-2">Amount Due ($)</label>
+                <div className="relative">
+                   <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                   <input 
+                     type="number" step="0.01" required
+                     className="w-full rounded-xl border border-border bg-background pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 shadow-sm"
+                     placeholder="250.00"
+                     value={amountDue} 
+                     onChange={e => setAmountDue(e.target.value)}
+                   />
+                </div>
               </div>
 
-              <div className="flex justify-end gap-3 mt-6">
+              <div className="flex flex-col gap-2 pt-4">
                 <button 
-                  type="button" 
-                  onClick={() => setShowInvoiceModal(null)} 
-                  className="px-4 py-2 text-sm font-medium bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80"
-                  disabled={generating}
+                  onClick={() => handleGenerateInvoice(showInvoiceModal)} 
+                  disabled={!amountDue || generating}
+                  className="w-full py-3 bg-primary text-primary-foreground font-bold rounded-xl hover:bg-primary/90 disabled:opacity-50 transition-all shadow-md active:scale-[0.98]"
                 >
-                  Cancel
+                  {generating ? "Generating..." : "Generate Stripe Link"}
                 </button>
                 <button 
-                  type="button" 
-                  onClick={() => handleGenerateInvoice(showInvoiceModal)} 
-                  className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50"
-                  disabled={!amountDue || generating}
+                  onClick={() => setShowInvoiceModal(null)} 
+                  className="w-full py-3 text-sm font-bold text-muted-foreground hover:bg-muted rounded-xl transition-all"
                 >
-                  {generating ? "Generating..." : "Create Link"}
+                  Cancel
                 </button>
               </div>
             </div>
@@ -269,45 +310,52 @@ export default function AdminShoots() {
       {/* Add Shoot Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-card w-full max-w-md rounded-xl shadow-lg border border-border/50 p-6 animate-in zoom-in-95 duration-200">
-            <h2 className="text-xl font-bold mb-4">Create New Shoot</h2>
-            <form onSubmit={handleAddSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Property Address</label>
-                <input 
-                  type="text" required
-                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                  placeholder="e.g. 123 Main St, Leawood KS"
-                  value={addFormData.property_address} 
-                  onChange={e => setAddFormData({...addFormData, property_address: e.target.value})}
-                />
+          <div className="bg-card w-full max-w-md rounded-2xl shadow-2xl border border-border/50 p-8 animate-in zoom-in-95 duration-200">
+            <h2 className="text-2xl font-bold mb-1">New Client Shoot</h2>
+            <p className="text-muted-foreground text-sm mb-6">Initialize a delivery record for a client.</p>
+            
+            <form onSubmit={handleAddSubmit} className="space-y-5">
+              <div className="space-y-2">
+                <label className="block text-xs font-bold uppercase tracking-wider">Property Address</label>
+                <div className="relative">
+                   <MapPin className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+                   <textarea 
+                     required rows={2}
+                     className="w-full rounded-xl border border-border bg-background pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 shadow-sm"
+                     placeholder="123 Main St, Leawood KS"
+                     value={addFormData.property_address} 
+                     onChange={e => setAddFormData({...addFormData, property_address: e.target.value})}
+                   />
+                </div>
               </div>
               
-              <div>
-                <label className="block text-sm font-medium mb-1">Shoot Date</label>
-                <input 
-                  type="date" required
-                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                  value={addFormData.shoot_date} 
-                  onChange={e => setAddFormData({...addFormData, shoot_date: e.target.value})}
-                />
+              <div className="space-y-2">
+                <label className="block text-xs font-bold uppercase tracking-wider">Shoot Date</label>
+                <div className="relative">
+                   <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                   <input 
+                     type="date" required
+                     className="w-full rounded-xl border border-border bg-background pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 shadow-sm"
+                     value={addFormData.shoot_date} 
+                     onChange={e => setAddFormData({...addFormData, shoot_date: e.target.value})}
+                   />
+                </div>
               </div>
 
-              <div className="flex justify-end gap-3 mt-6">
+              <div className="flex gap-3 pt-6">
                 <button 
                   type="button" 
                   onClick={() => setShowAddModal(false)} 
-                  className="px-4 py-2 text-sm font-medium bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80"
-                  disabled={adding}
+                  className="flex-1 py-3 text-sm font-bold text-muted-foreground hover:bg-muted rounded-xl transition-all"
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit" 
-                  className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50"
                   disabled={adding || !addFormData.property_address}
+                  className="flex-[2] py-3 bg-primary text-primary-foreground font-bold rounded-xl hover:bg-primary/90 disabled:opacity-50 transition-all shadow-lg active:scale-[0.98]"
                 >
-                  {adding ? "Creating..." : "Create Shoot"}
+                  {adding ? "Initializing..." : "Create Record"}
                 </button>
               </div>
             </form>
@@ -317,3 +365,4 @@ export default function AdminShoots() {
     </div>
   );
 }
+

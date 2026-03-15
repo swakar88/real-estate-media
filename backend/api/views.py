@@ -18,7 +18,8 @@ from .serializers import (
     ClientShootSerializer,
     PhotographerSerializer,
     PhotographerSlotSerializer,
-    SiteMediaSerializer
+    SiteMediaSerializer,
+    ClientSerializer
 )
 
 class ServiceViewSet(viewsets.ReadOnlyModelViewSet):
@@ -450,12 +451,20 @@ class PhotographerViewSet(viewsets.ModelViewSet):
         )
         
     def perform_destroy(self, instance):
-        # Soft delete: mark as inactive to preserve history
-        instance.is_active = False
-        instance.save()
-        # Also disable login
-        instance.user.is_active = False
-        instance.user.save()
+        hard_delete = self.request.query_params.get('hard') == 'true'
+        
+        if hard_delete:
+            # Permanent delete: remove User and Photographer profile
+            user = instance.user
+            instance.delete()
+            user.delete()
+        else:
+            # Soft delete: mark as inactive to preserve history
+            instance.is_active = False
+            instance.save()
+            # Also disable login
+            instance.user.is_active = False
+            instance.user.save()
 
     @action(detail=False, methods=['post'], permission_classes=[AllowAny], url_path='accept-invite')
     def accept_invite(self, request):
@@ -480,6 +489,11 @@ class PhotographerViewSet(viewsets.ModelViewSet):
             user.set_password(password)
             user.is_active = True
             user.save()
+            
+            # Update last_login
+            from django.utils import timezone
+            user.last_login = timezone.now()
+            user.save(update_fields=['last_login'])
             
             # Since they are active now, return JWT tokens to log them in automatically
             refresh = RefreshToken.for_user(user)
@@ -524,6 +538,12 @@ def register_user(request):
             first_name=first_name,
             last_name=last_name
         )
+        
+        # Update last_login
+        from django.utils import timezone
+        user.last_login = timezone.now()
+        user.save(update_fields=['last_login'])
+        
         refresh = RefreshToken.for_user(user)
         return Response({
             'refresh': str(refresh),
@@ -700,3 +720,19 @@ class SiteMediaViewSet(viewsets.ModelViewSet):
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("Only admins can modify site media")
         instance.delete()
+
+class ClientViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    API endpoint for viewing client users.
+    """
+    serializer_class = ClientSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        if not self.request.user.is_staff:
+            return User.objects.none()
+        
+        from django.db.models import Count
+        return User.objects.filter(is_staff=False, photographer_profile__isnull=True).annotate(
+            booking_count=Count('shoots')
+        ).order_by('-date_joined')

@@ -11,6 +11,7 @@ router.register(r'shoots', views.ClientShootViewSet, basename='shoots')
 router.register(r'photographers', views.PhotographerViewSet, basename='photographers')
 router.register(r'photographer/slots', views.PhotographerSlotViewSet, basename='photographer-slots')
 router.register(r'site-media', views.SiteMediaViewSet, basename='site-media')
+router.register(r'clients', views.ClientViewSet, basename='clients')
 
 urlpatterns = [
     path('availability/', views.get_availability, name='get_availability'),

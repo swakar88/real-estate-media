@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.contrib.auth.models import User
 from .models import Service, GalleryImage, Package, BookingRequest, ClientShoot, Photographer, PhotographerSlot, SiteMedia
 
 class ServiceSerializer(serializers.ModelSerializer):
@@ -56,3 +57,13 @@ class SiteMediaSerializer(serializers.ModelSerializer):
     class Meta:
         model = SiteMedia
         fields = '__all__'
+
+class ClientSerializer(serializers.ModelSerializer):
+    full_name = serializers.CharField(source='get_full_name', read_only=True)
+    booking_count = serializers.IntegerField(read_only=True)
+    last_login = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", read_only=True)
+    date_joined = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", read_only=True)
+
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'full_name', 'booking_count', 'last_login', 'date_joined']
