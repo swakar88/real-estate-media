@@ -163,3 +163,43 @@ class SiteMedia(models.Model):
     def __str__(self):
         return f"{self.title} ({self.key})"
 
+class EmailConfiguration(models.Model):
+    """
+    Stores SMTP settings for the system to send emails.
+    """
+    title = models.CharField(max_length=100, default="Primary SMTP")
+    email_host = models.CharField(max_length=255)
+    email_port = models.IntegerField(default=587)
+    email_username = models.CharField(max_length=255)
+    email_password = models.CharField(max_length=255)
+    email_from_address = models.EmailField()
+    email_from_name = models.CharField(max_length=255, default="KC Real Estate Media")
+    use_tls = models.BooleanField(default=True)
+    use_ssl = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True, help_text="If active, this configuration will be used for all system emails.")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.title} ({self.email_username})"
+
+    class Meta:
+        verbose_name = "Email Configuration"
+        verbose_name_plural = "Email Configurations"
+
+class EmailTemplate(models.Model):
+    """
+    Stores email templates (subject and body) for different triggers.
+    """
+    slug = models.SlugField(unique=True, help_text="Unique identifier for the template (e.g., 'booking-created')")
+    title = models.CharField(max_length=100, help_text="Human readable title")
+    subject = models.CharField(max_length=255)
+    body = models.TextField(help_text="HTML content with placeholders like {customer_name}")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.title
+
+    class Meta:
+        verbose_name = "Email Template"
+        verbose_name_plural = "Email Templates"

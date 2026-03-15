@@ -9,7 +9,11 @@ from django.http import HttpResponse
 import stripe
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
-from .models import Service, GalleryImage, Package, BookingRequest, ClientShoot, Photographer, PhotographerSlot, SiteMedia
+from .models import (
+    Service, GalleryImage, Package, BookingRequest, ClientShoot, 
+    Photographer, PhotographerSlot, SiteMedia, 
+    EmailConfiguration, EmailTemplate
+)
 from .serializers import (
     ServiceSerializer,
     GalleryImageSerializer,
@@ -19,7 +23,9 @@ from .serializers import (
     PhotographerSerializer,
     PhotographerSlotSerializer,
     SiteMediaSerializer,
-    ClientSerializer
+    ClientSerializer,
+    EmailConfigurationSerializer,
+    EmailTemplateSerializer
 )
 
 class ServiceViewSet(viewsets.ReadOnlyModelViewSet):
@@ -736,3 +742,93 @@ class ClientViewSet(viewsets.ReadOnlyModelViewSet):
         return User.objects.filter(is_staff=False, photographer_profile__isnull=True).annotate(
             booking_count=Count('shoots')
         ).order_by('-date_joined')
+
+from django.core.mail import get_connection, EmailMessage
+import traceback
+from rest_framework import permissions
+
+class EmailConfigurationViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for managing SMTP settings.
+    """
+    queryset = EmailConfiguration.objects.all()
+    serializer_class = EmailConfigurationSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+    def get_queryset(self):
+        # Ensure at least one config exists
+        EmailConfiguration.objects.get_or_create(id=1, defaults={
+            "title": "Primary SMTP",
+            "email_host": "smtp.gmail.com",
+            "email_port": 587,
+            "email_from_address": "noreply@example.com",
+            "email_from_name": "KC Real Estate Media"
+        })
+        return EmailConfiguration.objects.filter(id=1)
+
+    def create(self, request, *args, **kwargs):
+        """
+        Overridden to enforce singleton. POST will update the record with ID 1.
+        """
+        instance, _ = EmailConfiguration.objects.get_or_create(id=1)
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=['post'], url_path='test-connection')
+    def test_connection(self, request):
+        """
+        Tests the SMTP connection with the provided settings (without saving them).
+        """
+        data = request.data
+        host = data.get('email_host')
+        port = data.get('email_port')
+        username = data.get('email_username')
+        password = data.get('email_password')
+        use_tls = data.get('use_tls', True)
+        use_ssl = data.get('use_ssl', False)
+        from_email = data.get('email_from_address')
+        from_name = data.get('email_from_name', 'Test Sender')
+
+        if not all([host, port, username, password, from_email]):
+            return Response({"error": "Missing required fields for testing connection."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            connection = get_connection(
+                host=host,
+                port=port,
+                username=username,
+                password=password,
+                use_tls=use_tls,
+                use_ssl=use_ssl,
+                timeout=10
+            )
+            
+            # Send a test email
+            subject = "SMTP Test Connection - KC Real Estate Media"
+            message_body = f"This is a test email to verify your SMTP settings.\n\nSent from: {from_name} <{from_email}>"
+            
+            email = EmailMessage(
+                subject,
+                message_body,
+                f"{from_name} <{from_email}>",
+                [from_email], # Send to self
+                connection=connection
+            )
+            email.send()
+            
+            return Response({"message": "Test connection successful! Check your inbox."}, status=status.HTTP_200_OK)
+        except Exception as e:
+            print(f"SMTP Test Failed: {str(e)}")
+            traceback.print_exc()
+            return Response({"error": f"Connection failed: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+
+class EmailTemplateViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for managing email templates.
+    """
+    queryset = EmailTemplate.objects.all()
+    serializer_class = EmailTemplateSerializer
+    permission_classes = [permissions.IsAdminUser]
+    lookup_field = 'slug'

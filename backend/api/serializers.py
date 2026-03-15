@@ -1,6 +1,23 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import Service, GalleryImage, Package, BookingRequest, ClientShoot, Photographer, PhotographerSlot, SiteMedia
+from .models import (
+    Service, GalleryImage, Package, BookingRequest, 
+    ClientShoot, Photographer, PhotographerSlot, 
+    SiteMedia, EmailConfiguration, EmailTemplate
+)
+
+class EmailTemplateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EmailTemplate
+        fields = '__all__'
+
+class EmailConfigurationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EmailConfiguration
+        fields = '__all__'
+        extra_kwargs = {
+            'email_password': {'write_only': True}
+        }
 
 class ServiceSerializer(serializers.ModelSerializer):
     class Meta:

@@ -1,11 +1,32 @@
 import os
 import resend
 from django.conf import settings
+from django.core.mail import get_connection, EmailMessage
+from api.models import EmailConfiguration, EmailTemplate
+import re
+
+def get_email_connection():
+    """
+    Returns a configured SMTP connection if an active EmailConfiguration exists.
+    Otherwise returns None.
+    """
+    try:
+        config = EmailConfiguration.objects.filter(is_active=True).first()
+        if config:
+            return get_connection(
+                host=config.email_host,
+                port=config.email_port,
+                username=config.email_username,
+                password=config.email_password,
+                use_tls=config.use_tls,
+                use_ssl=config.use_ssl
+            ), config
+    except Exception as e:
+        print(f"Error fetching email configuration: {e}")
+    return None, None
 
 def _get_email_template(title, content_html, button_text=None, button_url=None):
-    """
-    Returns a consistent, professional HTML layout for all system emails.
-    """
+    # (Remains the same as before)
     button_html = ""
     if button_text and button_url:
         button_html = f"""
@@ -49,93 +70,143 @@ def _get_email_template(title, content_html, button_text=None, button_url=None):
     </html>
     """
 
-def send_photographer_invite_email(email, name, invite_link):
+def send_email_dynamic(subject, recipient_email, html_content, from_email=None, from_name=None):
     """
-    Send an email invitation to a new photographer using the Resend API.
+    Sends an email using either the configured SMTP backend or Resend as a fallback.
     """
+    connection, config = get_email_connection()
+    
+    if connection:
+        try:
+            email_from = f"{from_name or config.email_from_name} <{from_email or config.email_from_address}>"
+            email = EmailMessage(
+                subject,
+                html_content,
+                email_from,
+                [recipient_email],
+                connection=connection
+            )
+            email.content_subtype = "html"
+            email.send()
+            print(f"Email '{subject}' sent successfully to {recipient_email} via SMTP.")
+            return True
+        except Exception as e:
+            print(f"Failed to send email via SMTP: {e}. Falling back to Resend...")
+
+    # Fallback to Resend
     resend.api_key = os.environ.get('RESEND_API_KEY')
     if not resend.api_key:
-        print("Warning: RESEND_API_KEY is not set. Email not sent.")
+        print("Warning: Neither SMTP nor Resend is configured. Email not sent.")
         return False
 
-    from_email = os.environ.get('RESEND_FROM_EMAIL', 'onboarding@resend.dev')
+    resend_from = os.environ.get('RESEND_FROM_EMAIL', 'onboarding@resend.dev')
+    try:
+        response = resend.Emails.send({
+            "from": resend_from,
+            "to": recipient_email,
+            "subject": subject,
+            "html": html_content
+        })
+        print(f"Email '{subject}' sent successfully to {recipient_email} via Resend. Resend ID: {response.get('id')}")
+        return True
+    except Exception as e:
+        print(f"Failed to send email via Resend: {e}")
+        return False
 
-    content_html = f"""
+def _render_template(body, context):
+    """
+    Replaces {variable} placeholders in the body with context values.
+    """
+    for key, value in context.items():
+        body = body.replace(f"{{{key}}}", str(value))
+    return body
+
+def get_template_content(slug, default_subject, default_body, context=None):
+    """
+    Fetches a template from the database and renders it with context.
+    Returns (subject, rendered_body).
+    """
+    try:
+        template = EmailTemplate.objects.filter(slug=slug).first()
+        if template:
+            subject = _render_template(template.subject, context or {})
+            body = _render_template(template.body, context or {})
+            return subject, body
+    except Exception as e:
+        print(f"Error fetching template {slug}: {e}")
+    
+    return default_subject, _render_template(default_body, context or {})
+
+def send_photographer_invite_email(email, name, invite_link):
+    default_body = """
         <p>Hi {name},</p>
         <p>You have been invited to join the <strong>KC Real Estate Media</strong> team as a photographer.</p>
         <p>We're excited to have you on board! Please click the button below to accept your invitation, set your password, and access your photographer portal where you can manage your schedule and uploads.</p>
     """
-    
-    html_content = _get_email_template(
-        "Welcome to the Team",
-        content_html,
-        "Accept Invitation & Set Password",
-        invite_link
+    subject, content_html = get_template_content(
+        "photographer-invite", 
+        "Invitation: Join the KC Real Estate Media Team", 
+        default_body, 
+        {"name": name}
     )
-
-    try:
-        response = resend.Emails.send({
-            "from": from_email,
-            "to": email,
-            "subject": "Invitation: Join the KC Real Estate Media Team",
-            "html": html_content
-        })
-        print(f"Invite email sent successfully to {email}. Resend ID: {response.get('id')}")
-        return True
-    except Exception as e:
-        print(f"Failed to send invite email to {email}: {e}")
-        return False
+    html_content = _get_email_template("Welcome to the Team", content_html, "Accept Invitation & Set Password", invite_link)
+    return send_email_dynamic(subject, email, html_content)
 
 def _send_mocked_email(subject, html_content):
-    resend.api_key = os.environ.get('RESEND_API_KEY')
-    if not resend.api_key:
-        print("Warning: RESEND_API_KEY is not set. Email not sent.")
-        return False
-    from_email = os.environ.get('RESEND_FROM_EMAIL', 'onboarding@resend.dev')
+    # Keep the "mocked" behavior for now as per project context, 
+    # but use the dynamic sender.
     to_email = "swakar88@gmail.com" # MOCKED FOR TESTING
-
-    try:
-        response = resend.Emails.send({
-            "from": from_email,
-            "to": to_email,
-            "subject": subject,
-            "html": html_content
-        })
-        print(f"Email '{subject}' sent successfully to {to_email}. Resend ID: {response.get('id')}")
-        return True
-    except Exception as e:
-        print(f"Failed to send email '{subject}' to {to_email}: {e}")
-        return False
+    return send_email_dynamic(subject, to_email, html_content)
 
 def send_booking_created_emails(booking, customer_email, photographer_email, photographer_name):
-    # Admin
-    admin_content = f"""
+    context = {
+        "property_address": booking.property_details,
+        "customer_name": f"{booking.first_name} {booking.last_name}",
+        "customer_email": booking.email,
+        "package_name": booking.package_interest,
+        "shoot_date": booking.shoot_date,
+        "time_slot": booking.time_slot,
+        "photographer_name": photographer_name or 'Unassigned'
+    }
+
+    # Admin Alert
+    admin_subject, admin_content = get_template_content(
+        "new-booking-alert",
+        f"New Booking Received - {booking.property_details[:50]}",
+        """
         <p>A new booking request has been received and automatically processed.</p>
         <ul style="list-style: none; padding: 0;">
-            <li><strong>Property:</strong> {booking.property_details}</li>
-            <li><strong>Client:</strong> {booking.first_name} {booking.last_name} ({booking.email})</li>
-            <li><strong>Package:</strong> {booking.package_interest}</li>
-            <li><strong>Date:</strong> {booking.shoot_date} at {booking.time_slot}</li>
-            <li><strong>Assigned:</strong> {photographer_name or 'Unassigned'}</li>
+            <li><strong>Property:</strong> {property_address}</li>
+            <li><strong>Client:</strong> {customer_name} ({customer_email})</li>
+            <li><strong>Package:</strong> {package_name}</li>
+            <li><strong>Date:</strong> {shoot_date} at {time_slot}</li>
+            <li><strong>Assigned:</strong> {photographer_name}</li>
         </ul>
-    """
+        """,
+        context
+    )
     _send_mocked_email(
-        subject=f"New Booking Received - {booking.property_details[:50]}",
+        subject=admin_subject,
         html_content=_get_email_template("New Booking Alert", admin_content)
     )
 
-    # Customer
-    customer_content = f"""
-        <p>Hi {booking.first_name},</p>
-        <p>Your booking request for <strong>{booking.property_details[:100]}</strong> has been received and confirmed!</p>
-        <p>Our photographer {photographer_name or 'will be assigned shortly'}. We look forward to capturing your property.</p>
-    """
+    # Customer Confirmation
+    cust_subject, cust_content = get_template_content(
+        "booking-confirmation",
+        "Booking Confirmation - KC Real Estate Media",
+        """
+        <p>Hi {customer_name},</p>
+        <p>Your booking request for <strong>{property_address}</strong> has been received and confirmed!</p>
+        <p>Our photographer {photographer_name}. We look forward to capturing your property.</p>
+        """,
+        context
+    )
     _send_mocked_email(
-        subject="Booking Confirmation - KC Real Estate Media",
-        html_content=_get_email_template("Booking Confirmed", customer_content)
+        subject=cust_subject,
+        html_content=_get_email_template("Booking Confirmed", cust_content)
     )
 
-    # Photographer
+    # Photographer Notification
     if photographer_email:
         photog_content = f"""
             <p>Hi {photographer_name},</p>
@@ -150,48 +221,60 @@ def send_booking_created_emails(booking, customer_email, photographer_email, pho
         )
 
 def send_content_uploaded_emails(shoot_address):
-    # Admin
     admin_content = f"<p>Media has been uploaded for the property at <strong>{shoot_address}</strong>. It is now ready for client delivery.</p>"
     _send_mocked_email(
         subject=f"Shoot Media Uploaded - {shoot_address[:50]}",
         html_content=_get_email_template("Media Uploaded", admin_content)
     )
 
-    # Customer
-    customer_content = f"""
-        <p>Great news! The media for <strong>{shoot_address}</strong> has been processed and is ready.</p>
+    # Customer notification
+    subject, content_html = get_template_content(
+        "media-ready",
+        "Your Media is Ready!",
+        """
+        <p>Great news! The media for <strong>{property_address}</strong> has been processed and is ready.</p>
         <p>You will receive an invoice shortly. Once paid, your download links will be automatically enabled on your dashboard.</p>
-    """
+        """,
+        {"property_address": shoot_address}
+    )
     _send_mocked_email(
-        subject="Your Media is Ready!",
-        html_content=_get_email_template("Processing Complete", customer_content)
+        subject=subject,
+        html_content=_get_email_template("Processing Complete", content_html)
     )
 
 def send_invoice_generated_email(shoot_address, payment_link):
-    # Customer
-    content = f"""
-        <p>The invoice for your recent shoot at <strong>{shoot_address}</strong> is now ready for payment.</p>
+    subject, content_html = get_template_content(
+        "invoice-ready",
+        f"Invoice for Your Recent Shoot - {shoot_address[:50]}",
+        """
+        <p>The invoice for your recent shoot at <strong>{property_address}</strong> is now ready for payment.</p>
         <p>Please click the button below to complete your payment securely via Stripe. Your media will be available for download immediately after payment.</p>
-    """
+        """,
+        {"property_address": shoot_address}
+    )
     _send_mocked_email(
-        subject=f"Invoice for Your Recent Shoot - {shoot_address[:50]}",
-        html_content=_get_email_template("Invoice Ready", content, "Pay Securely via Stripe", payment_link)
+        subject=subject,
+        html_content=_get_email_template("Invoice Ready", content_html, "Pay Securely via Stripe", payment_link)
     )
 
 def send_payment_confirmed_emails(shoot_address, dashboard_link):
-    # Admin
     admin_content = f"<p>Payment has been successfully received for <strong>{shoot_address}</strong>. Media access has been granted to the client.</p>"
     _send_mocked_email(
         subject=f"Payment Received - {shoot_address[:50]}",
         html_content=_get_email_template("Payment Captured", admin_content)
     )
 
-    # Customer
-    customer_content = f"""
+    # Customer notification
+    subject, content_html = get_template_content(
+        "payment-confirmed",
+        "Payment Receipt & Media Download Link",
+        """
         <p>Thank you for your payment!</p>
-        <p>Payment for <strong>{shoot_address}</strong> has been confirmed. You can now access and download all high-resolution media directly from your dashboard.</p>
-    """
+        <p>Payment for <strong>{property_address}</strong> has been confirmed. You can now access and download all high-resolution media directly from your dashboard.</p>
+        """,
+        {"property_address": shoot_address}
+    )
     _send_mocked_email(
-        subject="Payment Receipt & Media Download Link",
-        html_content=_get_email_template("Payment Successful", customer_content, "Go to Dashboard", dashboard_link)
+        subject=subject,
+        html_content=_get_email_template("Payment Successful", content_html, "Go to Dashboard", dashboard_link)
     )

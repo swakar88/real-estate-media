@@ -13,7 +13,11 @@ import {
   X,
   Users,
   MonitorPlay,
-  UserCircle
+  UserCircle,
+  Mail,
+  FileText,
+  Sun,
+  Moon
 } from "lucide-react";
 
 export default function AdminLayout({
@@ -65,6 +69,27 @@ export default function AdminLayout({
     verifyAdmin();
   }, [router]);
 
+  const [isDark, setIsDark] = useState(true);
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("admin-theme");
+    if (savedTheme) {
+      setIsDark(savedTheme === "dark");
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("admin-theme", "dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("admin-theme", "light");
+    }
+  }, [isDark]);
+
+  const toggleTheme = () => setIsDark(!isDark);
+
   const handleLogout = () => {
     localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");
@@ -87,10 +112,12 @@ export default function AdminLayout({
     { name: "Clients", href: "/admin-portal/clients", icon: UserCircle },
     { name: "Portfolio", href: "/admin-portal/gallery", icon: ImageIcon },
     { name: "Site Media", href: "/admin-portal/site-media", icon: MonitorPlay },
+    { name: "Email Config", href: "/admin-portal/email-config", icon: Mail },
+    { name: "Email Templates", href: "/admin-portal/email-templates", icon: FileText },
   ];
 
   return (
-    <div className="flex h-screen bg-muted/20 overflow-hidden">
+    <div className="flex h-screen bg-muted/20 overflow-hidden text-foreground">
       
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
@@ -108,7 +135,7 @@ export default function AdminLayout({
       `}>
         <div className="h-full flex flex-col">
           <div className="flex items-center justify-between px-6 py-6 border-b border-border/50">
-            <span className="font-extrabold text-xl tracking-tight">Admin<span className="text-primary">Portal</span></span>
+            <span className="font-extrabold text-xl tracking-tight text-foreground transition-colors duration-300">Admin<span className="text-primary">Portal</span></span>
             <button className="md:hidden text-muted-foreground hover:text-foreground" onClick={() => setSidebarOpen(false)}>
               <X className="h-5 w-5" />
             </button>
@@ -124,35 +151,55 @@ export default function AdminLayout({
                   href={link.href}
                   onClick={() => setSidebarOpen(false)}
                   className={`
-                    flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all
+                    flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all group
                     ${isActive 
-                      ? "bg-primary text-primary-foreground shadow-md" 
+                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25 scale-[1.02]" 
                       : "text-muted-foreground hover:bg-muted hover:text-foreground hover:translate-x-1"
                     }
                   `}
                 >
-                  <Icon className="h-5 w-5" />
+                  <Icon className={`h-5 w-5 transition-transform duration-300 ${isActive ? "" : "group-hover:rotate-12"}`} />
                   {link.name}
                 </Link>
               );
             })}
           </div>
 
-          <div className="p-4 border-t border-border/50">
-            <div className="flex items-center gap-3 mb-4 px-2">
-              <div className="h-8 w-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-sm">
-                {adminUser?.first_name?.[0] || "A"}
+          <div className="p-4 border-t border-border/50 space-y-4">
+            <div className="bg-muted px-2 py-2 rounded-2xl">
+              <button 
+                onClick={toggleTheme}
+                className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all bg-card/50 shadow-sm border border-border/10"
+              >
+                <div className="flex items-center gap-2">
+                  <div className={`p-1.5 rounded-lg ${isDark ? "bg-primary/20 text-primary" : "bg-orange-100 text-orange-600"}`}>
+                    {isDark ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+                  </div>
+                  <span className="text-foreground">{isDark ? "Dark Theme" : "Light Theme"}</span>
+                </div>
+                <div className={`w-10 h-6 rounded-full p-1 transition-colors duration-300 ${isDark ? 'bg-primary' : 'bg-slate-300 shadow-inner'}`}>
+                  <div className={`w-4 h-4 rounded-full bg-white shadow-md transform transition-transform duration-300 ${isDark ? 'translate-x-4' : 'translate-x-0'}`} />
+                </div>
+              </button>
+            </div>
+
+            <div className="flex items-center gap-3 py-2 px-2 border-t border-border/10">
+              <div className="h-10 w-10 rounded-2xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center font-black text-lg overflow-hidden relative group">
+                <span className="relative z-10">{adminUser?.first_name?.[0] || "A"}</span>
+                <div className="absolute inset-0 bg-primary/5 group-hover:bg-primary/10 transition-colors"></div>
               </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-medium leading-none">{adminUser?.first_name || adminUser?.username}</span>
-                <span className="text-xs text-muted-foreground mt-1">Administrator</span>
+              <div className="flex flex-col min-w-0">
+                <span className="text-sm font-bold truncate text-foreground">{adminUser?.first_name || adminUser?.username}</span>
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-70">Administrator</span>
               </div>
             </div>
             <button 
               onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-destructive hover:bg-destructive/10 transition-all active:scale-95"
             >
-              <LogOut className="h-4 w-4" />
+              <div className="p-1.5 rounded-lg bg-destructive/10">
+                <LogOut className="h-4 w-4" />
+              </div>
               Sign Out
             </button>
           </div>
