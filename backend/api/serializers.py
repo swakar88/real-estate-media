@@ -78,6 +78,7 @@ class ClientShootSerializer(serializers.ModelSerializer):
     client_name = serializers.CharField(source='client.get_full_name', read_only=True)
     photographer_name = serializers.CharField(source='photographer.user.get_full_name', read_only=True)
     media_items = MediaItemSerializer(many=True, read_only=True)
+    thumbnail_url = serializers.SerializerMethodField()
     
     class Meta:
         model = ClientShoot
@@ -86,9 +87,29 @@ class ClientShootSerializer(serializers.ModelSerializer):
             'r2_object_key', 'status', 'notes', 'photographer', 'photographer_name',
             'beds', 'baths', 'sqft', 'property_price',
             'amount_due', 'payment_status', 'stripe_payment_link', 'created_at',
-            'media_items'
+            'media_items', 'thumbnail_url'
         ]
         read_only_fields = ['created_at', 'stripe_payment_link']
+
+    def get_thumbnail_url(self, obj):
+        # Pick the first processed photo
+        first_photo = obj.media_items.filter(media_type='photo', is_processed=True).order_by('order').first()
+        if not first_photo:
+            # Try video if no photo? User said "first image", so maybe just photos.
+            return None
+            
+        from .utils.r2_utils import generate_presigned_url
+        import os
+        
+        is_paid = obj.payment_status.lower() == 'paid' if obj.payment_status else False
+        
+        if is_paid:
+            return generate_presigned_url(first_photo.gcs_object_key)
+        else:
+            # Watermarked URL
+            filename = os.path.basename(first_photo.gcs_object_key)
+            wm_key = f"orders/shoot_{obj.id}/watermarked/{filename}"
+            return generate_presigned_url(wm_key)
 
 
 class PhotographerSerializer(serializers.ModelSerializer):

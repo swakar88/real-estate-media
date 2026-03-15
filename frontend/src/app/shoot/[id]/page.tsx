@@ -119,12 +119,18 @@ export default function PropertyPage() {
   };
 
   const downloadAll = async (type: string = 'high-res') => {
-    const items = type === 'video' ? videos : photos; // Assuming 'videos' and 'photos' are defined in scope
-    for (let i = 0; i < items.length; i++) {
-        await triggerDownload(items[i].id, type); 
-        // Small delay between downloads to prevent browser blocking
-        await new Promise(resolve => setTimeout(resolve, i === 0 ? 0 : 500));
+    if (type === 'video') {
+        const items = videos;
+        for (let i = 0; i < items.length; i++) {
+            await triggerDownload(items[i].id, type); 
+            await new Promise(resolve => setTimeout(resolve, i === 0 ? 0 : 500));
+        }
+        return;
     }
+
+    // For photos, use the new backend ZIP endpoint
+    const url = `${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/shoots/${id}/download-zip/?type=${type}`;
+    window.open(url, '_blank');
   };
 
   const getExpiryDate = () => {
@@ -301,7 +307,7 @@ export default function PropertyPage() {
                    <>
                      {videos[0].url.includes('.mp4') || videos[0].url.includes('.mov') || videos[0].url.includes('upload') ? (
                        <video 
-                         src={videos[0].watermarked_url || videos[0].url} 
+                         src={shoot.payment_status === 'paid' ? videos[0].url : (videos[0].watermarked_url || videos[0].url)} 
                          className="w-full h-full object-cover"
                          controls
                          controlsList="nodownload"

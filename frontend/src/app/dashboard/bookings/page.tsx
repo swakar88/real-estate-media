@@ -147,9 +147,17 @@ export default function BookingsPage() {
               <div key={shoot.id} className="group bg-card rounded-[2.5rem] border border-border/40 shadow-sm hover:shadow-2xl hover:shadow-primary/5 hover:-translate-y-1 transition-all duration-500 overflow-hidden flex flex-col h-full">
                 {/* Image / Header area */}
                 <div className="aspect-[16/9] w-full bg-muted relative overflow-hidden group-hover:brightness-110 transition-all duration-500">
-                  <div className="absolute inset-0 flex items-center justify-center text-muted-foreground/20 group-hover:scale-110 transition-transform duration-700">
-                    <Camera className="h-20 w-20" />
-                  </div>
+                  {shoot.thumbnail_url ? (
+                    <img 
+                      src={shoot.thumbnail_url} 
+                      alt={shoot.property_address}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center text-muted-foreground/20 group-hover:scale-110 transition-transform duration-700">
+                      <Camera className="h-20 w-20" />
+                    </div>
+                  )}
                   <div className={`absolute top-4 right-4 px-4 py-2 rounded-full backdrop-blur-md shadow-lg flex items-center gap-2 border border-white/10 ${status.color}`}>
                     <StatusIcon className="h-3.5 w-3.5" />
                     <span className="text-[10px] font-black uppercase tracking-widest">{status.label}</span>

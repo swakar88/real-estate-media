@@ -10,6 +10,8 @@ import stripe
 import os
 import threading
 from datetime import datetime
+import zipfile
+import io
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 from .models import (
@@ -183,12 +185,12 @@ class ClientShootViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_permissions(self):
-        if self.action in ['public_view', 'get_download_url']:
+        if self.action in ['public_view', 'get_download_url', 'download_zip']:
             return [AllowAny()]
         return super().get_permissions()
 
     def get_queryset(self):
-        if self.action in ['public_view', 'get_download_url']:
+        if self.action in ['public_view', 'get_download_url', 'download_zip']:
             return ClientShoot.objects.all().order_by('-created_at')
 
         if self.request.user.is_staff:
@@ -480,6 +482,53 @@ class ClientShootViewSet(viewsets.ModelViewSet):
             return Response({"download_url": presigned_url})
             
         return Response({"detail": "Failed to generate download url."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=True, methods=['get'], url_path='download-zip')
+    def download_zip(self, request, pk=None):
+        shoot = self.get_object()
+        download_type = request.query_params.get('type', 'high-res') # high-res, optimized
+        
+        # Check payment for zip download
+        is_paid = shoot.payment_status.lower() == 'paid' if shoot.payment_status else False
+        if not is_paid and not request.user.is_staff:
+            return Response({"error": "Payment required for full download"}, status=402)
+            
+        media_items = MediaItem.objects.filter(shoot=shoot, media_type='photo')
+        if not media_items.exists():
+            return Response({"error": "No photos found for this shoot"}, status=404)
+            
+        from .utils.r2_utils import get_object_content, get_boto3_client
+        
+        # Create ZIP in memory
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            for item in media_items:
+                obj_key = item.gcs_object_key
+                
+                # Check for optimized version if requested
+                if download_type == 'optimized':
+                    filename = os.path.basename(obj_key)
+                    opt_key = f"orders/shoot_{shoot.id}/watermarked/{filename}"
+                    # Check if it exists
+                    try:
+                        s3 = get_boto3_client()
+                        s3.head_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=opt_key)
+                        obj_key = opt_key
+                    except Exception:
+                        pass # Fallback to high-res
+
+                content = get_object_content(obj_key)
+                if content:
+                    # Use the original filename or the object key basename
+                    file_name = os.path.basename(obj_key)
+                    zip_file.writestr(file_name, content)
+        
+        zip_buffer.seek(0)
+        
+        response = HttpResponse(zip_buffer.read(), content_type='application/zip')
+        zip_filename = f"shoot_{shoot.id}_{download_type}.zip"
+        response['Content-Disposition'] = f'attachment; filename="{zip_filename}"'
+        return response
 
 
 class MediaItemViewSet(viewsets.ModelViewSet):

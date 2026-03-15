@@ -63,3 +63,17 @@ def generate_presigned_url(object_key, expires_in=86400, as_attachment=False, fi
     except Exception as e:
         print(f"Error generating presigned url: {e}")
         return None
+def get_object_content(object_key):
+    """
+    Fetch the content of an object from R2.
+    """
+    s3_client = get_boto3_client()
+    try:
+        response = s3_client.get_object(
+            Bucket=settings.AWS_STORAGE_BUCKET_NAME,
+            Key=object_key
+        )
+        return response['Body'].read()
+    except Exception as e:
+        print(f"Error fetching object content: {e}")
+        return None
