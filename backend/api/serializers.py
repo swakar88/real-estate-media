@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from .models import (
     Service, GalleryImage, Package, BookingRequest, 
     ClientShoot, Photographer, PhotographerSlot, 
-    SiteMedia, EmailConfiguration, EmailTemplate
+    SiteMedia, EmailConfiguration, EmailTemplate, MediaItem
 )
 
 class EmailTemplateSerializer(serializers.ModelSerializer):
@@ -39,14 +39,56 @@ class BookingRequestSerializer(serializers.ModelSerializer):
         model = BookingRequest
         fields = '__all__'
 
+class MediaItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MediaItem
+        fields = ['id', 'media_type', 'url', 'watermarked_url', 'gcs_object_key', 'is_processed', 'order', 'created_at']
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        # For private buckets, generate fresh signed URLs for the frontend
+        if instance.gcs_object_key:
+            try:
+                from .utils.r2_utils import generate_presigned_url
+                import os
+                
+                # Sign the main URL
+                ret['url'] = generate_presigned_url(instance.gcs_object_key)
+                
+                # Sign the watermarked URL only if it's already processed
+                if instance.is_processed and instance.media_type in ['photo', 'video']:
+                    # The watermarked version is stored in orders/shoot_{id}/watermarked/{filename}
+                    filename = os.path.basename(instance.gcs_object_key)
+                    wm_key = f"orders/shoot_{instance.shoot.id}/watermarked/{filename}"
+                    
+                    # For extra safety, we could check if watermarked exists, 
+                    # but typically is_processed flag is sufficient.
+                    ret['watermarked_url'] = generate_presigned_url(wm_key)
+                else:
+                    ret['watermarked_url'] = None
+            except Exception as e:
+                # If signing fails, ensure we don't return a broken string
+                ret['url'] = None
+                ret['watermarked_url'] = None
+                print(f"Error signing URL in serializer for key {instance.gcs_object_key}: {e}")
+                
+        return ret
+
 class ClientShootSerializer(serializers.ModelSerializer):
     client_name = serializers.CharField(source='client.get_full_name', read_only=True)
-    client_email = serializers.EmailField(source='client.email', read_only=True)
-
+    photographer_name = serializers.CharField(source='photographer.user.get_full_name', read_only=True)
+    media_items = MediaItemSerializer(many=True, read_only=True)
+    
     class Meta:
         model = ClientShoot
-        fields = '__all__'
-        read_only_fields = ['client']
+        fields = [
+            'id', 'client', 'client_name', 'property_address', 'shoot_date', 
+            'r2_object_key', 'status', 'notes', 'photographer', 'photographer_name',
+            'beds', 'baths', 'sqft', 'property_price',
+            'amount_due', 'payment_status', 'stripe_payment_link', 'created_at',
+            'media_items'
+        ]
+        read_only_fields = ['created_at', 'stripe_payment_link']
 
 
 class PhotographerSerializer(serializers.ModelSerializer):

@@ -34,18 +34,29 @@ def generate_presigned_put(object_key, file_type, expires_in=3600):
         print(f"Error generating presigned put: {e}")
         return None
 
-def generate_presigned_url(object_key, expires_in=86400):
+def generate_presigned_url(object_key, expires_in=86400, as_attachment=False, filename=None):
     """
-    Generate a presigned GET url for downloading a file securely
+    Generate a presigned GET url for downloading a file securely.
+    If as_attachment is True, it sets Content-Disposition to force download.
     """
     s3_client = get_boto3_client()
     try:
+        params = {
+            'Bucket': settings.AWS_STORAGE_BUCKET_NAME,
+            'Key': object_key
+        }
+        
+        if as_attachment:
+            disp = 'attachment'
+            if filename:
+                # Basic cleaning of filename to avoid header issues
+                clean_name = filename.replace('"', '').replace("'", "")
+                disp = f'attachment; filename="{clean_name}"'
+            params['ResponseContentDisposition'] = disp
+
         response = s3_client.generate_presigned_url(
             'get_object',
-            Params={
-                'Bucket': settings.AWS_STORAGE_BUCKET_NAME,
-                'Key': object_key
-            },
+            Params=params,
             ExpiresIn=expires_in
         )
         return response
