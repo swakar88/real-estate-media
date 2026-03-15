@@ -182,8 +182,13 @@ class ClientShootViewSet(viewsets.ModelViewSet):
     serializer_class = ClientShootSerializer
     permission_classes = [IsAuthenticated]
 
+    def get_permissions(self):
+        if self.action in ['public_view', 'get_download_url']:
+            return [AllowAny()]
+        return super().get_permissions()
+
     def get_queryset(self):
-        if self.action == 'public_view':
+        if self.action in ['public_view', 'get_download_url']:
             return ClientShoot.objects.all().order_by('-created_at')
 
         if self.request.user.is_staff:

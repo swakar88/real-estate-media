@@ -79,16 +79,26 @@ export default function AdminLayout({
   }, []);
 
   useEffect(() => {
+    const root = window.document.documentElement;
+    const body = window.document.body;
+    
+    // Clean up html tag
+    root.classList.remove("dark");
+    
     if (isDark) {
-      document.documentElement.classList.add("dark");
+      body.classList.add("dark");
       localStorage.setItem("admin-theme", "dark");
     } else {
-      document.documentElement.classList.remove("dark");
+      body.classList.remove("dark");
       localStorage.setItem("admin-theme", "light");
     }
+    console.log("Admin Theme updated (on body):", isDark ? "dark" : "light");
   }, [isDark]);
 
-  const toggleTheme = () => setIsDark(!isDark);
+  const toggleTheme = () => {
+    console.log("Toggling admin theme...");
+    setIsDark(prev => !prev);
+  };
 
   const handleLogout = () => {
     localStorage.removeItem("access_token");

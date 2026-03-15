@@ -100,7 +100,7 @@ export default function PropertyPage() {
   const videos: MediaItem[] = shoot?.media_items?.filter((i: MediaItem) => i.media_type === 'video' && i.url) || [];
   const tours: MediaItem[] = shoot?.media_items?.filter((i: MediaItem) => i.media_type === 'virtual_tour' && i.url) || [];
 
-  const triggerDownload = async (itemId: number, type: string = 'high-res') => {
+  const triggerDownload = async (itemId: string | number, type: string = 'high-res') => {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/shoots/${id}/get-download-url/?item_id=${itemId}&type=${type}`);
       if (res.ok) {
@@ -121,7 +121,7 @@ export default function PropertyPage() {
   const downloadAll = async (type: string = 'high-res') => {
     const items = type === 'video' ? videos : photos; // Assuming 'videos' and 'photos' are defined in scope
     for (let i = 0; i < items.length; i++) {
-        await triggerDownload(items[i].id as number, type); // Cast id to number
+        await triggerDownload(items[i].id, type); 
         // Small delay between downloads to prevent browser blocking
         await new Promise(resolve => setTimeout(resolve, i === 0 ? 0 : 500));
     }
@@ -281,7 +281,7 @@ export default function PropertyPage() {
                      onClick={() => setSelectedImage(idx)}
                    >
                      <img 
-                       src={item.watermarked_url || item.url} 
+                       src={shoot.payment_status === 'paid' ? item.url : (item.watermarked_url || item.url)} 
                        alt="" 
                        className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
                        onContextMenu={(e) => e.preventDefault()}
@@ -486,7 +486,7 @@ export default function PropertyPage() {
                             </div>
                          </div>
                          <button 
-                           onClick={() => window.open(videos[0].url, '_blank')}
+                           onClick={() => triggerDownload(videos[0].id, 'video')}
                            className="w-full sm:w-auto px-8 py-4 bg-primary text-white text-xs font-black uppercase tracking-widest rounded-2xl border border-white/20 hover:scale-105 transition-all shadow-xl shadow-primary/20"
                          >
                             Download

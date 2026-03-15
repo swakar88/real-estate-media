@@ -7,24 +7,45 @@ import { useState, useEffect } from 'react';
 export default function Navbar() {
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-
+  const [isPhotographer, setIsPhotographer] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     // Check auth status on mount
     const token = localStorage.getItem('access_token');
     setIsLoggedIn(!!token);
+
+    if (token) {
+      fetchUserRole(token);
+    }
   }, []);
+
+  const fetchUserRole = async (token: string) => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/me/`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setIsPhotographer(data.is_photographer || data.is_staff);
+      }
+    } catch (err) {
+      console.error("Error fetching user role:", err);
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     setIsLoggedIn(false);
+    setIsPhotographer(false);
     setIsMobileMenuOpen(false);
     router.push('/login');
   };
 
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
+
+  const showPublicLinks = !isPhotographer;
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -33,9 +54,13 @@ export default function Navbar() {
           <span className="font-bold text-xl tracking-wider uppercase">KC Real<span className="text-primary"> Estate Media</span></span>
         </Link>
         <nav className="hidden md:flex items-center space-x-8 text-sm font-medium">
-          <Link href="/services" className="transition-colors hover:text-primary">Real Estate & Services</Link>
-          <Link href="/gallery" className="transition-colors hover:text-primary">Gallery & Video</Link>
-          <Link href="/about" className="transition-colors hover:text-primary">About Us</Link>
+          {showPublicLinks && (
+            <>
+              <Link href="/services" className="transition-colors hover:text-primary">Real Estate & Services</Link>
+              <Link href="/gallery" className="transition-colors hover:text-primary">Gallery & Video</Link>
+              <Link href="/about" className="transition-colors hover:text-primary">About Us</Link>
+            </>
+          )}
         </nav>
         <div className="flex items-center space-x-4">
           {isLoggedIn ? (
@@ -51,9 +76,11 @@ export default function Navbar() {
             </Link>
           )}
           
-          <Link href="/book" className="hidden md:inline-flex h-10 items-center justify-center rounded-md bg-primary px-8 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50">
-            Book Online
-          </Link>
+          {showPublicLinks && (
+            <Link href="/book" className="hidden md:inline-flex h-10 items-center justify-center rounded-md bg-primary px-8 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50">
+              Book Online
+            </Link>
+          )}
           {/* Mobile Menu Button */}
           <button 
             className="md:hidden p-2 text-foreground focus:outline-none"
@@ -82,9 +109,13 @@ export default function Navbar() {
       {isMobileMenuOpen && (
         <div className="md:hidden border-t border-border/40 bg-background absolute top-20 left-0 w-full shadow-lg">
           <nav className="flex flex-col p-4 space-y-4 text-sm font-medium">
-            <Link href="/services" onClick={closeMobileMenu} className="transition-colors hover:text-primary p-2">Real Estate & Services</Link>
-            <Link href="/gallery" onClick={closeMobileMenu} className="transition-colors hover:text-primary p-2">Gallery & Video</Link>
-            <Link href="/about" onClick={closeMobileMenu} className="transition-colors hover:text-primary p-2">About Us</Link>
+            {showPublicLinks && (
+              <>
+                <Link href="/services" onClick={closeMobileMenu} className="transition-colors hover:text-primary p-2">Real Estate & Services</Link>
+                <Link href="/gallery" onClick={closeMobileMenu} className="transition-colors hover:text-primary p-2">Gallery & Video</Link>
+                <Link href="/about" onClick={closeMobileMenu} className="transition-colors hover:text-primary p-2">About Us</Link>
+              </>
+            )}
             
             <div className="h-px w-full bg-border/40 my-2"></div>
             
@@ -101,9 +132,11 @@ export default function Navbar() {
               </Link>
             )}
             
-            <Link href="/book" onClick={closeMobileMenu} className="flex h-10 items-center justify-center rounded-md bg-primary px-8 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 mt-2">
-              Book Online
-            </Link>
+            {showPublicLinks && (
+              <Link href="/book" onClick={closeMobileMenu} className="flex h-10 items-center justify-center rounded-md bg-primary px-8 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 mt-2">
+                Book Online
+              </Link>
+            )}
           </nav>
         </div>
       )}

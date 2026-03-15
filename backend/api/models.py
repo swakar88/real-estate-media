@@ -60,6 +60,8 @@ class Photographer(models.Model):
     phone = models.CharField(max_length=20, blank=True)
     bio = models.TextField(blank=True)
     profile_image_url = models.URLField(max_length=500, blank=True, null=True, help_text="Unsplash URL or remote path")
+    equipment = models.TextField(blank=True, help_text="List of equipment used (e.g. Sony A7IV, RS3 Mini)")
+    social_links = models.JSONField(default=dict, blank=True, help_text="Social media handles (e.g. {'instagram': 'user', 'website': 'link'})")
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
@@ -138,6 +140,12 @@ class ClientShoot(models.Model):
     notes = models.TextField(blank=True)
     photographer = models.ForeignKey(Photographer, on_delete=models.SET_NULL, null=True, blank=True, related_name='client_shoots')
     
+    # Property Metadata (for realistic listing view)
+    beds = models.IntegerField(null=True, blank=True)
+    baths = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
+    sqft = models.IntegerField(null=True, blank=True)
+    property_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, help_text="Listing price of the property")
+    
     # Invoicing / Stripe Fields
     amount_due = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, help_text="Total amount for the shoot")
     payment_status = models.CharField(max_length=20, choices=PAYMENT_CHOICES, default='unpaid')
@@ -203,3 +211,28 @@ class EmailTemplate(models.Model):
     class Meta:
         verbose_name = "Email Template"
         verbose_name_plural = "Email Templates"
+
+class MediaItem(models.Model):
+    """
+    Stores individual media files (photos, videos, tours) for a shoot.
+    """
+    MEDIA_TYPE_CHOICES = [
+        ('photo', 'Photo'),
+        ('video', 'Video'),
+        ('virtual_tour', 'Virtual Tour'),
+    ]
+    
+    shoot = models.ForeignKey(ClientShoot, on_delete=models.CASCADE, related_name='media_items')
+    media_type = models.CharField(max_length=20, choices=MEDIA_TYPE_CHOICES)
+    url = models.URLField(max_length=1000, help_text="Public URL for full size or embedded content")
+    watermarked_url = models.URLField(max_length=1000, blank=True, null=True, help_text="URL for watermarked/low-res version")
+    gcs_object_key = models.CharField(max_length=500, blank=True, null=True, help_text="Google Cloud Storage object key")
+    order = models.IntegerField(default=0, help_text="Sort order for display")
+    is_processed = models.BooleanField(default=False, help_text="True if watermarked/compressed version is ready")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['order', 'created_at']
+
+    def __str__(self):
+        return f"{self.shoot.property_address} - {self.get_media_type_display()} ({self.id})"

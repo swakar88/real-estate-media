@@ -12,6 +12,7 @@ router.register(r'photographers', views.PhotographerViewSet, basename='photograp
 router.register(r'photographer/slots', views.PhotographerSlotViewSet, basename='photographer-slots')
 router.register(r'site-media', views.SiteMediaViewSet, basename='site-media')
 router.register(r'clients', views.ClientViewSet, basename='clients')
+router.register(r'media-items', views.MediaItemViewSet, basename='media-items')
 router.register(r'email-configuration', views.EmailConfigurationViewSet, basename='email-configuration')
 router.register(r'email-templates', views.EmailTemplateViewSet, basename='email-templates')
 
