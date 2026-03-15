@@ -82,7 +82,7 @@ export default function Login() {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/10 rounded-full blur-[120px] pointer-events-none"></div>
 
         <ScrollReveal className="w-full max-w-md px-4 relative z-10">
-          <div className="rounded-2xl border border-border/50 bg-card p-8 md:p-10 shadow-2xl backdrop-blur-sm">
+          <div className="rounded-[2.5rem] border border-primary/20 bg-card p-8 md:p-10 shadow-gold backdrop-blur-sm">
             <div className="text-center mb-8">
               <h1 className="text-3xl font-extrabold tracking-tight mb-2">
                 {isRegistering ? "Create Account" : "Agent Portal"}
@@ -160,22 +160,22 @@ export default function Login() {
               <button 
                 type="submit" 
                 disabled={loading}
-                className="w-full py-3 bg-primary text-primary-foreground font-bold rounded-md hover:bg-primary/90 transition-all shadow-md hover:shadow-lg disabled:opacity-50 flex justify-center items-center"
+                className="w-full py-4 bg-primary text-primary-foreground font-black text-xs uppercase tracking-widest rounded-2xl shadow-gold hover:shadow-gold-heavy hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 flex justify-center items-center"
               >
                 {loading ? (
                    <span className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"></span>
                 ) : (
-                   isRegistering ? "Create Account" : "Sign In"
+                   isRegistering ? "Create My Account" : "Sign In to Portal"
                 )}
               </button>
             </form>
 
-            <div className="mt-8 pt-6 border-t border-border/40 text-center">
+            <div className="mt-8 pt-6 border-t border-primary/10 text-center">
               <p className="text-sm text-muted-foreground">
                 {isRegistering ? "Already have an account?" : "Don't have an account yet?"}{" "}
                 <button 
                   onClick={() => { setIsRegistering(!isRegistering); setError(""); }} 
-                  className="text-primary font-medium hover:underline"
+                  className="text-primary font-black text-xs uppercase tracking-widest hover:underline"
                 >
                   {isRegistering ? "Sign in instead" : "Create one now"}
                 </button>

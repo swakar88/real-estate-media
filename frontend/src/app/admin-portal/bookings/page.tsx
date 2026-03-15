@@ -120,17 +120,21 @@ export default function AdminBookings() {
         <StaggerContainer className="grid grid-cols-1 gap-4">
           {filteredBookings.map((booking) => (
             <StaggerItem key={booking.id}>
-              <div className="bg-card border border-border/50 rounded-2xl p-5 md:p-6 shadow-sm hover:shadow-md transition-all group relative border-l-4 overflow-hidden" 
-                   style={{ borderLeftColor: booking.status === 'pending' ? '#f59e0b' : booking.status === 'confirmed' ? '#3b82f6' : booking.status === 'completed' ? '#10b981' : '#ef4444' }}>
+              <div className={`bg-card border border-border/50 rounded-2xl p-5 md:p-6 shadow-sm hover:shadow-md transition-all group relative border-l-4 overflow-hidden ${
+                booking.status === 'pending' ? 'border-l-warning' : 
+                booking.status === 'confirmed' ? 'border-l-info' : 
+                booking.status === 'completed' ? 'border-l-success' : 
+                'border-l-error'
+              }`}>
                 
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                   <div className="flex-1 space-y-4">
                     <div className="flex flex-wrap items-center gap-3">
                       <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider
-                        ${booking.status === 'pending' ? 'bg-amber-500/10 text-amber-500' : ''}
-                        ${booking.status === 'confirmed' ? 'bg-blue-500/10 text-blue-500' : ''}
-                        ${booking.status === 'completed' ? 'bg-green-500/10 text-green-500' : ''}
-                        ${booking.status === 'cancelled' ? 'bg-red-500/10 text-red-500' : ''}
+                        ${booking.status === 'pending' ? 'bg-warning/10 text-warning' : ''}
+                        ${booking.status === 'confirmed' ? 'bg-info/10 text-info' : ''}
+                        ${booking.status === 'completed' ? 'bg-success/10 text-success' : ''}
+                        ${booking.status === 'cancelled' ? 'bg-error/10 text-error' : ''}
                       `}>
                         {booking.status}
                       </span>
@@ -168,7 +172,7 @@ export default function AdminBookings() {
                        <div className="flex gap-2">
                           <button 
                             onClick={() => updateStatus(booking.id, 'completed')}
-                            className="px-4 py-2 bg-green-500/10 text-green-600 hover:bg-green-500 hover:text-white border border-green-500/20 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-sm"
+                            className="px-4 py-2 bg-success/10 text-success hover:bg-success hover:text-white border border-success/20 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-sm"
                           >
                             <CheckCircle2 className="w-3.5 h-3.5" /> Complete
                           </button>

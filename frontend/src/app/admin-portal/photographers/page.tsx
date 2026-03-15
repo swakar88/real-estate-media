@@ -315,7 +315,7 @@ export default function AdminPhotographers() {
                       {selectedPhotographer.is_active ? (
                         <button 
                           onClick={() => removePhotographer(selectedPhotographer.id)}
-                          className="h-10 px-4 text-xs font-bold text-muted-foreground hover:text-amber-600 hover:bg-amber-600/10 rounded-xl transition-all border border-border/50 flex items-center gap-2"
+                          className="h-10 px-4 text-xs font-bold text-muted-foreground hover:text-warning hover:bg-warning/10 rounded-xl transition-all border border-border/50 flex items-center gap-2"
                         >
                           <AlertTriangle className="w-4 h-4" /> Deactivate
                         </button>
@@ -327,7 +327,7 @@ export default function AdminPhotographers() {
                       
                       <button 
                         onClick={() => removePhotographer(selectedPhotographer.id, true)}
-                        className="h-10 px-4 text-xs font-bold text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all border border-border/50 flex items-center gap-2"
+                        className="h-10 px-4 text-xs font-bold text-muted-foreground hover:text-error hover:bg-error/10 rounded-xl transition-all border border-border/50 flex items-center gap-2"
                       >
                         <ShieldAlert className="w-4 h-4" /> Permanent Delete
                       </button>
@@ -374,8 +374,8 @@ export default function AdminPhotographers() {
                                   </span>
                                   
                                   <div className="mt-2 space-y-1">
-                                     {hasAvailable && <div className="h-1.5 w-full bg-green-500 rounded-full opacity-60"></div>}
-                                     {hasBooked && <div className="h-1.5 w-full bg-blue-500 rounded-full opacity-60"></div>}
+                                     {hasAvailable && <div className="h-1.5 w-full bg-success rounded-full opacity-60"></div>}
+                                     {hasBooked && <div className="h-1.5 w-full bg-info rounded-full opacity-60"></div>}
                                   </div>
                                   
                                   {slots.length > 0 && (
@@ -454,7 +454,7 @@ export default function AdminPhotographers() {
                                ) : getSlotsForDate(date).sort((a,b) => a.time_slot.localeCompare(b.time_slot)).map(slot => (
                                   <div key={slot.id} className="flex items-center justify-between p-3 bg-background border border-border/40 rounded-xl group transition-all hover:border-border">
                                      <div className="flex items-center gap-3">
-                                        <Clock className={`w-3.5 h-3.5 ${slot.is_booked ? 'text-blue-500' : 'text-green-500'}`} />
+                                        <Clock className={`w-3.5 h-3.5 ${slot.is_booked ? 'text-info' : 'text-success'}`} />
                                         <span className="text-sm font-bold">{slot.time_slot}</span>
                                      </div>
                                      <div className="flex items-center gap-2">

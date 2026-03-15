@@ -19,6 +19,7 @@ import {
   Sun,
   Moon
 } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function AdminLayout({
   children,
@@ -69,37 +70,6 @@ export default function AdminLayout({
     verifyAdmin();
   }, [router]);
 
-  const [isDark, setIsDark] = useState(true);
-
-  useEffect(() => {
-    const savedTheme = localStorage.getItem("admin-theme");
-    if (savedTheme) {
-      setIsDark(savedTheme === "dark");
-    }
-  }, []);
-
-  useEffect(() => {
-    const root = window.document.documentElement;
-    const body = window.document.body;
-    
-    // Clean up html tag
-    root.classList.remove("dark");
-    
-    if (isDark) {
-      body.classList.add("dark");
-      localStorage.setItem("admin-theme", "dark");
-    } else {
-      body.classList.remove("dark");
-      localStorage.setItem("admin-theme", "light");
-    }
-    console.log("Admin Theme updated (on body):", isDark ? "dark" : "light");
-  }, [isDark]);
-
-  const toggleTheme = () => {
-    console.log("Toggling admin theme...");
-    setIsDark(prev => !prev);
-  };
-
   const handleLogout = () => {
     localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");
@@ -108,7 +78,7 @@ export default function AdminLayout({
 
   if (!isAuthorized) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="flex min-h-screen items-center justify-center bg-black">
          <span className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></span>
       </div>
     );
@@ -127,19 +97,19 @@ export default function AdminLayout({
   ];
 
   return (
-    <div className="flex h-screen bg-muted/20 overflow-hidden text-foreground">
+    <div className="flex h-screen bg-black overflow-hidden text-foreground">
       
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div 
-          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 md:hidden animate-in fade-in"
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 md:hidden animate-in fade-in"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* Sidebar */}
       <aside className={`
-        fixed inset-y-0 left-0 z-50 w-64 bg-card border-r border-border/50 shadow-xl 
+        fixed inset-y-0 left-0 z-50 w-64 bg-card border-r border-primary/20 shadow-gold 
         transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0
         ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
       `}>
@@ -175,23 +145,12 @@ export default function AdminLayout({
             })}
           </div>
 
-          <div className="p-4 border-t border-border/50 space-y-4">
-            <div className="bg-muted px-2 py-2 rounded-2xl">
-              <button 
-                onClick={toggleTheme}
-                className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all bg-card/50 shadow-sm border border-border/10"
-              >
-                <div className="flex items-center gap-2">
-                  <div className={`p-1.5 rounded-lg ${isDark ? "bg-primary/20 text-primary" : "bg-orange-100 text-orange-600"}`}>
-                    {isDark ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-                  </div>
-                  <span className="text-foreground">{isDark ? "Dark Theme" : "Light Theme"}</span>
-                </div>
-                <div className={`w-10 h-6 rounded-full p-1 transition-colors duration-300 ${isDark ? 'bg-primary' : 'bg-slate-300 shadow-inner'}`}>
-                  <div className={`w-4 h-4 rounded-full bg-white shadow-md transform transition-transform duration-300 ${isDark ? 'translate-x-4' : 'translate-x-0'}`} />
-                </div>
-              </button>
-            </div>
+           <div className="p-4 border-t border-primary/10 flex items-center justify-between">
+             <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Adjust Theme</div>
+             <ThemeToggle />
+           </div>
+           
+           <div className="p-4 border-t border-border/10">
 
             <div className="flex items-center gap-3 py-2 px-2 border-t border-border/10">
               <div className="h-10 w-10 rounded-2xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center font-black text-lg overflow-hidden relative group">
@@ -219,7 +178,7 @@ export default function AdminLayout({
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         {/* Mobile Header */}
-        <header className="md:hidden flex items-center justify-between px-4 py-4 bg-card border-b border-border/50">
+        <header className="md:hidden flex items-center justify-between px-4 py-4 bg-card border-b border-primary/20 shadow-gold">
           <span className="font-bold text-lg">Admin Portal</span>
           <button onClick={() => setSidebarOpen(true)} className="p-2 -mr-2 text-muted-foreground">
              <Menu className="h-6 w-6" />

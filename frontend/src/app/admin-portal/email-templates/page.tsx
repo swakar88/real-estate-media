@@ -111,7 +111,7 @@ export default function EmailTemplatesPage() {
                 key={template.slug}
                 onClick={() => setSelectedTemplate(template)}
                 className={`w-full text-left p-4 transition-all hover:bg-muted/50 flex items-center justify-between group ${
-                  selectedTemplate?.slug === template.slug ? "bg-primary/10 border-r-4 border-primary" : ""
+                  selectedTemplate?.slug === template.slug ? "bg-primary/10 border-r-4 border-primary shadow-inner" : ""
                 }`}
               >
                 <div>
@@ -145,7 +145,7 @@ export default function EmailTemplatesPage() {
                 <div className="flex items-center gap-2">
                   <button 
                     onClick={() => setShowPreview(true)}
-                    className="bg-muted hover:bg-muted/80 text-foreground px-4 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all active:scale-95 border border-border/50"
+                    className="bg-muted hover:bg-muted/80 text-foreground px-4 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all active:scale-95 border border-primary/20"
                   >
                     <Eye className="w-4 h-4" />
                     Preview
@@ -153,7 +153,7 @@ export default function EmailTemplatesPage() {
                   <button 
                     onClick={handleSave}
                     disabled={saving}
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50 shadow-lg shadow-primary/20"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest shadow-gold hover:shadow-gold-heavy flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50"
                   >
                     <Save className="w-4 h-4" />
                     {saving ? "Saving..." : "Save Changes"}
@@ -232,19 +232,19 @@ export default function EmailTemplatesPage() {
       {/* Preview Modal */}
       {showPreview && selectedTemplate && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 animate-in fade-in duration-300">
-          <div className="absolute inset-0 bg-background/95 backdrop-blur-md" onClick={() => setShowPreview(false)} />
-          <div className="relative bg-white text-slate-900 w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh]">
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <div className="absolute inset-0 bg-black/95 backdrop-blur-md" onClick={() => setShowPreview(false)} />
+          <div className="relative bg-card text-foreground w-full max-w-2xl rounded-[2.5rem] shadow-gold border border-primary/20 overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh]">
+            <div className="p-6 border-b border-primary/20 flex items-center justify-between bg-muted/20">
                <div>
-                  <h3 className="font-black text-slate-900 flex items-center gap-2 text-lg">
-                    <Eye className="w-5 h-5" />
+                  <h3 className="font-black text-foreground flex items-center gap-2 text-lg">
+                    <Eye className="w-5 h-5 text-primary" />
                     Template Preview
                   </h3>
-                  <p className="text-xs text-slate-500 font-medium">{selectedTemplate.title} — Actual View</p>
+                  <p className="text-xs text-muted-foreground font-medium">{selectedTemplate.title} — Live Rendering</p>
                </div>
                <button 
                 onClick={() => setShowPreview(false)}
-                className="w-10 h-10 rounded-full bg-slate-200 hover:bg-slate-300 flex items-center justify-center transition-colors"
+                className="w-10 h-10 rounded-full bg-muted hover:bg-muted/80 flex items-center justify-center transition-colors border border-primary/10"
                >
                  <X className="w-5 h-5" />
                </button>

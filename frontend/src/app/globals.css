@@ -5,48 +5,62 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: 0.98 0 0; /* White */
-  --foreground: 0.12 0 0; /* Black */
-  --card: 1 0 0;
-  --card-foreground: 0.12 0 0;
+  /* Premium Light Mode (Ivory & Champagne) */
+  --background: 0.98 0.01 90; /* Soft Ivory #FFFDF5 approx */
+  --foreground: 0.15 0 0; /* Deep Charcoal for readability */
+  --card: 1 0 0; /* Plain White */
+  --card-foreground: 0.15 0 0;
   --popover: 1 0 0;
-  --popover-foreground: 0.12 0 0;
-  --primary: 0.77 0.09 75; /* Robinhood Brassy Matte Gold */
-  --primary-foreground: 0.12 0 0;
-  --secondary: 0.92 0 0;
-  --secondary-foreground: 0.12 0 0;
-  --muted: 0.92 0 0;
-  --muted-foreground: 0.4 0 0;
-  --accent: 0.92 0.05 85;
-  --accent-foreground: 0.12 0 0;
-  --destructive: 0.4 0.15 25;
-  --destructive-foreground: 0.98 0 0;
-  --border: 0.9 0 0;
-  --input: 0.9 0 0;
-  --ring: 0.77 0.09 75;
-  --radius: 0.5rem;
+  --popover-foreground: 0.15 0 0;
+  --primary: 0.82 0.08 86; /* Soft Champagne Gold #E8C88A approx */
+  --primary-foreground: 0.15 0 0;
+  --secondary: 0.95 0.02 90;
+  --secondary-foreground: 0.15 0 0;
+  --muted: 0.95 0.02 90;
+  --muted-foreground: 0.45 0 0;
+  --accent: 0.9 0.04 86;
+  --accent-foreground: 0.15 0 0;
+  --destructive: 0.6 0.2 25;
+  --destructive-foreground: 1 0 0;
+  --border: 0.9 0.02 90;
+  --input: 0.9 0.02 90;
+  --ring: 0.82 0.08 86;
+  --radius: 2rem;
+
+  /* Semantic Status Colors */
+  --success: 0.6 0.15 145;
+  --warning: 0.8 0.15 85;
+  --error: 0.5 0.2 25;
+  --info: 0.6 0.15 250;
 }
 
-.dark, body.dark {
-  --background: 0.12 0 0;
-  --foreground: 0.98 0 0;
-  --card: 0.16 0 0;
+.dark {
+  /* Premium Dark Mode (Pure Black & Metallic Gold) */
+  --background: 0 0 0; /* Pure Black #000000 */
+  --foreground: 0.98 0 0; /* Near White */
+  --card: 0.1 0 0; /* Very Dark Gray */
   --card-foreground: 0.98 0 0;
-  --popover: 0.16 0 0;
+  --popover: 0.1 0 0;
   --popover-foreground: 0.98 0 0;
-  --primary: 0.77 0.09 75; /* Robinhood Brassy Matte Gold */
-  --primary-foreground: 0.12 0 0;
+  --primary: 0.88 0.11 86; /* Metallic Champagne Gold #F5D67A */
+  --primary-foreground: 0 0 0; /* Black text on Gold */
   --secondary: 0.22 0 0;
   --secondary-foreground: 0.98 0 0;
   --muted: 0.22 0 0;
-  --muted-foreground: 0.7 0 0;
+  --muted-foreground: 0.6 0 0; /* Muted gray #808080 */
   --accent: 0.22 0.05 85;
   --accent-foreground: 0.98 0 0;
   --destructive: 0.4 0.15 25;
   --destructive-foreground: 0.98 0 0;
-  --border: 0.25 0 0;
-  --input: 0.25 0 0;
-  --ring: 0.77 0.09 75;
+  --border: 0.2 0 0; /* Subtle dark gray border */
+  --input: 0.2 0 0;
+  --ring: 0.88 0.11 86;
+
+  /* Dark Semantic Status Colors */
+  --success: 0.7 0.15 145;
+  --warning: 0.85 0.15 85;
+  --error: 0.6 0.2 25;
+  --info: 0.7 0.15 250;
 }
 
 @theme inline {
@@ -69,6 +83,10 @@
   --color-border: oklch(var(--border));
   --color-input: oklch(var(--input));
   --color-ring: oklch(var(--ring));
+  --color-success: oklch(var(--success));
+  --color-warning: oklch(var(--warning));
+  --color-error: oklch(var(--error));
+  --color-info: oklch(var(--info));
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -86,6 +104,8 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --shadow-gold: 0 0 20px -5px oklch(var(--primary) / 0.5);
+  --shadow-gold-heavy: 0 0 30px 0 oklch(var(--primary) / 0.3);
 }
 
 /* Custom base aesthetic utilities */

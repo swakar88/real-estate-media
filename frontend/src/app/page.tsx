@@ -46,7 +46,7 @@ export default async function Home() {
             <ScrollReveal delay={0.2}>
               <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold tracking-tight mb-6 max-w-4xl drop-shadow-sm">
                 Immersive Virtual Media <br/>
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-rose-400">
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-primary">
                   For Real Estate & Business
                 </span>
               </h1>
@@ -58,7 +58,7 @@ export default async function Home() {
             </ScrollReveal>
             <ScrollReveal delay={0.4}>
               <div className="flex flex-col sm:flex-row gap-4">
-                <Link href="/book" className="inline-flex h-12 items-center justify-center rounded-md bg-primary px-8 font-medium text-primary-foreground shadow-lg transition-all hover:bg-primary/90 hover:scale-105">
+                <Link href="/book" className="inline-flex h-12 items-center justify-center rounded-md bg-primary px-8 font-medium text-primary-foreground shadow-gold hover:shadow-gold-heavy transition-all hover:bg-primary/90 hover:scale-105">
                   Book a Shoot Now
                 </Link>
                 <Link href="/gallery" className="inline-flex h-12 items-center justify-center rounded-md border border-input bg-background/50 backdrop-blur px-8 font-medium shadow-sm transition-all hover:bg-accent hover:text-accent-foreground hover:scale-105">

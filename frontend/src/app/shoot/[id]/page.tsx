@@ -145,7 +145,7 @@ export default function PropertyPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
-         <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+         <div className="w-12 h-12 border-4 border-primary shadow-gold border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -167,7 +167,7 @@ export default function PropertyPage() {
     <div className="min-h-screen bg-[#050505] text-white selection:bg-primary selection:text-white overflow-x-hidden">
       {/* Expiry Notification */}
       {shoot.payment_status === 'paid' && expiryDate && (
-        <div className="bg-primary/20 border-b border-primary/20 py-2.5 px-6 text-center animate-in fade-in slide-in-from-top duration-700 relative z-[60]">
+        <div className="bg-primary/20 border-b border-primary shadow-gold/20 py-2.5 px-6 text-center animate-in fade-in slide-in-from-top duration-700 relative z-[60]">
           <p className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.25em] text-primary flex items-center justify-center gap-3">
             <Clock className="w-3.5 h-3.5" />
             Media stored until {expiryDate} (30 days remaining)
@@ -196,7 +196,7 @@ export default function PropertyPage() {
                {shoot.payment_status === 'paid' ? (
                  <button 
                   onClick={() => setShowDownloadModal(true)}
-                  className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.02] transition-all font-black text-xs uppercase tracking-widest active:scale-95"
+                  className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-2xl shadow-gold hover:shadow-gold-heavy hover:scale-[1.02] transition-all font-black text-xs uppercase tracking-widest active:scale-95"
                  >
                     <Download className="h-4 w-4" /> Download
                  </button>
@@ -205,9 +205,9 @@ export default function PropertyPage() {
                    <a 
                      href={shoot.stripe_payment_link}
                      target="_blank"
-                     className="flex items-center gap-2 px-6 py-3 bg-rose-500 text-white rounded-2xl shadow-xl shadow-rose-500/20 hover:scale-[1.02] transition-all font-black text-xs uppercase tracking-widest active:scale-95"
+                     className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-2xl shadow-xl shadow-rose-500/20 hover:scale-[1.02] transition-all font-black text-xs uppercase tracking-widest active:scale-95"
                    >
-                      <CreditCard className="h-4 w-4" /> Buy Now
+                      <CreditCard className="h-4 w-4" /> Pay to Unlock
                    </a>
                  )
                )}
@@ -222,20 +222,20 @@ export default function PropertyPage() {
               <div className="space-y-4">
                  <h2 className="text-4xl md:text-6xl font-black tracking-tighter leading-none">{shoot.property_address}</h2>
                  <div className="flex flex-wrap items-center gap-6">
-                    <p className="text-white/40 font-bold uppercase tracking-widest text-xs">{shoot.client_name}</p>
+                    <p className="text-muted-foreground font-bold uppercase tracking-widest text-xs">{shoot.client_name}</p>
                     <div className="flex items-center gap-4 text-white/20">
                        <span className="w-1 h-1 bg-current rounded-full" />
-                       <div className="flex items-center gap-2 text-white/60">
+                       <div className="flex items-center gap-2 text-muted-foreground">
                           <BedDouble className="h-4 w-4" />
                           <span className="text-xs font-bold">{shoot.beds || 4} Beds</span>
                        </div>
                        <span className="w-1 h-1 bg-current rounded-full" />
-                       <div className="flex items-center gap-2 text-white/60">
+                       <div className="flex items-center gap-2 text-muted-foreground">
                           <Bath className="h-4 w-4" />
                           <span className="text-xs font-bold">{shoot.baths || 3} Baths</span>
                        </div>
                        <span className="w-1 h-1 bg-current rounded-full" />
-                       <div className="flex items-center gap-2 text-white/60">
+                       <div className="flex items-center gap-2 text-muted-foreground">
                           <Maximize className="h-4 w-4" />
                           <span className="text-xs font-bold">{(shoot.sqft || 2800).toLocaleString()} SqFt</span>
                        </div>
@@ -244,8 +244,8 @@ export default function PropertyPage() {
               </div>
               
               {shoot.property_price && (
-                 <div className="bg-white/5 border border-white/10 p-6 rounded-[2rem] text-right">
-                    <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1">Listing Price</p>
+                 <div className="bg-white/5 border border-primary shadow-gold/20 p-6 rounded-[2rem] text-right">
+                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Listing Price</p>
                     <p className="text-3xl font-black text-primary">${parseFloat(shoot.property_price).toLocaleString()}</p>
                  </div>
               )}
@@ -257,19 +257,19 @@ export default function PropertyPage() {
             <div className="flex items-center gap-2 p-1.5 bg-white/5 rounded-3xl w-fit border border-white/5">
                <button 
                  onClick={() => setActiveTab('photos')}
-                 className={`px-8 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'photos' ? 'bg-primary text-white shadow-xl shadow-primary/20 scale-105' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
+                 className={`px-8 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'photos' ? 'bg-primary text-primary-foreground shadow-gold hover:shadow-gold-heavy scale-105' : 'text-muted-foreground hover:text-white hover:bg-white/5'}`}
                >
                   Photos
                </button>
                <button 
                  onClick={() => setActiveTab('video')}
-                 className={`px-8 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'video' ? 'bg-primary text-white shadow-xl shadow-primary/20 scale-105' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
+                 className={`px-8 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'video' ? 'bg-primary text-primary-foreground shadow-gold hover:shadow-gold-heavy scale-105' : 'text-muted-foreground hover:text-white hover:bg-white/5'}`}
                >
                   Video
                </button>
                <button 
                  onClick={() => setActiveTab('tour')}
-                 className={`px-8 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'tour' ? 'bg-primary text-white shadow-xl shadow-primary/20 scale-105' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
+                 className={`px-8 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'tour' ? 'bg-primary text-primary-foreground shadow-gold hover:shadow-gold-heavy scale-105' : 'text-muted-foreground hover:text-white hover:bg-white/5'}`}
                >
                   3D Tour
                </button>
@@ -326,7 +326,7 @@ export default function PropertyPage() {
                      
                      {!videos[0].is_processed && (
                        <div className="absolute top-6 left-6 flex items-center gap-3 px-4 py-2 bg-black/60 backdrop-blur-md rounded-2xl border border-white/10">
-                         <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                         <div className="w-3 h-3 border-2 border-primary shadow-gold border-t-transparent rounded-full animate-spin"></div>
                          <p className="text-[10px] font-bold text-white uppercase tracking-widest">Optimizing for Web...</p>
                        </div>
                      )}
@@ -407,7 +407,7 @@ export default function PropertyPage() {
                 <div 
                   key={item.id}
                   onClick={(e) => { e.stopPropagation(); setSelectedImage(idx); }}
-                  className={`h-16 w-24 rounded-xl overflow-hidden cursor-pointer transition-all shrink-0 border-2 ${selectedImage === idx ? 'border-primary scale-110 shadow-lg shadow-primary/20' : 'border-transparent opacity-40 hover:opacity-100'}`}
+                  className={`h-16 w-24 rounded-xl overflow-hidden cursor-pointer transition-all shrink-0 border-2 ${selectedImage === idx ? 'border-primary shadow-gold scale-110 shadow-lg shadow-primary/20' : 'border-transparent opacity-40 hover:opacity-100'}`}
                 >
                   <img 
                     src={item.url} 
@@ -426,12 +426,12 @@ export default function PropertyPage() {
       {showDownloadModal && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 animate-in fade-in duration-300">
            <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setShowDownloadModal(false)} />
-           <div className="relative w-full max-w-2xl bg-[#0a0a0a] border border-white/10 rounded-[3rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+           <div className="relative w-full max-w-2xl bg-card border border-white/10 rounded-[3rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
               <div className="p-8 md:p-12">
                  <div className="flex items-center justify-between mb-8">
                     <div>
                        <h3 className="text-3xl font-black tracking-tighter mb-2">Download Assets</h3>
-                       <p className="text-white/40 font-bold uppercase tracking-widest text-[10px]">Commercial high-resolution media</p>
+                       <p className="text-muted-foreground font-bold uppercase tracking-widest text-[10px]">Commercial high-resolution media</p>
                     </div>
                     <button onClick={() => setShowDownloadModal(false)} className="p-4 bg-white/5 hover:bg-white/10 rounded-full transition-all">
                        <X className="w-6 h-6" />
@@ -481,7 +481,7 @@ export default function PropertyPage() {
 
                     {/* Videos */}
                     {videos.length > 0 && (
-                      <div className="md:col-span-2 group bg-primary/20 border border-primary/20 p-8 rounded-[2.5rem] hover:bg-primary transition-all duration-500 cursor-pointer flex flex-col sm:flex-row items-center justify-between gap-6">
+                      <div className="md:col-span-2 group bg-primary/20 border border-primary shadow-gold/20 p-8 rounded-[2.5rem] hover:bg-primary transition-all duration-500 cursor-pointer flex flex-col sm:flex-row items-center justify-between gap-6">
                          <div className="flex items-center gap-6">
                             <div className="w-12 h-12 bg-primary rounded-2xl flex items-center justify-center">
                                <VideoIcon className="w-6 h-6 text-white" />
@@ -493,7 +493,7 @@ export default function PropertyPage() {
                          </div>
                          <button 
                            onClick={() => triggerDownload(videos[0].id, 'video')}
-                           className="w-full sm:w-auto px-8 py-4 bg-primary text-white text-xs font-black uppercase tracking-widest rounded-2xl border border-white/20 hover:scale-105 transition-all shadow-xl shadow-primary/20"
+                           className="w-full sm:w-auto px-8 py-4 bg-primary text-primary-foreground text-xs font-black uppercase tracking-widest rounded-2xl border border-white/20 hover:scale-105 transition-all shadow-gold hover:shadow-gold-heavy"
                          >
                             Download
                          </button>

@@ -13,10 +13,9 @@ import {
   User as UserIcon, 
   Clock, 
   Camera, 
-  CheckCircle2,
-  Moon,
-  Sun
+  CheckCircle2
 } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function PhotographerPortal() {
   const router = useRouter();
@@ -34,34 +33,6 @@ export default function PhotographerPortal() {
   // Availability Form State
   const [date, setDate] = useState("");
   const [timeSlot, setTimeSlot] = useState("09:00");
-  const [isDark, setIsDark] = useState(true);
-
-  useEffect(() => {
-    const savedTheme = localStorage.getItem("theme") || "dark";
-    setIsDark(savedTheme === "dark");
-  }, []);
-
-  useEffect(() => {
-    const root = window.document.documentElement;
-    const body = window.document.body;
-    
-    // Clean up html tag
-    root.classList.remove("dark");
-    
-    if (isDark) {
-      body.classList.add("dark");
-      localStorage.setItem("theme", "dark");
-    } else {
-      body.classList.remove("dark");
-      localStorage.setItem("theme", "light");
-    }
-    console.log("Photographer Theme updated (on body):", isDark ? "dark" : "light");
-  }, [isDark]);
-
-  const toggleTheme = () => {
-    console.log("Toggling photographer theme...");
-    setIsDark(prev => !prev);
-  };
 
   useEffect(() => {
     fetchData();
@@ -208,7 +179,7 @@ export default function PhotographerPortal() {
   const completedShoots = shoots.filter(s => s.status === 'delivered' && s.payment_status === 'paid');
 
   return (
-    <div className="flex min-h-screen flex-col bg-background text-foreground selection:bg-primary/30 font-sans transition-colors duration-300">
+    <div className="flex min-h-screen flex-col dark:bg-black bg-background text-foreground selection:bg-primary/30 font-sans transition-colors duration-300">
       <Navbar />
       
       <div className={`flex flex-1 ${user?.is_staff ? 'pt-[72px]' : ''}`}>
@@ -222,20 +193,14 @@ export default function PhotographerPortal() {
               <h1 className="text-4xl font-black tracking-tight mb-2">Photographer Portal</h1>
               <p className="text-muted-foreground font-medium">Manage your shoots, availability and portfolio assets.</p>
             </div>
-            <div className="flex items-center gap-4 bg-card p-2 pr-6 rounded-2xl border border-border backdrop-blur-sm shadow-sm">
-              <button 
-                onClick={toggleTheme}
-                className="w-10 h-10 ml-2 rounded-xl bg-muted/50 border border-border flex items-center justify-center hover:bg-muted transition-all text-muted-foreground hover:text-foreground"
-                title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
-              >
-                {isDark ? <Moon className="w-4 h-4 text-primary" /> : <Sun className="w-4 h-4 text-orange-500" />}
-              </button>
-              <div className="w-12 h-12 rounded-xl overflow-hidden border border-border shrink-0">
+            <div className="flex items-center gap-4 bg-card p-2 pr-6 rounded-2xl border border-primary/20 backdrop-blur-sm shadow-gold">
+              <ThemeToggle />
+              <div className="w-12 h-12 rounded-xl overflow-hidden border border-primary/10 shrink-0">
                 <img src={profileImgSrc} alt="" className="w-full h-full object-cover" />
               </div>
               <div>
                 <p className="text-[10px] font-black uppercase tracking-widest text-primary">Logged in as</p>
-                <p className="font-bold text-sm">{user?.first_name || user?.username}</p>
+                <p className="font-bold text-sm tracking-tight">{user?.first_name || user?.username}</p>
               </div>
             </div>
           </div>
@@ -271,7 +236,7 @@ export default function PhotographerPortal() {
                   </div>
                   
                   {activeShoots.length === 0 && (
-                    <div className="bg-card border border-border p-12 rounded-[2.5rem] flex flex-col items-center text-center gap-4">
+                    <div className="bg-card border border-primary/20 shadow-gold flex flex-col items-center text-center gap-4">
                       <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center">
                         <Camera className="w-8 h-8 text-muted-foreground/30" />
                       </div>
@@ -280,7 +245,7 @@ export default function PhotographerPortal() {
                   )}
 
                   {activeShoots.map(shoot => (
-                    <div key={shoot.id} className="group bg-card border border-border hover:border-primary/40 p-8 rounded-[2.5rem] transition-all duration-500 shadow-sm">
+                    <div key={shoot.id} className="group bg-card border border-primary/20 hover:border-primary/40 p-8 rounded-[2.5rem] transition-all duration-500 shadow-gold">
                       <div className="flex justify-between items-start gap-4 mb-6">
                         <div className="min-w-0">
                           <h3 className="text-xl font-black truncate group-hover:text-primary transition-colors">{shoot.property_address}</h3>
@@ -296,7 +261,7 @@ export default function PhotographerPortal() {
                       </div>
 
                       {shoot.notes && (
-                        <div className="p-4 bg-muted/50 rounded-2xl mb-6 text-sm text-foreground/70 border border-border italic">
+                        <div className="p-4 bg-muted/50 rounded-2xl mb-6 text-sm text-foreground/70 border border-primary/10 italic">
                           "{shoot.notes}"
                         </div>
                       )}
@@ -423,7 +388,7 @@ export default function PhotographerPortal() {
                            <button 
                              id={`btn-${shoot.id}`}
                              onClick={() => document.getElementById(`file-${shoot.id}`)?.click()}
-                             className="bg-white text-black h-[50px] rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-primary hover:text-white transition-all shadow-xl shadow-black/10 active:scale-95"
+                             className="bg-primary text-primary-foreground h-[50px] rounded-2xl font-black text-[10px] uppercase tracking-widest hover:shadow-gold-heavy transition-all shadow-gold active:scale-95"
                            >
                               Choose & Upload
                            </button>
@@ -434,9 +399,9 @@ export default function PhotographerPortal() {
                 </div>
 
                 {/* Completed Shoots Section */}
-                <div className="bg-card border border-border p-10 rounded-[3rem] shadow-xl">
+                <div className="bg-card border border-primary/20 p-10 rounded-[3rem] shadow-gold">
                   <h2 className="text-xl font-black mb-6 flex items-center gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-green-500" /> Past Work
+                    <CheckCircle2 className="w-5 h-5 text-success" /> Past Work
                   </h2>
                   <div className="space-y-4">
                     {completedShoots.length === 0 ? (
@@ -446,7 +411,7 @@ export default function PhotographerPortal() {
                         <div key={shoot.id} className="bg-muted/30 border border-border p-5 rounded-2xl hover:bg-muted/50 transition-all group">
                           <div className="flex justify-between items-center mb-1">
                             <p className="font-bold text-sm tracking-tight group-hover:text-primary transition-colors">{shoot.property_address || 'Unnamed Property'}</p>
-                            <CheckCircle2 className="w-4 h-4 text-green-500/50 group-hover:text-green-500 transition-colors" />
+                            <CheckCircle2 className="w-4 h-4 text-success/50 group-hover:text-success transition-colors" />
                           </div>
                           <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Delivered: {new Date(shoot.created_at).toLocaleDateString()}</p>
                         </div>
@@ -459,7 +424,7 @@ export default function PhotographerPortal() {
 
             {activeTab === 'availability' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                <div className="bg-card border border-border p-10 rounded-[3rem] shadow-sm">
+                <div className="bg-card border border-primary/20 p-10 rounded-[3rem] shadow-gold">
                   <h2 className="text-xl font-black mb-8 flex items-center gap-3">
                     <Calendar className="w-5 h-5 text-primary"/> Schedule Availability
                   </h2>
@@ -488,7 +453,7 @@ export default function PhotographerPortal() {
                          <option value="17:00" className="bg-card text-foreground">5:00 PM - Twilight/Evening</option>
                        </select>
                     </div>
-                    <button type="submit" className="w-full bg-primary text-white h-[60px] rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:shadow-2xl hover:shadow-primary/20 hover:scale-[1.02] transition-all active:scale-95">
+                    <button type="submit" className="w-full bg-primary text-primary-foreground h-[60px] rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-gold hover:shadow-gold-heavy hover:scale-[1.02] transition-all active:scale-95">
                       Publish Session Slot
                     </button>
                   </form>
@@ -498,12 +463,12 @@ export default function PhotographerPortal() {
                    <h3 className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] ml-2">Currently Listed Slots</h3>
                    <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 no-scrollbar">
                     {slots.length === 0 && (
-                      <div className="text-center py-20 bg-muted/20 rounded-[2.5rem] border border-border">
+                      <div className="text-center py-20 bg-muted/20 rounded-[2.5rem] border border-primary/10">
                         <p className="text-[10px] font-black text-muted-foreground/30 uppercase tracking-widest">No slots available</p>
                       </div>
                     )}
                     {slots.map(slot => (
-                      <div key={slot.id} className="flex justify-between items-center group bg-card hover:bg-muted/50 border border-border p-6 rounded-[2rem] transition-all shadow-sm">
+                      <div key={slot.id} className="flex justify-between items-center group bg-card hover:bg-primary/5 border border-primary/20 p-6 rounded-[2rem] transition-all shadow-gold">
                         <div className="flex items-center gap-4">
                           <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center text-primary">
                              <Calendar className="w-4 h-4" />
@@ -515,10 +480,10 @@ export default function PhotographerPortal() {
                         </div>
                         <div className="flex items-center gap-4">
                           {slot.is_booked ? (
-                            <span className="text-[9px] font-black text-rose-500 bg-rose-500/10 px-4 py-2 rounded-full border border-rose-500/10 uppercase tracking-widest">Booked</span>
+                            <span className="text-[9px] font-black text-error bg-error/10 px-4 py-2 rounded-full border border-error/10 uppercase tracking-widest">Booked</span>
                           ) : (
                             <div className="flex items-center gap-4">
-                              <span className="text-[9px] font-black text-green-500 bg-green-500/10 px-4 py-2 rounded-full border border-green-500/10 uppercase tracking-widest">Available</span>
+                              <span className="text-[9px] font-black text-success bg-success/10 px-4 py-2 rounded-full border border-success/10 uppercase tracking-widest">Available</span>
                               <button onClick={() => deleteSlot(slot.id)} className="p-3 text-muted-foreground/30 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all"><Trash2 className="w-4 h-4" /></button>
                             </div>
                           )}
@@ -533,7 +498,7 @@ export default function PhotographerPortal() {
             {activeTab === 'profile' && (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
                  {/* Profile sidebar */}
-                 <div className="bg-card border border-border p-10 rounded-[3rem] text-center shadow-xl">
+                 <div className="bg-card border border-primary/20 p-10 rounded-[3rem] text-center shadow-gold">
                     <div className="relative inline-block">
                        <div className="w-32 h-32 rounded-[2rem] overflow-hidden border-4 border-border mb-6 group relative cursor-pointer">
                           <img src={profileImgSrc} alt="" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
@@ -568,14 +533,14 @@ export default function PhotographerPortal() {
                     <div className="mt-10 p-6 bg-muted/30 rounded-3xl border border-border text-left">
                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-3">Account Status</p>
                        <div className="flex items-center gap-3">
-                          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                          <div className="w-2 h-2 rounded-full bg-success animate-pulse"></div>
                           <p className="text-[10px] font-black uppercase tracking-widest">Active & Accepting Bookings</p>
                        </div>
                     </div>
                   </div>
 
                   {/* Edit Form */}
-                  <div className="lg:col-span-2 bg-card border border-border p-10 rounded-[3rem]">
+                  <div className="lg:col-span-2 bg-card border border-primary/20 p-10 rounded-[3rem] shadow-gold">
                      <h2 className="text-2xl font-black mb-8">Professional Profile</h2>
                     <form onSubmit={updateProfile} className="space-y-8">
                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -622,7 +587,7 @@ export default function PhotographerPortal() {
                           </div>
                        </div>
 
-                        <button type="submit" className="px-12 py-5 bg-primary text-primary-foreground rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:opacity-90 transition-all shadow-xl shadow-primary/20 active:scale-95">
+                        <button type="submit" className="px-12 py-5 bg-primary text-primary-foreground rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-gold hover:shadow-gold-heavy transition-all active:scale-95">
                            Save Changes
                         </button>
                     </form>

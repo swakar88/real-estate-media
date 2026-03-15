@@ -16,6 +16,7 @@ import {
   Settings
 } from "lucide-react";
 import { toast } from "sonner";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function DashboardLayout({
   children,
@@ -27,34 +28,6 @@ export default function DashboardLayout({
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [isDark, setIsDark] = useState(true);
-
-  useEffect(() => {
-    const savedTheme = localStorage.getItem("theme") || "dark";
-    setIsDark(savedTheme === "dark");
-  }, []);
-
-  useEffect(() => {
-    const root = window.document.documentElement;
-    const body = window.document.body;
-    
-    // Clean up html tag just in case
-    root.classList.remove("dark");
-    
-    if (isDark) {
-      body.classList.add("dark");
-      localStorage.setItem("theme", "dark");
-    } else {
-      body.classList.remove("dark");
-      localStorage.setItem("theme", "light");
-    }
-    console.log("Client Theme updated (on body):", isDark ? "dark" : "light");
-  }, [isDark]);
-
-  const toggleTheme = () => {
-    console.log("Toggling client theme...");
-    setIsDark(prev => !prev);
-  };
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -177,13 +150,7 @@ export default function DashboardLayout({
             </div>
 
             <div className="grid grid-cols-2 gap-2">
-              <button 
-                onClick={toggleTheme}
-                className="flex flex-col items-center justify-center gap-2 p-3 rounded-2xl bg-muted/40 border border-border/10 hover:bg-muted/60 transition-all group"
-              >
-                {isDark ? <Moon className="h-4 w-4 text-primary" /> : <Sun className="h-4 w-4 text-orange-500" />}
-                <span className="text-[10px] font-bold uppercase tracking-wider">{isDark ? "Dark" : "Light"}</span>
-              </button>
+              <ThemeToggle />
               <button 
                 onClick={handleLogout}
                 className="flex flex-col items-center justify-center gap-2 p-3 rounded-2xl bg-destructive/5 border border-destructive/10 hover:bg-destructive/10 transition-all group text-destructive"

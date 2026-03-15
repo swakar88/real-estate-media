@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 export default function Navbar() {
   const router = useRouter();
@@ -63,6 +64,9 @@ export default function Navbar() {
           )}
         </nav>
         <div className="flex items-center space-x-4">
+          <div>
+            <ThemeToggle />
+          </div>
           {isLoggedIn ? (
             <button 
               onClick={handleLogout}
@@ -77,7 +81,7 @@ export default function Navbar() {
           )}
           
           {showPublicLinks && (
-            <Link href="/book" className="hidden md:inline-flex h-10 items-center justify-center rounded-md bg-primary px-8 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50">
+            <Link href="/book" className="hidden md:inline-flex h-10 items-center justify-center rounded-md bg-primary px-8 text-sm font-medium text-primary-foreground shadow-gold hover:shadow-gold-heavy hover:scale-105 transition-all hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50">
               Book Online
             </Link>
           )}
@@ -107,7 +111,7 @@ export default function Navbar() {
 
       {/* Mobile Dropdown Menu */}
       {isMobileMenuOpen && (
-        <div className="md:hidden border-t border-border/40 bg-background absolute top-20 left-0 w-full shadow-lg">
+        <div className="md:hidden border-t border-border/40 bg-background absolute top-20 left-0 w-full shadow-gold hover:shadow-gold-heavy-lg">
           <nav className="flex flex-col p-4 space-y-4 text-sm font-medium">
             {showPublicLinks && (
               <>
@@ -133,7 +137,7 @@ export default function Navbar() {
             )}
             
             {showPublicLinks && (
-              <Link href="/book" onClick={closeMobileMenu} className="flex h-10 items-center justify-center rounded-md bg-primary px-8 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 mt-2">
+              <Link href="/book" onClick={closeMobileMenu} className="flex h-10 items-center justify-center rounded-md bg-primary px-8 text-sm font-medium text-primary-foreground shadow-gold hover:shadow-gold-heavy transition-colors hover:bg-primary/90 mt-2">
                 Book Online
               </Link>
             )}

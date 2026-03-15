@@ -144,7 +144,7 @@ export default function BookingsPage() {
             const StatusIcon = status.icon;
             
             return (
-              <div key={shoot.id} className="group bg-card rounded-[2.5rem] border border-border/40 shadow-sm hover:shadow-2xl hover:shadow-primary/5 hover:-translate-y-1 transition-all duration-500 overflow-hidden flex flex-col h-full">
+              <div key={shoot.id} className="group bg-card rounded-[2.5rem] border border-primary/10 shadow-sm hover:shadow-2xl hover:shadow-primary/10 hover:border-primary/30 hover:-translate-y-1 transition-all duration-500 overflow-hidden flex flex-col h-full">
                 {/* Image / Header area */}
                 <div className="aspect-[16/9] w-full bg-muted relative overflow-hidden group-hover:brightness-110 transition-all duration-500">
                   {shoot.thumbnail_url ? (
@@ -158,7 +158,7 @@ export default function BookingsPage() {
                       <Camera className="h-20 w-20" />
                     </div>
                   )}
-                  <div className={`absolute top-4 right-4 px-4 py-2 rounded-full backdrop-blur-md shadow-lg flex items-center gap-2 border border-white/10 ${status.color}`}>
+                  <div className={`absolute top-4 right-4 px-4 py-2 rounded-full backdrop-blur-md shadow-gold flex items-center gap-2 border border-primary/20 ${status.color}`}>
                     <StatusIcon className="h-3.5 w-3.5" />
                     <span className="text-[10px] font-black uppercase tracking-widest">{status.label}</span>
                   </div>
@@ -173,7 +173,7 @@ export default function BookingsPage() {
                         <MoreVertical className="h-5 w-5" />
                       </button>
                     </div>
-                    <div className="flex items-center gap-3 text-muted-foreground/60">
+                    <div className="flex items-center gap-3 text-muted-foreground">
                       <div className="flex items-center gap-1.5 font-bold text-[10px] uppercase tracking-wider">
                          <Calendar className="h-3.5 w-3.5" />
                          {new Date(shoot.shoot_date).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
@@ -186,7 +186,7 @@ export default function BookingsPage() {
                       shoot.payment_status === 'paid' ? (
                         <Link 
                           href={`/shoot/${shoot.id}`}
-                          className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-4 bg-primary text-primary-foreground rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
+                          className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-4 bg-primary text-primary-foreground rounded-2xl font-black text-xs uppercase tracking-widest shadow-gold hover:shadow-gold-heavy hover:scale-[1.02] active:scale-95 transition-all"
                         >
                           <Download className="h-4 w-4" /> Download Assets
                         </Link>
@@ -203,7 +203,7 @@ export default function BookingsPage() {
                               href={shoot.stripe_payment_link}
                               target="_blank"
                               rel="noreferrer"
-                              className="w-full inline-flex items-center justify-center gap-2 px-6 py-4 bg-rose-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-rose-500/20 hover:scale-[1.02] active:scale-95 transition-all text-center"
+                              className="w-full inline-flex items-center justify-center gap-2 px-6 py-4 bg-primary text-primary-foreground rounded-2xl font-black text-xs uppercase tracking-widest shadow-gold hover:shadow-gold-heavy hover:scale-[1.02] active:scale-95 transition-all text-center"
                             >
                               <CreditCard className="h-4 w-4" /> Pay to Unlock Full Size
                             </a>
@@ -229,7 +229,7 @@ export default function BookingsPage() {
                 <h3 className="text-xl font-black">No Bookings Found</h3>
                 <p className="text-muted-foreground font-medium">You haven't scheduled any property shoots yet.</p>
              </div>
-             <Link href="/book" className="px-8 py-4 bg-primary text-primary-foreground rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-primary/20">Book A New Shoot</Link>
+             <Link href="/book" className="px-8 py-4 bg-primary text-primary-foreground rounded-2xl font-black text-xs uppercase tracking-widest shadow-gold hover:shadow-gold-heavy">Book A New Shoot</Link>
           </div>
         )}
       </div>

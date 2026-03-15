@@ -25,12 +25,14 @@ def list_r2():
     
     try:
         response = s3.list_objects_v2(Bucket=bucket, Prefix=prefix)
-        print(f"Bucket: {bucket}, Prefix: {prefix}")
-        if 'Contents' in response:
-            for obj in response['Contents']:
-                print(f"- {obj['Key']} ({obj['Size']} bytes)")
-        else:
-            print("No objects found.")
+        with open("c:/Dev/Krishna/real-estate-media/tmp/r2_list_shoot_8.txt", 'w') as f:
+            f.write(f"Bucket: {bucket}, Prefix: {prefix}\n")
+            if 'Contents' in response:
+                for obj in response['Contents']:
+                    f.write(f"- {obj['Key']} ({obj['Size']} bytes)\n")
+            else:
+                f.write("No objects found.\n")
+        print("Done writing to file.")
     except Exception as e:
         print(f"Error: {e}")
 

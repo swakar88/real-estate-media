@@ -111,10 +111,10 @@ export default function DashboardPage() {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[
-          { label: "Total Bookings", value: stats.totalBookings, icon: Calendar, color: "bg-blue-500/10 text-blue-500" },
-          { label: "In Production", value: stats.activeShoots, icon: Clock, color: "bg-amber-500/10 text-amber-500" },
-          { label: "Ready to Download", value: stats.readyToDownload, icon: CheckCircle2, color: "bg-green-500/10 text-green-500" },
-          { label: "Pending Payments", value: stats.pendingPayments, icon: AlertCircle, color: "bg-rose-500/10 text-rose-500" },
+          { label: "Total Bookings", value: stats.totalBookings, icon: Calendar, color: "bg-info/10 text-info" },
+          { label: "In Production", value: stats.activeShoots, icon: Clock, color: "bg-warning/10 text-warning" },
+          { label: "Ready to Download", value: stats.readyToDownload, icon: CheckCircle2, color: "bg-success/10 text-success" },
+          { label: "Pending Payments", value: stats.pendingPayments, icon: AlertCircle, color: "bg-error/10 text-error" },
         ].map((item) => (
           <div key={item.label} className="bg-card p-6 rounded-[2rem] border border-border/40 shadow-sm hover:shadow-xl transition-all duration-500 group">
             <div className="flex items-center justify-between mb-4">
@@ -164,8 +164,8 @@ export default function DashboardPage() {
                       )}
 
                       <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ring-1 ring-inset shrink-0 ${
-                        shoot.status === 'delivered' ? 'bg-green-500/10 text-green-500 ring-green-500/20' : 
-                        shoot.status === 'editing' ? 'bg-blue-500/10 text-blue-500 ring-blue-500/20' : 
+                        shoot.status === 'delivered' ? 'bg-success/10 text-success ring-success/20' : 
+                        shoot.status === 'editing' ? 'bg-info/10 text-info ring-info/20' : 
                         'bg-slate-500/10 text-slate-500 ring-slate-500/20'
                       }`}>
                         {shoot.status}
@@ -189,11 +189,11 @@ export default function DashboardPage() {
 
         {/* Quick Actions / Tips */}
         <div className="space-y-6">
-          <div className="bg-primary p-8 rounded-[2.5rem] text-primary-foreground shadow-2xl shadow-primary/30 relative overflow-hidden group">
-            <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
+          <div className="bg-card p-8 rounded-[2.5rem] border border-primary/20 text-foreground shadow-gold relative overflow-hidden group">
+            <div className="absolute -right-4 -top-4 w-24 h-24 bg-primary/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
             <h3 className="text-lg font-black mb-2 relative z-10">Need a Shoot?</h3>
-            <p className="text-sm text-primary-foreground/80 mb-6 relative z-10 leading-relaxed font-medium">Standard delivery is within 24-48 hours. Let us showcase your listing in the best light.</p>
-            <Link href="/book" className="inline-flex items-center gap-2 px-6 py-3.5 bg-white text-primary rounded-2xl font-black text-xs uppercase tracking-widest relative z-10 hover:shadow-xl hover:scale-[1.02] transition-all active:scale-95">
+            <p className="text-sm text-muted-foreground mb-6 relative z-10 leading-relaxed font-medium">Standard delivery is within 24-48 hours. Let us showcase your listing in the best light.</p>
+            <Link href="/book" className="inline-flex items-center gap-2 px-6 py-3.5 bg-primary text-primary-foreground rounded-2xl font-black text-xs uppercase tracking-widest relative z-10 shadow-gold hover:shadow-gold-heavy hover:scale-[1.02] transition-all active:scale-95">
               Book Today <ArrowUpRight className="h-4 w-4" />
             </Link>
           </div>

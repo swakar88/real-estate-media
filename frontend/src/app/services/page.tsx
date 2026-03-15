@@ -51,12 +51,12 @@ export default async function Services() {
                   <div className="h-48 bg-muted flex items-center justify-center relative overflow-hidden group-hover:scale-105 transition-transform duration-500">
                     <Image src={media.services_dusk || "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"} alt="Day to Dusk real estate editing" fill className="object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-background/90 to-transparent z-10"></div>
-                    <span className="z-20 font-semibold text-lg text-rose-300">Twilight Conversion</span>
+                    <span className="z-20 font-bold text-lg text-primary shadow-sm">Twilight Conversion</span>
                   </div>
-                  <div className="p-6">
+                  <div className="p-6 border-t border-primary/10">
                     <h3 className="text-xl font-bold mb-2">Day-To-Dusk</h3>
                     <p className="text-sm text-muted-foreground mb-4">Transform standard daytime exterior photos into stunning twilight imagery. Captures attention instantly on MLS.</p>
-                    <Link href="/book" className="text-primary text-sm hover:underline font-medium">Add to Package →</Link>
+                    <Link href="/book" className="text-primary text-sm hover:underline font-black uppercase tracking-widest">Add to Package →</Link>
                   </div>
                 </div>
               </StaggerItem>
@@ -67,7 +67,7 @@ export default async function Services() {
                   <div className="h-48 bg-muted flex items-center justify-center relative overflow-hidden group-hover:scale-105 transition-transform duration-500">
                     <Image src={media.services_staging || "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"} alt="Decluttered room editing" fill className="object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-background/90 to-transparent z-10"></div>
-                    <span className="z-20 font-semibold text-lg text-rose-300">Virtual Staging</span>
+                    <span className="z-20 font-bold text-lg text-primary shadow-sm">Virtual Staging</span>
                   </div>
                   <div className="p-6">
                     <h3 className="text-xl font-bold mb-2">Enhanced De-clutter</h3>
@@ -83,7 +83,7 @@ export default async function Services() {
                   <div className="h-48 bg-muted flex items-center justify-center relative overflow-hidden group-hover:scale-105 transition-transform duration-500">
                     <Image src={media.services_grass || "https://images.unsplash.com/photo-1588880331179-bc9b93a8cb65?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"} alt="Lush green grass editing" fill className="object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-background/90 to-transparent z-10"></div>
-                    <span className="z-20 font-semibold text-lg text-rose-300">Green Grass Edit</span>
+                    <span className="z-20 font-bold text-lg text-primary shadow-sm">Green Grass Edit</span>
                   </div>
                   <div className="p-6">
                     <h3 className="text-xl font-bold mb-2">Green Grass Edit</h3>

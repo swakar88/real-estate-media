@@ -121,7 +121,7 @@ export default function BookingForm({ packages }: { packages: any[] }) {
   if (success) {
     return (
       <div className="text-center py-8 animate-in zoom-in duration-500">
-        <div className="w-16 h-16 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
+        <div className="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-6 shadow-gold transition-all">
           <CheckCircle2 className="w-8 h-8" />
         </div>
         <h3 className="text-2xl font-bold mb-4">Your Booking is confirmed.</h3>
@@ -134,10 +134,10 @@ export default function BookingForm({ packages }: { packages: any[] }) {
             Login to your account to cancel or reschedule :)
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-             <Link href={isAuthenticated ? "/dashboard" : "/login"} className="px-6 py-2 bg-primary text-primary-foreground font-medium rounded-md hover:bg-primary/90 transition-colors text-sm">
+             <Link href={isAuthenticated ? "/dashboard" : "/login"} className="px-8 py-3 bg-primary text-primary-foreground font-black text-xs uppercase tracking-widest rounded-2xl shadow-gold hover:shadow-gold-heavy hover:scale-[1.02] active:scale-95 transition-all">
                Manage Booking
              </Link>
-             <button onClick={() => setSuccess(false)} className="px-6 py-2 border border-border bg-background hover:bg-muted font-medium rounded-md transition-colors text-sm">
+             <button onClick={() => setSuccess(false)} className="px-8 py-3 border border-primary/20 bg-card hover:bg-muted text-foreground font-black text-xs uppercase tracking-widest rounded-2xl transition-all">
                Book Another
              </button>
           </div>
@@ -155,7 +155,7 @@ export default function BookingForm({ packages }: { packages: any[] }) {
             Please create an account or log in to schedule a shoot. This allows you to easily track the status of your booking, process invoices, and securely download your high-res media when it's ready.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/login" className="px-8 py-3 bg-primary text-primary-foreground font-bold rounded-md hover:bg-primary/90 transition-colors shadow-md hover:shadow-lg">
+            <Link href="/login" className="px-10 py-4 bg-primary text-primary-foreground font-black text-xs uppercase tracking-widest rounded-2xl shadow-gold hover:shadow-gold-heavy hover:scale-[1.02] active:scale-95 transition-all">
               Create Account / Login
             </Link>
           </div>
@@ -171,7 +171,7 @@ export default function BookingForm({ packages }: { packages: any[] }) {
         <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-20 md:mb-32">
           {packages.map((pkg: any) => (
             <StaggerItem key={pkg.id}>
-              <div className={`flex flex-col rounded-2xl bg-card p-8 shadow-sm hover:shadow-lg transition-shadow h-full relative ${pkg.is_popular ? 'border-2 border-primary shadow-lg transform md:-translate-y-4' : 'border border-border/50'}`}>
+              <div className={`flex flex-col rounded-3xl bg-card p-8 shadow-gold transition-all h-full relative group ${pkg.is_popular ? 'border-2 border-primary shadow-gold-heavy transform md:-translate-y-4' : 'border border-primary/10'}`}>
                 {pkg.is_popular && (
                   <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-primary text-primary-foreground px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider whitespace-nowrap">
                     Most Popular
@@ -193,9 +193,9 @@ export default function BookingForm({ packages }: { packages: any[] }) {
                 <button 
                   type="button"
                   onClick={() => handlePackageSelect(pkg.id.toString())}
-                  className={`w-full py-3 rounded-md font-medium transition-colors ${pkg.is_popular ? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-md hover:shadow-lg' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}
+                  className={`w-full py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${pkg.is_popular ? 'bg-primary text-primary-foreground shadow-gold hover:shadow-gold-heavy' : 'bg-muted text-foreground hover:bg-muted/80'} active:scale-95`}
                 >
-                  {formData.packageId === pkg.id.toString() ? "Selected" : "Select Package"}
+                  {formData.packageId === pkg.id.toString() ? "Selected ✓" : "Select Package"}
                 </button>
               </div>
             </StaggerItem>
@@ -210,7 +210,7 @@ export default function BookingForm({ packages }: { packages: any[] }) {
       {/* Booking Form Layout */}
       {/* Booking Form Layout */}
       <ScrollReveal delay={0.3}>
-        <div id="booking-form-section" className="rounded-2xl border border-border/50 bg-card p-8 md:p-12 shadow-sm">
+        <div id="booking-form-section" className="rounded-[2.5rem] border border-primary/20 bg-card p-8 md:p-12 shadow-gold">
            <div className="text-center mb-10">
              <h2 className="text-3xl font-bold mb-4">Schedule Your Shoot</h2>
              <p className="text-muted-foreground max-w-xl mx-auto">
@@ -347,13 +347,13 @@ export default function BookingForm({ packages }: { packages: any[] }) {
         </div>
       </div>
 
-      <div className="pt-4">
+      <div className="pt-6">
          <button 
            type="submit" 
            disabled={loading}
-           className="w-full md:w-auto px-10 py-4 bg-primary text-primary-foreground font-bold rounded-md hover:bg-primary/90 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+           className="w-full md:w-auto px-12 py-5 bg-primary text-primary-foreground font-black text-xs uppercase tracking-widest rounded-2xl shadow-gold hover:shadow-gold-heavy hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
          >
-           {loading ? "Submitting Request..." : "Submit Booking Request →"}
+           {loading ? "Confirming Request..." : "Submit Booking Request →"}
          </button>
       </div>
 

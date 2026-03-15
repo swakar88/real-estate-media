@@ -92,9 +92,9 @@ export default function AdminDashboard() {
   }, []);
 
   const statCards = [
-    { title: "Active Shoots", value: stats.activeShoots, icon: Camera, href: "/admin-portal/shoots", color: "text-blue-500", bg: "bg-blue-500/10" },
-    { title: "Completed (This Month)", value: stats.completedShootsMonth, icon: CheckCircle2, href: "/admin-portal/shoots", color: "text-amber-500", bg: "bg-amber-500/10" },
-    { title: "Monthly Revenue", value: `$${stats.monthlyRevenue.toLocaleString()}`, icon: DollarSign, href: "/admin-portal/shoots", color: "text-green-500", bg: "bg-green-500/10" },
+    { title: "Active Shoots", value: stats.activeShoots, icon: Camera, href: "/admin-portal/shoots", color: "text-primary", bg: "bg-primary/10" },
+    { title: "Completed (This Month)", value: stats.completedShootsMonth, icon: CheckCircle2, href: "/admin-portal/shoots", color: "text-primary", bg: "bg-primary/10" },
+    { title: "Monthly Revenue", value: `$${stats.monthlyRevenue.toLocaleString()}`, icon: DollarSign, href: "/admin-portal/shoots", color: "text-primary", bg: "bg-primary/10" },
   ];
 
   if (loading) {
@@ -119,9 +119,9 @@ export default function AdminDashboard() {
           const Icon = stat.icon;
           return (
             <StaggerItem key={stat.title}>
-              <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
+              <div className="bg-card border border-primary/20 rounded-2xl p-6 shadow-gold hover:shadow-gold-heavy transition-all group relative overflow-hidden">
                 <div className="flex items-center gap-4 mb-4 relative z-10">
-                  <div className={`p-3 rounded-xl ${stat.bg} ${stat.color}`}>
+                  <div className={`p-3 rounded-xl ${stat.bg} ${stat.color} shadow-gold`}>
                      <Icon className="h-6 w-6" />
                   </div>
                   <div>
@@ -174,7 +174,7 @@ export default function AdminDashboard() {
                       {new Date(booking.created_at).toLocaleDateString()}
                     </p>
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
-                        booking.status === 'pending' ? 'bg-amber-500/10 text-amber-500' : 'bg-green-500/10 text-green-500'
+                        booking.status === 'pending' ? 'bg-primary/10 text-primary border border-primary/20' : 'bg-primary/20 text-primary border border-primary/30'
                     }`}>
                       {booking.status}
                     </span>

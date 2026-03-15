@@ -200,7 +200,7 @@ export default function AdminShoots() {
                           </td>
                           <td className="px-6 py-4">
                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest
-                                ${shoot.status === 'delivered' ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'}
+                                ${shoot.status === 'delivered' ? 'bg-success/10 text-success border border-success/20' : 'bg-warning/10 text-warning border border-warning/20'}
                              `}>
                                 {shoot.status === 'delivered' ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
                                 {shoot.status}
@@ -208,7 +208,7 @@ export default function AdminShoots() {
                           </td>
                           <td className="px-6 py-4">
                              <div className="flex flex-col gap-1.5">
-                                <span className={`inline-flex w-fit items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase ${shoot.payment_status === 'paid' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
+                                <span className={`inline-flex w-fit items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase ${shoot.payment_status === 'paid' ? 'bg-success/10 text-success' : 'bg-error/10 text-error'}`}>
                                    {shoot.payment_status || 'unpaid'}
                                 </span>
                                 {shoot.amount_due && <div className="text-xs font-bold">${parseFloat(shoot.amount_due).toFixed(2)}</div>}

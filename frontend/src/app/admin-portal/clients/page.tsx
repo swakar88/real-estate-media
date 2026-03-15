@@ -90,7 +90,7 @@ export default function AdminClients() {
       <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 gap-6">
         <StaggerItem>
           <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-blue-500/10 text-blue-500">
+            <div className="p-3 rounded-xl bg-info/10 text-info">
                <Users className="h-6 w-6" />
             </div>
             <div>
@@ -101,7 +101,7 @@ export default function AdminClients() {
         </StaggerItem>
         <StaggerItem>
           <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-green-500/10 text-green-500">
+            <div className="p-3 rounded-xl bg-success/10 text-success">
                <UserPlus className="h-6 w-6" />
             </div>
             <div>

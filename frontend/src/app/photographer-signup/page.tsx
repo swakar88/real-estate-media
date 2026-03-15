@@ -64,7 +64,7 @@ function SignupForm() {
   };
 
   return (
-    <div className="rounded-2xl border border-border/50 bg-card p-8 md:p-10 shadow-2xl backdrop-blur-sm">
+    <div className="rounded-[2.5rem] border border-primary/20 bg-card p-8 md:p-10 shadow-gold backdrop-blur-sm">
       <div className="text-center mb-8">
         <h1 className="text-3xl font-extrabold tracking-tight mb-2">
           Welcome to the Team
@@ -112,7 +112,7 @@ function SignupForm() {
         <button 
           type="submit" 
           disabled={loading || !token}
-          className="w-full py-3 bg-primary text-primary-foreground font-bold rounded-md hover:bg-primary/90 transition-all shadow-md hover:shadow-lg disabled:opacity-50 flex justify-center items-center"
+          className="w-full py-4 bg-primary text-primary-foreground font-black text-xs uppercase tracking-widest rounded-2xl shadow-gold hover:shadow-gold-heavy hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 flex justify-center items-center"
         >
           {loading ? (
              <span className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"></span>
