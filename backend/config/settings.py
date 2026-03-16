@@ -173,6 +173,7 @@ AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
 AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
 AWS_S3_ENDPOINT_URL = os.environ.get('AWS_S3_ENDPOINT_URL')
 AWS_S3_REGION_NAME = 'auto' # Required for R2
+R2_PUBLIC_DOMAIN = os.environ.get('R2_PUBLIC_DOMAIN', '').strip()
 
 # Google Cloud Storage Settings
 GCS_BUCKET_NAME = os.environ.get('GCS_BUCKET_NAME')

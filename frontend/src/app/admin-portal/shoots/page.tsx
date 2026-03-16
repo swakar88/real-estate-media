@@ -133,7 +133,7 @@ export default function AdminShoots() {
                   placeholder="Search shoots..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-4 py-2 border border-border/50 rounded-lg bg-card focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm w-full md:w-64 transition-all shadow-sm"
+                  className="pl-10 pr-4 py-2 border border-primary/20 rounded-xl bg-card focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm w-full md:w-64 transition-all shadow-gold"
                 />
              </div>
 
@@ -171,7 +171,7 @@ export default function AdminShoots() {
            <span className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></span>
         </div>
       ) : filteredShoots.length > 0 ? (
-        <div className="bg-card border border-border/50 rounded-2xl overflow-hidden shadow-sm">
+        <div className="bg-card/80 backdrop-blur-sm border border-primary/20 rounded-[2.5rem] overflow-hidden shadow-gold">
            <div className="overflow-x-auto">
               <table className="w-full text-sm text-left border-collapse">
                  <thead>
@@ -267,8 +267,8 @@ export default function AdminShoots() {
 
       {/* Invoice Modal */}
       {showInvoiceModal && (
-        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-card w-full max-w-sm rounded-2xl shadow-2xl border border-border/50 p-6 animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-card w-full max-w-sm rounded-[2.5rem] shadow-gold-heavy border border-primary/20 p-10 animate-in zoom-in-95 duration-200">
             <h2 className="text-xl font-bold mb-2">Create Invoice</h2>
             <p className="text-muted-foreground text-xs mb-6 uppercase tracking-widest font-bold">Stripe Integration</p>
             
@@ -309,8 +309,8 @@ export default function AdminShoots() {
 
       {/* Add Shoot Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-card w-full max-w-md rounded-2xl shadow-2xl border border-border/50 p-8 animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-card w-full max-w-md rounded-[2.5rem] shadow-gold-heavy border border-primary/20 p-10 animate-in zoom-in-95 duration-200">
             <h2 className="text-2xl font-bold mb-1">New Client Shoot</h2>
             <p className="text-muted-foreground text-sm mb-6">Initialize a delivery record for a client.</p>
             

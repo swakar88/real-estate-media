@@ -92,12 +92,15 @@ export default function AdminLayout({
     { name: "Clients", href: "/admin-portal/clients", icon: UserCircle },
     { name: "Portfolio", href: "/admin-portal/gallery", icon: ImageIcon },
     { name: "Site Media", href: "/admin-portal/site-media", icon: MonitorPlay },
+    { name: "Admins", href: "/admin-portal/admins", icon: Users },
+    { name: "Pricing & Packages", href: "/admin-portal/pricing", icon: FileText },
     { name: "Email Config", href: "/admin-portal/email-config", icon: Mail },
     { name: "Email Templates", href: "/admin-portal/email-templates", icon: FileText },
   ];
 
   return (
-    <div className="flex h-screen bg-black overflow-hidden text-foreground">
+    <div className="flex h-screen bg-background overflow-hidden text-foreground relative">
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[120px] pointer-events-none z-0"></div>
       
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
@@ -109,7 +112,7 @@ export default function AdminLayout({
 
       {/* Sidebar */}
       <aside className={`
-        fixed inset-y-0 left-0 z-50 w-64 bg-card border-r border-primary/20 shadow-gold 
+        fixed inset-y-0 left-0 z-50 w-64 bg-card/80 backdrop-blur-xl border-r border-primary/20 shadow-gold 
         transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0
         ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
       `}>
@@ -185,7 +188,7 @@ export default function AdminLayout({
           </button>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-4 md:p-8">
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 relative z-10">
            {children}
         </div>
       </main>

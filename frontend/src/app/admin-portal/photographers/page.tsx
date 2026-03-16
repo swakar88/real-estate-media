@@ -244,9 +244,9 @@ export default function AdminPhotographers() {
           
           <button 
              onClick={() => setShowAddModal(true)}
-             className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 text-sm font-bold rounded-xl hover:bg-primary/90 transition-all shadow-md active:scale-95"
+             className="flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 text-xs font-black uppercase tracking-widest rounded-xl hover:bg-primary/90 transition-all shadow-gold active:scale-95"
           >
-             <Plus className="w-4 h-4" /> Add Team Member
+             <Plus className="w-5 h-5" /> Add Team Member
           </button>
         </div>
       </ScrollReveal>
@@ -260,8 +260,11 @@ export default function AdminPhotographers() {
           
           {/* Photographers List */}
           <div className="lg:col-span-1 space-y-4">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground px-1">Team Directory</h2>
-            <div className="bg-card border border-border/50 rounded-2xl overflow-hidden shadow-sm divide-y divide-border/30">
+            <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 px-1 mb-4 flex items-center gap-2">
+              <Users className="w-3 h-3 text-primary" />
+              Team Directory
+            </h2>
+            <div className="bg-card/80 backdrop-blur-sm border border-primary/20 rounded-[2rem] overflow-hidden shadow-gold divide-y divide-primary/5">
               {photographers.length === 0 ? (
                 <div className="p-8 text-center text-muted-foreground text-sm italic">No team members.</div>
               ) : photographers.map(photo => (
@@ -297,37 +300,39 @@ export default function AdminPhotographers() {
             {selectedPhotographer ? (
               <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
                 {/* Header Info */}
-                <div className="bg-card p-6 rounded-2xl border border-border/50 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
-                   <div className="flex items-center gap-4">
-                      <div className={`h-16 w-16 rounded-2xl flex items-center justify-center font-bold text-2xl shadow-inner
+                <div className="bg-card/80 backdrop-blur-sm p-8 rounded-[2.5rem] border border-primary/20 shadow-gold flex flex-col md:flex-row md:items-center justify-between gap-8">
+                   <div className="flex items-center gap-6">
+                      <div className={`h-20 w-20 rounded-[1.5rem] flex items-center justify-center font-black text-3xl shadow-inner border border-primary/10
                          ${selectedPhotographer.is_active ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
                         {selectedPhotographer.user_name?.[0] || selectedPhotographer.first_name?.[0] || "P"}
                       </div>
                       <div>
-                        <h2 className="text-2xl font-bold flex items-center gap-2">
+                        <h2 className="text-3xl font-black italic text-foreground flex items-center gap-3">
                           {selectedPhotographer.user_name || `${selectedPhotographer.first_name} ${selectedPhotographer.last_name}`}
                         </h2>
-                        <p className="text-sm text-muted-foreground font-medium uppercase tracking-widest">{selectedPhotographer.email}</p>
+                        <p className="text-[10px] text-primary font-black uppercase tracking-[0.2em] bg-primary/10 px-3 py-1 rounded-full mt-2 inline-block">
+                           {selectedPhotographer.email}
+                        </p>
                       </div>
                    </div>
                    
-                   <div className="flex items-center gap-2">
+                   <div className="flex items-center gap-3">
                       {selectedPhotographer.is_active ? (
                         <button 
                           onClick={() => removePhotographer(selectedPhotographer.id)}
-                          className="h-10 px-4 text-xs font-bold text-muted-foreground hover:text-warning hover:bg-warning/10 rounded-xl transition-all border border-border/50 flex items-center gap-2"
+                          className="h-12 px-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 hover:text-warning hover:bg-warning/10 rounded-xl transition-all border border-primary/10 flex items-center gap-2 active:scale-95"
                         >
                           <AlertTriangle className="w-4 h-4" /> Deactivate
                         </button>
                       ) : (
-                         <div className="px-4 py-2 bg-destructive/10 text-destructive text-[10px] font-bold uppercase rounded-lg border border-destructive/20 select-none">
+                         <div className="px-5 py-3 bg-destructive/10 text-destructive text-[10px] font-black uppercase tracking-widest rounded-xl border border-destructive/20 select-none">
                             Inactive Profile
                          </div>
                       )}
                       
                       <button 
                         onClick={() => removePhotographer(selectedPhotographer.id, true)}
-                        className="h-10 px-4 text-xs font-bold text-muted-foreground hover:text-error hover:bg-error/10 rounded-xl transition-all border border-border/50 flex items-center gap-2"
+                        className="h-12 px-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 hover:text-error hover:bg-error/10 rounded-xl transition-all border border-primary/10 flex items-center gap-2 active:scale-95"
                       >
                         <ShieldAlert className="w-4 h-4" /> Permanent Delete
                       </button>
@@ -335,7 +340,7 @@ export default function AdminPhotographers() {
                 </div>
 
                 {/* Calendar View */}
-                <div className="bg-card border border-border/50 rounded-2xl shadow-sm overflow-hidden flex flex-col md:flex-row min-h-[500px]">
+                <div className="bg-card/80 backdrop-blur-sm border border-primary/20 rounded-[2.5rem] shadow-gold overflow-hidden flex flex-col md:flex-row min-h-[500px]">
                    <div className="flex-1 p-6">
                       <div className="flex items-center justify-between mb-8">
                          <div className="flex items-center gap-3">
@@ -353,9 +358,9 @@ export default function AdminPhotographers() {
                          </div>
                       </div>
 
-                      <div className="grid grid-cols-7 gap-px bg-border/20 rounded-xl overflow-hidden border border-border/20">
+                      <div className="grid grid-cols-7 gap-px bg-primary/10 rounded-2xl overflow-hidden border border-primary/20 shadow-inner">
                          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                            <div key={day} className="bg-muted/30 p-2 text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{day}</div>
+                            <div key={day} className="bg-primary/5 p-3 text-center text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">{day}</div>
                          ))}
                          {daysInMonth.map((dayObj, i) => {
                             const slots = getSlotsForDate(dayObj.dateStr);
@@ -365,9 +370,9 @@ export default function AdminPhotographers() {
                             return (
                                <div key={i} 
                                     onClick={() => dayObj.dateStr && setDate(dayObj.dateStr)}
-                                    className={`min-h-[80px] p-2 bg-card group relative transition-all cursor-pointer hover:bg-muted/20
-                                       ${!dayObj.current ? 'opacity-20 pointer-events-none' : ''}
-                                       ${date === dayObj.dateStr ? 'ring-2 ring-primary inset-0 z-10 rounded-md shadow-lg shadow-primary/20' : ''}
+                                    className={`min-h-[100px] p-3 bg-card group relative transition-all cursor-pointer hover:bg-primary/5
+                                       ${!dayObj.current ? 'opacity-10 pointer-events-none' : ''}
+                                       ${date === dayObj.dateStr ? 'bg-primary/10 ring-2 ring-primary inset-0 z-10' : ''}
                                     `}>
                                   <span className={`text-[11px] font-bold ${date === dayObj.dateStr ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'}`}>
                                      {dayObj.day}
@@ -398,7 +403,7 @@ export default function AdminPhotographers() {
                                <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Date</label>
                                <input 
                                  type="date" required 
-                                 className="w-full bg-background border border-border/60 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" 
+                                 className="w-full bg-black/40 border border-primary/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 font-bold" 
                                  value={date} 
                                  onChange={e => setDate(e.target.value)} 
                                />
@@ -407,7 +412,7 @@ export default function AdminPhotographers() {
                                <div>
                                   <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Range From</label>
                                   <select 
-                                    className="w-full bg-background border border-border/60 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary/50" 
+                                    className="w-full bg-black/40 border border-primary/10 rounded-xl px-3 py-3 text-xs font-black uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer" 
                                     value={timeFrom} 
                                     onChange={e => setTimeFrom(e.target.value)}
                                   >
@@ -421,7 +426,7 @@ export default function AdminPhotographers() {
                                <div>
                                   <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Range To</label>
                                   <select 
-                                    className="w-full bg-background border border-border/60 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary/50" 
+                                    className="w-full bg-black/40 border border-primary/10 rounded-xl px-3 py-3 text-xs font-black uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer" 
                                     value={timeTo} 
                                     onChange={e => setTimeTo(e.target.value)}
                                   >
@@ -452,10 +457,12 @@ export default function AdminPhotographers() {
                                getSlotsForDate(date).length === 0 ? (
                                   <div className="text-center py-10 opacity-40 italic text-xs">No slots on this day.</div>
                                ) : getSlotsForDate(date).sort((a,b) => a.time_slot.localeCompare(b.time_slot)).map(slot => (
-                                  <div key={slot.id} className="flex items-center justify-between p-3 bg-background border border-border/40 rounded-xl group transition-all hover:border-border">
-                                     <div className="flex items-center gap-3">
-                                        <Clock className={`w-3.5 h-3.5 ${slot.is_booked ? 'text-info' : 'text-success'}`} />
-                                        <span className="text-sm font-bold">{slot.time_slot}</span>
+                                  <div key={slot.id} className="flex items-center justify-between p-4 bg-black/40 border border-primary/10 rounded-2xl group transition-all hover:border-primary/30 shadow-inner">
+                                     <div className="flex items-center gap-4">
+                                        <div className={`p-2 rounded-lg ${slot.is_booked ? 'bg-info/10 text-info' : 'bg-success/10 text-success'}`}>
+                                           <Clock className="w-4 h-4" />
+                                        </div>
+                                        <span className="text-sm font-black italic">{slot.time_slot}</span>
                                      </div>
                                      <div className="flex items-center gap-2">
                                         {slot.is_booked ? (
@@ -496,9 +503,9 @@ export default function AdminPhotographers() {
 
       {/* Add Photographer Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-card w-full max-w-md rounded-2xl shadow-2xl border border-border/50 p-8 animate-in zoom-in-95 duration-200">
-            <h2 className="text-2xl font-bold mb-1">Add Team Member</h2>
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-card w-full max-w-md rounded-[2.5rem] shadow-gold-heavy border border-primary/20 p-10 animate-in zoom-in-95 duration-200">
+            <h2 className="text-3xl font-black italic mb-2">Add <span className="text-primary">Team Member</span></h2>
             <p className="text-sm text-muted-foreground mb-8">Send an invitation to join the platform.</p>
             
             <form onSubmit={addPhotographer} className="space-y-6">
@@ -507,7 +514,7 @@ export default function AdminPhotographers() {
                   <label className="text-xs font-bold uppercase tracking-wider ml-1">First Name</label>
                   <input 
                     type="text" required
-                    className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 shadow-sm"
+                    className="w-full rounded-xl border border-primary/10 bg-black/40 px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 shadow-inner"
                     placeholder="John"
                     value={newPhotoData.first_name} 
                     onChange={e => setNewPhotoData({...newPhotoData, first_name: e.target.value})}
@@ -517,7 +524,7 @@ export default function AdminPhotographers() {
                   <label className="text-xs font-bold uppercase tracking-wider ml-1">Last Name</label>
                   <input 
                     type="text" required
-                    className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 shadow-sm"
+                    className="w-full rounded-xl border border-primary/10 bg-black/40 px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 shadow-inner"
                     placeholder="Doe"
                     value={newPhotoData.last_name} 
                     onChange={e => setNewPhotoData({...newPhotoData, last_name: e.target.value})}
@@ -529,7 +536,7 @@ export default function AdminPhotographers() {
                 <label className="text-xs font-bold uppercase tracking-wider ml-1">Email <span className="font-normal">(System ID)</span></label>
                 <input 
                   type="email" required
-                  className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 shadow-sm"
+                  className="w-full rounded-xl border border-primary/10 bg-black/40 px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 shadow-inner"
                   placeholder="john@kcrealestatemedia.com"
                   value={newPhotoData.email} 
                   onChange={e => setNewPhotoData({...newPhotoData, email: e.target.value})}

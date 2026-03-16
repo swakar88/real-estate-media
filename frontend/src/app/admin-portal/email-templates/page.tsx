@@ -98,10 +98,12 @@ export default function EmailTemplatesPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6 pb-20">
         {/* Template List */}
-        <div className="md:col-span-4 bg-card rounded-2xl border border-border/50 overflow-hidden shadow-sm h-fit">
-          <div className="p-4 border-b border-border/50 bg-muted/30">
-            <h2 className="font-semibold text-foreground flex items-center gap-2">
-              <Settings2 className="w-4 h-4 text-primary" />
+        <div className="md:col-span-4 bg-card/80 backdrop-blur-sm rounded-[2rem] border border-primary/20 overflow-hidden shadow-gold h-fit">
+          <div className="p-6 border-b border-primary/10 bg-primary/5">
+            <h2 className="font-black italic text-foreground flex items-center gap-3">
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <Settings2 className="w-4 h-4 text-primary" />
+              </div>
               Templates
             </h2>
           </div>
@@ -131,32 +133,32 @@ export default function EmailTemplatesPage() {
         {/* Editor */}
         <div className="md:col-span-8 space-y-6">
           {selectedTemplate ? (
-            <div className="bg-card rounded-2xl border border-border/50 overflow-hidden shadow-sm animate-in fade-in slide-in-from-right-4 duration-300">
-              <div className="p-6 border-b border-border/50 flex items-center justify-between bg-muted/20">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-primary/20 text-primary flex items-center justify-center">
-                    <FileText className="w-5 h-5" />
+            <div className="bg-card/80 backdrop-blur-sm rounded-[2.5rem] border border-primary/20 overflow-hidden shadow-gold animate-in fade-in slide-in-from-right-4 duration-300">
+              <div className="p-8 border-b border-primary/10 flex items-center justify-between bg-primary/5">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shadow-inner">
+                    <FileText className="w-6 h-6" />
                   </div>
                   <div>
-                    <h2 className="font-bold text-lg text-foreground">{selectedTemplate.title}</h2>
-                    <p className="text-xs text-muted-foreground">Slug: {selectedTemplate.slug}</p>
+                    <h2 className="font-black italic text-xl text-foreground truncate max-w-[200px]">{selectedTemplate.title}</h2>
+                    <p className="text-[10px] text-primary font-black uppercase tracking-widest bg-primary/10 px-2 py-0.5 rounded-full inline-block mt-1">Registry: {selectedTemplate.slug}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   <button 
                     onClick={() => setShowPreview(true)}
-                    className="bg-muted hover:bg-muted/80 text-foreground px-4 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all active:scale-95 border border-primary/20"
+                    className="bg-card hover:bg-muted text-foreground px-5 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2 transition-all active:scale-95 border border-primary/20 shadow-md"
                   >
-                    <Eye className="w-4 h-4" />
+                    <Eye className="w-4 h-4 text-primary" />
                     Preview
                   </button>
                   <button 
                     onClick={handleSave}
                     disabled={saving}
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest shadow-gold hover:shadow-gold-heavy flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-gold hover:shadow-gold-heavy flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50"
                   >
                     <Save className="w-4 h-4" />
-                    {saving ? "Saving..." : "Save Changes"}
+                    {saving ? "Deploying..." : "Update Template"}
                   </button>
                 </div>
               </div>
@@ -168,7 +170,7 @@ export default function EmailTemplatesPage() {
                     type="text"
                     value={selectedTemplate.subject}
                     onChange={(e) => setSelectedTemplate({...selectedTemplate, subject: e.target.value})}
-                    className="w-full px-4 py-3 rounded-xl bg-muted/30 border border-border/50 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium"
+                    className="w-full px-5 py-4 rounded-2xl bg-black/40 border border-primary/10 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all font-bold"
                     placeholder="Subject line..."
                   />
                 </div>

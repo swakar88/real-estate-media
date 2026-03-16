@@ -1,7 +1,8 @@
 from rest_framework import viewsets, views, status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated, AllowAny, IsAdminUser
+from rest_framework import permissions
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.models import User
 from django.conf import settings
@@ -29,26 +30,36 @@ from .serializers import (
     PhotographerSlotSerializer,
     SiteMediaSerializer,
     ClientSerializer,
+    AdminSerializer,
     EmailConfigurationSerializer,
     EmailTemplateSerializer,
     MediaItemSerializer
 )
 
-class ServiceViewSet(viewsets.ReadOnlyModelViewSet):
+class ServiceViewSet(viewsets.ModelViewSet):
     """
-    API endpoint that allows services to be viewed.
+    API endpoint that allows services to be viewed and managed.
     """
-    queryset = Service.objects.filter(is_active=True)
+    queryset = Service.objects.all() # Show all to admins, maybe filter later
     serializer_class = ServiceSerializer
 
-class GalleryImageViewSet(viewsets.ReadOnlyModelViewSet):
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [AllowAny()]
+        return [IsAuthenticated()]
+
+class GalleryImageViewSet(viewsets.ModelViewSet):
     """
-    API endpoint that allows gallery images to be viewed.
+    API endpoint that allows gallery images to be viewed and managed.
     """
     queryset = GalleryImage.objects.all().order_by('-created_at')
     serializer_class = GalleryImageSerializer
 
-    # Optional: We could use django-filter here instead, but basic list filtering suffices
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [AllowAny()]
+        return [IsAuthenticated()]
+
     def get_queryset(self):
         queryset = super().get_queryset()
         category = self.request.query_params.get('category')
@@ -56,12 +67,45 @@ class GalleryImageViewSet(viewsets.ReadOnlyModelViewSet):
             queryset = queryset.filter(category=category)
         return queryset
 
-class PackageViewSet(viewsets.ReadOnlyModelViewSet):
+    @action(detail=False, methods=['get'], url_path='get-upload-url')
+    def get_upload_url(self, request):
+        """
+        Generates a presigned PUT URL for Cloudflare R2 for gallery/site assets.
+        """
+        filename = request.query_params.get('filename', f"asset_{int(datetime.now().timestamp())}")
+        content_type = request.query_params.get('contentType', 'image/jpeg')
+        
+        # Path for public assets (gallery, site media)
+        object_key = f"assets/{filename}"
+        
+        from .utils.r2_utils import generate_presigned_put
+        presigned_url = generate_presigned_put(object_key, content_type)
+        
+        if presigned_url:
+            public_domain = getattr(settings, 'R2_PUBLIC_DOMAIN', '').replace('https://', '').replace('http://', '').strip('/')
+            if public_domain:
+                public_url = f"https://{public_domain}/{object_key}"
+            else:
+                public_url = f"{settings.AWS_S3_ENDPOINT_URL}/{settings.AWS_STORAGE_BUCKET_NAME}/{object_key}"
+                
+            return Response({
+                "upload_url": presigned_url,
+                "object_key": object_key,
+                "public_url": public_url
+            })
+        return Response({"detail": "Failed to generate upload url."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class PackageViewSet(viewsets.ModelViewSet):
     """
-    API endpoint that allows packages to be viewed.
+    API endpoint that allows packages to be viewed and managed.
     """
     queryset = Package.objects.all().order_by('order', 'price')
     serializer_class = PackageSerializer
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [AllowAny()]
+        return [IsAuthenticated()]
 
 class BookingRequestViewSet(viewsets.ModelViewSet):
     """
@@ -220,7 +264,9 @@ class ClientShootViewSet(viewsets.ModelViewSet):
         
         if old_status != 'delivered' and updated_instance.status == 'delivered':
             from .utils.email_utils import send_content_uploaded_emails
-            send_content_uploaded_emails(updated_instance.property_address)
+            # Get client email safely
+            client_email = updated_instance.client.email if updated_instance.client else None
+            send_content_uploaded_emails(updated_instance.property_address, client_email)
 
     @action(detail=True, methods=['post'], url_path='generate-invoice')
     def generate_invoice(self, request, pk=None):
@@ -271,7 +317,8 @@ class ClientShootViewSet(viewsets.ModelViewSet):
 
             # SEND INVOICE EMAILS
             from .utils.email_utils import send_invoice_generated_email
-            send_invoice_generated_email(shoot.property_address, session_url)
+            client_email = shoot.client.email if shoot.client else None
+            send_invoice_generated_email(shoot.property_address, session_url, client_email)
             
             return Response({
                 "detail": "Invoice generated successfully",
@@ -766,6 +813,63 @@ def register_user(request):
     except Exception as e:
         return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def register_admin(request):
+    """
+    Endpoint for existing admins to register new staff users.
+    """
+    if not request.user.is_staff:
+        return Response({'detail': 'Only admins can create other admins.'}, status=status.HTTP_403_FORBIDDEN)
+        
+    data = request.data
+    email = data.get('email')
+    password = data.get('password')
+    first_name = data.get('first_name', '')
+    last_name = data.get('last_name', '')
+
+    if not email or not password:
+        return Response({'detail': 'Email and password are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if User.objects.filter(email=email).exists() or User.objects.filter(username=email).exists():
+        return Response({'detail': 'An account with that email already exists.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        user = User.objects.create_user(
+            username=email,
+            email=email,
+            password=password,
+            first_name=first_name,
+            last_name=last_name,
+            is_staff=True # Set as admin
+        )
+        user.save()
+        return Response({'detail': f'Admin account for {email} created successfully.'}, status=status.HTTP_201_CREATED)
+    except Exception as e:
+        return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def request_password_reset(request):
+    """
+    Mocked endpoint for password reset requests.
+    """
+    email = request.data.get('email')
+    if not email:
+        return Response({'detail': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+    # In a real app, we would verify the user exists and send a real tokenized link.
+    # For now, we mock the behavior.
+    print(f"PASSWORD RESET REQUEST FOR: {email}")
+    
+    # Simulate sending email
+    from .utils.email_utils import send_email_dynamic
+    subject = "Password Reset Request - KC Real Estate Media"
+    body = f"<p>Hello,</p><p>We received a request to reset your password. Please click the link below to set a new password:</p><p><a href='#'>Reset Password Link</a></p><p>If you didn't request this, please ignore this email.</p>"
+    
+    # Mocking successful "send"
+    return Response({'detail': 'If an account exists with that email, a reset link has been sent.'}, status=status.HTTP_200_OK)
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_availability(request):
@@ -926,11 +1030,50 @@ class SiteMediaViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticatedOrReadOnly]
     lookup_field = 'key'
 
+    @action(detail=False, methods=['get'], url_path='get-upload-url')
+    def get_upload_url(self, request):
+        """
+        Generates a presigned PUT URL for Cloudflare R2 for site assets.
+        """
+        if not request.user.is_staff:
+            return Response({"detail": "Only admins can request upload URLs."}, status=status.HTTP_403_FORBIDDEN)
+            
+        filename = request.query_params.get('filename', f"asset_{int(datetime.now().timestamp())}")
+        content_type = request.query_params.get('contentType', 'image/jpeg')
+        
+        # Path for site media assets
+        object_key = f"assets/{filename}"
+        
+        from .utils.r2_utils import generate_presigned_put
+        presigned_url = generate_presigned_put(object_key, content_type)
+        
+        if presigned_url:
+            public_domain = getattr(settings, 'R2_PUBLIC_DOMAIN', '').replace('https://', '').replace('http://', '').strip('/')
+            if public_domain:
+                public_url = f"https://{public_domain}/{object_key}"
+            else:
+                public_url = f"{settings.AWS_S3_ENDPOINT_URL}/{settings.AWS_STORAGE_BUCKET_NAME}/{object_key}"
+                
+            return Response({
+                "upload_url": presigned_url,
+                "object_key": object_key,
+                "public_url": public_url
+            })
+        return Response({"detail": "Failed to generate upload url."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     def list(self, request, *args, **kwargs):
         # Allow returning as a dict of {key: url} for optimal frontend consumption
         queryset = self.get_queryset()
-        if request.query_params.get('format') == 'dict':
-            return Response({item.key: item.url for item in queryset})
+        if request.query_params.get('view') == 'dict':
+            result = {}
+            serializer = self.get_serializer(queryset, many=True)
+            for item in serializer.data:
+                key = item['key']
+                result[key] = item['url']
+                result[f"{key}_type"] = item['media_type']
+                if item.get('url_before'):
+                    result[f"{key}_before"] = item['url_before']
+            return Response(result)
         return super().list(request, *args, **kwargs)
 
     def perform_create(self, serializer):
@@ -967,9 +1110,125 @@ class ClientViewSet(viewsets.ReadOnlyModelViewSet):
             booking_count=Count('shoots')
         ).order_by('-date_joined')
 
+class AdminViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for viewing and managing admin users.
+    """
+    serializer_class = AdminSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+    def get_queryset(self):
+        return User.objects.filter(is_staff=True).order_by('-date_joined')
+
+    def perform_create(self, serializer):
+        from django.contrib.auth.models import User
+        from django.core.signing import TimestampSigner
+        from .utils.email_utils import send_admin_invite_email
+        from django.conf import settings
+        
+        data = self.request.data
+        email = data.get('email')
+        first_name = data.get('first_name', '')
+        last_name = data.get('last_name', '')
+        
+        if User.objects.filter(email=email).exists():
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({"email": "A user with this email already exists."})
+
+        # Create user but inactive with unusable password
+        user = User.objects.create_user(
+            username=email,
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            is_active=False,
+            is_staff=True
+        )
+        user.set_unusable_password()
+        user.save()
+        
+        # Generate token
+        signer = TimestampSigner()
+        token = signer.sign_object({'user_id': user.id})
+        
+        # Determine frontend URL
+        frontend_url = 'http://localhost:3000' if settings.DEBUG else 'https://kcmedia-frontend.vercel.app'
+        invite_link = f"{frontend_url}/admin-signup?token={token}"
+        
+        # Send Email
+        send_admin_invite_email(
+            email=email,
+            name=first_name,
+            invite_link=invite_link
+        )
+
+    def perform_destroy(self, instance):
+        # Don't allow deleting yourself
+        if instance == self.request.user:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("You cannot delete your own admin account.")
+
+        hard_delete = self.request.query_params.get('hard') == 'true'
+        
+        if hard_delete:
+            instance.delete()
+        else:
+            # Soft delete: mark as inactive and remove staff status to prevent admin access
+            instance.is_active = False
+            instance.is_staff = False 
+            instance.save()
+
+    @action(detail=False, methods=['post'], permission_classes=[AllowAny], url_path='accept-invite')
+    def accept_invite(self, request):
+        from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
+        from django.contrib.auth.models import User
+        from rest_framework_simplejwt.tokens import RefreshToken
+        
+        token = request.data.get('token')
+        password = request.data.get('password')
+        
+        if not token or not password:
+            return Response({"detail": "Token and password are required."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        signer = TimestampSigner()
+        try:
+            token_data = signer.unsign_object(token, max_age=604800)
+            user_id = token_data.get('user_id')
+            user = User.objects.get(id=user_id)
+            
+            # Verify they are supposed to be staff
+            if not user.is_staff and not user.is_active:
+                # If they were soft-deleted, they are no longer staff. 
+                # But if they are accepting invite, they should be staff=True (from perform_create)
+                pass 
+
+            user.set_password(password)
+            user.is_active = True
+            user.save()
+            
+            from django.utils import timezone
+            user.last_login = timezone.now()
+            user.save(update_fields=['last_login'])
+            
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                'detail': 'Admin account activated successfully.',
+                'access': str(refresh.access_token),
+                'refresh': str(refresh)
+            }, status=status.HTTP_200_OK)
+            
+        except SignatureExpired:
+            return Response({"detail": "Invitation link has expired."}, status=status.HTTP_400_BAD_REQUEST)
+        except BadSignature:
+            return Response({"detail": "Invalid invitation link."}, status=status.HTTP_400_BAD_REQUEST)
+        except User.DoesNotExist:
+            return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 from django.core.mail import get_connection, EmailMessage
 import traceback
-from rest_framework import permissions
+
 
 class EmailConfigurationViewSet(viewsets.ModelViewSet):
     """

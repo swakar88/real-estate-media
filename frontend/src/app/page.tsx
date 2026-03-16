@@ -7,7 +7,7 @@ import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/Scroll
 async function getSiteMedia() {
   try {
     // Revalidate every minute or use 'no-store' if we want instant updates
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/site-media/?format=dict`, { cache: 'no-store' });
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/site-media/?view=dict`, { cache: 'no-store' });
     if (!res.ok) return {};
     return res.json();
   } catch (err) {
@@ -27,13 +27,24 @@ export default async function Home() {
         <section className="relative h-[85vh] w-full flex items-center justify-center overflow-hidden">
           {/* Background Element */}
           <div className="absolute inset-0 bg-background z-0">
-             <Image 
-                src={media.home_hero_bg || "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80"} 
-                alt="Luxury Real Estate Background" 
-                fill 
-                className="object-cover opacity-40 mix-blend-luminosity brightness-50" 
-                priority 
-             />
+             {media.home_hero_bg_type === 'video' ? (
+                <video 
+                   src={media.home_hero_bg} 
+                   autoPlay 
+                   muted 
+                   loop 
+                   playsInline 
+                   className="w-full h-full object-cover opacity-40 mix-blend-luminosity brightness-50"
+                />
+             ) : (
+                <Image 
+                   src={media.home_hero_bg || "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80"} 
+                   alt="Luxury Real Estate Background" 
+                   fill 
+                   className="object-cover opacity-40 mix-blend-luminosity brightness-50" 
+                   priority 
+                />
+             )}
              <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent"></div>
           </div>
           

@@ -86,7 +86,7 @@ export default function AdminBookings() {
                 placeholder="Search requests..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-border/50 rounded-lg bg-card focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm w-full sm:w-64 transition-all shadow-sm"
+                className="pl-10 pr-4 py-2 border border-primary/20 rounded-xl bg-card focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm w-full sm:w-64 transition-all shadow-gold"
               />
             </div>
             
@@ -120,7 +120,7 @@ export default function AdminBookings() {
         <StaggerContainer className="grid grid-cols-1 gap-4">
           {filteredBookings.map((booking) => (
             <StaggerItem key={booking.id}>
-              <div className={`bg-card border border-border/50 rounded-2xl p-5 md:p-6 shadow-sm hover:shadow-md transition-all group relative border-l-4 overflow-hidden ${
+              <div className={`bg-card/80 backdrop-blur-sm border border-primary/20 rounded-[2.5rem] p-8 md:p-10 shadow-gold hover:shadow-gold-heavy transition-all group relative border-l-4 overflow-hidden ${
                 booking.status === 'pending' ? 'border-l-warning' : 
                 booking.status === 'confirmed' ? 'border-l-info' : 
                 booking.status === 'completed' ? 'border-l-success' : 

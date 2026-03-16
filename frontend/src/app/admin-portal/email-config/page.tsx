@@ -148,15 +148,17 @@ export default function EmailConfigPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         <div className="md:col-span-2">
-          <form onSubmit={handleSave} className="bg-card border border-border/50 rounded-xl shadow-sm overflow-hidden">
-            <div className="p-6 border-b border-border/50 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Mail className="h-5 w-5 text-primary" />
-                <h2 className="font-semibold">SMTP Settings</h2>
+          <form onSubmit={handleSave} className="bg-card/80 backdrop-blur-sm border border-primary/20 rounded-[2.5rem] shadow-gold overflow-hidden">
+            <div className="p-8 border-b border-primary/10 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-primary/10 rounded-xl text-primary">
+                  <Mail className="h-5 w-5" />
+                </div>
+                <h2 className="text-xl font-black italic">SMTP <span className="text-primary italic">Settings</span></h2>
               </div>
               <div className="flex items-center gap-2">
-                <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${config.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
-                  {config.is_active ? 'Active' : 'Inactive'}
+                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${config.is_active ? 'bg-primary/20 text-primary border border-primary/20' : 'bg-muted text-muted-foreground border border-border'}`}>
+                  {config.is_active ? 'Active Connection' : 'Inactive'}
                 </span>
               </div>
             </div>
@@ -169,7 +171,7 @@ export default function EmailConfigPage() {
                     type="text"
                     value={config.title}
                     onChange={e => setConfig({...config, title: e.target.value})}
-                    className="w-full px-3 py-2 bg-muted/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="w-full px-4 py-3 bg-black/40 border border-primary/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm"
                     placeholder="e.g. Gmail SMTP"
                   />
                 </div>
@@ -181,7 +183,7 @@ export default function EmailConfigPage() {
                     type="text"
                     value={config.email_host}
                     onChange={e => setConfig({...config, email_host: e.target.value})}
-                    className="w-full px-3 py-2 bg-muted/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="w-full px-4 py-3 bg-black/40 border border-primary/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm"
                     placeholder="smtp.gmail.com"
                     required
                   />
@@ -192,7 +194,7 @@ export default function EmailConfigPage() {
                     type="number"
                     value={config.email_port}
                     onChange={e => setConfig({...config, email_port: parseInt(e.target.value)})}
-                    className="w-full px-3 py-2 bg-muted/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="w-full px-4 py-3 bg-black/40 border border-primary/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm"
                     placeholder="587"
                     required
                   />
@@ -204,7 +206,7 @@ export default function EmailConfigPage() {
                     type="text"
                     value={config.email_username}
                     onChange={e => setConfig({...config, email_username: e.target.value})}
-                    className="w-full px-3 py-2 bg-muted/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="w-full px-4 py-3 bg-black/40 border border-primary/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm"
                     placeholder="your-email@gmail.com"
                     required
                   />
@@ -216,8 +218,8 @@ export default function EmailConfigPage() {
                       type={showPassword ? "text" : "password"}
                       value={config.email_password}
                       onChange={e => setConfig({...config, email_password: e.target.value})}
-                      className="w-full px-3 py-2 bg-muted/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 pr-10"
-                      placeholder={ (config as any).id ? "•••••••• (Leave blank to keep current)" : "Enter password"}
+                      className="w-full px-4 py-3 bg-black/40 border border-primary/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 pr-12 text-sm"
+                      placeholder={ (config as any).id ? "•••••••• (Keep Current)" : "Enter password"}
                       required={!(config as any).id}
                     />
                     <button 
@@ -236,7 +238,7 @@ export default function EmailConfigPage() {
                     type="email"
                     value={config.email_from_address}
                     onChange={e => setConfig({...config, email_from_address: e.target.value})}
-                    className="w-full px-3 py-2 bg-muted/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="w-full px-4 py-3 bg-black/40 border border-primary/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm"
                     placeholder="noreply@kcremedia.com"
                     required
                   />
@@ -247,7 +249,7 @@ export default function EmailConfigPage() {
                     type="text"
                     value={config.email_from_name}
                     onChange={e => setConfig({...config, email_from_name: e.target.value})}
-                    className="w-full px-3 py-2 bg-muted/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="w-full px-4 py-3 bg-black/40 border border-primary/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm"
                     placeholder="KC Real Estate Media"
                     required
                   />
@@ -301,25 +303,25 @@ export default function EmailConfigPage() {
                 type="button"
                 onClick={handleTestConnection}
                 disabled={testing || saving}
-                className="flex items-center gap-2 px-4 py-2 bg-background border border-border rounded-lg text-sm font-medium hover:bg-muted transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 px-6 py-3 bg-card border border-primary/20 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-muted transition-all active:scale-95 disabled:opacity-50"
               >
-                {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                {testing ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : <Send className="h-4 w-4 text-primary" />}
                 Test Connection
               </button>
               <button
                 type="submit"
                 disabled={saving || testing}
-                className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 shadow-sm transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 px-8 py-3 bg-primary text-primary-foreground rounded-xl text-xs font-black uppercase tracking-widest hover:bg-primary/90 shadow-gold transition-all active:scale-95 disabled:opacity-50"
               >
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                Save Changes
+                Save Configuration
               </button>
             </div>
           </form>
         </div>
 
         <div className="space-y-6">
-          <div className="bg-card border border-border/50 rounded-xl p-6 shadow-sm">
+          <div className="bg-card/80 backdrop-blur-sm border border-primary/20 rounded-3xl p-8 shadow-gold">
             <h3 className="font-semibold mb-4 flex items-center gap-2">
               <AlertCircle className="h-4 w-4 text-primary" />
               Information

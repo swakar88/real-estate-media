@@ -138,6 +138,25 @@ class SiteMediaSerializer(serializers.ModelSerializer):
         model = SiteMedia
         fields = '__all__'
 
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        from django.conf import settings
+        public_domain = getattr(settings, 'R2_PUBLIC_DOMAIN', '').replace('https://', '').replace('http://', '').strip('/')
+        bucket = getattr(settings, 'AWS_STORAGE_BUCKET_NAME', '')
+        
+        def rewrite_url(url):
+            if not url: return url
+            if public_domain and bucket and f'/{bucket}/' in url and 'r2.cloudflarestorage.com' in url:
+                key_part = url.split(f"/{bucket}/")[1]
+                return f"https://{public_domain}/{key_part}"
+            return url
+
+        ret['url'] = rewrite_url(ret['url'])
+        if 'url_before' in ret:
+            ret['url_before'] = rewrite_url(ret['url_before'])
+                
+        return ret
+
 class ClientSerializer(serializers.ModelSerializer):
     full_name = serializers.CharField(source='get_full_name', read_only=True)
     booking_count = serializers.IntegerField(read_only=True)
@@ -147,3 +166,11 @@ class ClientSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'full_name', 'booking_count', 'last_login', 'date_joined']
+
+class AdminSerializer(serializers.ModelSerializer):
+    full_name = serializers.CharField(source='get_full_name', read_only=True)
+    
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'full_name', 'date_joined', 'is_active']
+        read_only_fields = ['date_joined']

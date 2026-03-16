@@ -3,10 +3,12 @@ import Footer from "@/components/Footer";
 import Link from 'next/link';
 import Image from 'next/image';
 import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/ScrollReveal";
+import ImageComparison from "@/components/ImageComparison";
+import { Video } from "lucide-react";
 
 async function getSiteMedia() {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/site-media/?format=dict`, { cache: 'no-store' });
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/site-media/?view=dict`, { cache: 'no-store' });
     if (!res.ok) return {};
     return res.json();
   } catch (err) {
@@ -47,48 +49,96 @@ export default async function Services() {
             <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {/* Day to Dusk */}
               <StaggerItem>
-                <div className="rounded-xl border border-border/50 bg-card overflow-hidden h-full">
-                  <div className="h-48 bg-muted flex items-center justify-center relative overflow-hidden group-hover:scale-105 transition-transform duration-500">
-                    <Image src={media.services_dusk || "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"} alt="Day to Dusk real estate editing" fill className="object-cover" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-background/90 to-transparent z-10"></div>
-                    <span className="z-20 font-bold text-lg text-primary shadow-sm">Twilight Conversion</span>
+                <div className="rounded-[2.5rem] border border-primary/20 bg-card overflow-hidden h-full shadow-gold hover:shadow-gold-heavy transition-all group">
+                  <div className="h-64 bg-black relative overflow-hidden">
+                    {media.services_dusk_before ? (
+                      <ImageComparison 
+                        beforeImage={media.services_dusk_before}
+                        afterImage={media.services_dusk}
+                      />
+                    ) : (
+                      <Image 
+                        src={media.services_dusk || "https://images.unsplash.com/photo-1484154218962-a197022b5858?q=80&w=1474&auto=format&fit=crop"} 
+                        alt="Premium Twilight Conversion" 
+                        fill 
+                        className="object-cover transition-transform duration-1000 group-hover:scale-110" 
+                      />
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none"></div>
+                    <div className="absolute bottom-6 left-6 pointer-events-none">
+                        <span className="text-primary font-black text-[10px] uppercase tracking-[0.3em] block mb-1">Architectural</span>
+                        <h3 className="text-2xl font-black text-white italic">Twilight <span className="text-primary italic">Conversion</span></h3>
+                    </div>
                   </div>
-                  <div className="p-6 border-t border-primary/10">
-                    <h3 className="text-xl font-bold mb-2">Day-To-Dusk</h3>
-                    <p className="text-sm text-muted-foreground mb-4">Transform standard daytime exterior photos into stunning twilight imagery. Captures attention instantly on MLS.</p>
-                    <Link href="/book" className="text-primary text-sm hover:underline font-black uppercase tracking-widest">Add to Package →</Link>
+                  <div className="p-8">
+                    <p className="text-sm text-muted-foreground mb-6 leading-relaxed">Transform standard daytime exterior photos into stunning, high-end twilight imagery. Guaranteed to capture attention instantly on premium listings.</p>
+                    <Link href="/add-on-services" className="inline-flex items-center gap-2 text-primary text-xs font-black uppercase tracking-widest hover:gap-4 transition-all">
+                        View Pricing <span>→</span>
+                    </Link>
                   </div>
                 </div>
               </StaggerItem>
 
               {/* Declutter */}
               <StaggerItem>
-                <div className="rounded-xl border border-border/50 bg-card overflow-hidden h-full">
-                  <div className="h-48 bg-muted flex items-center justify-center relative overflow-hidden group-hover:scale-105 transition-transform duration-500">
-                    <Image src={media.services_staging || "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"} alt="Decluttered room editing" fill className="object-cover" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-background/90 to-transparent z-10"></div>
-                    <span className="z-20 font-bold text-lg text-primary shadow-sm">Virtual Staging</span>
+                <div className="rounded-[2.5rem] border border-primary/20 bg-card overflow-hidden h-full shadow-gold hover:shadow-gold-heavy transition-all group">
+                  <div className="h-64 bg-black relative overflow-hidden">
+                    {media.services_staging_before ? (
+                      <ImageComparison 
+                        beforeImage={media.services_staging_before}
+                        afterImage={media.services_staging}
+                      />
+                    ) : (
+                      <Image 
+                        src={media.services_staging || "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?q=80&w=1470&auto=format&fit=crop"} 
+                        alt="Premium Virtual Decluttering" 
+                        fill 
+                        className="object-cover transition-transform duration-1000 group-hover:scale-110" 
+                      />
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none"></div>
+                    <div className="absolute bottom-6 left-6 pointer-events-none">
+                        <span className="text-primary font-black text-[10px] uppercase tracking-[0.3em] block mb-1">Interior Optimization</span>
+                        <h3 className="text-2xl font-black text-white italic">Virtual <span className="text-primary italic">De-clutter</span></h3>
+                    </div>
                   </div>
-                  <div className="p-6">
-                    <h3 className="text-xl font-bold mb-2">Enhanced De-clutter</h3>
-                    <p className="text-sm text-muted-foreground mb-4">Digitally remove unwanted furniture, vehicles, or personal items from rooms to present a clean, empty space.</p>
-                    <Link href="/book" className="text-primary text-sm hover:underline font-medium">Add to Package →</Link>
+                  <div className="p-8">
+                    <p className="text-sm text-muted-foreground mb-6 leading-relaxed">Digitally remove unwanted furniture, vehicles, or personal items. We present a pristine, showroom-quality space that invites potential buyers in.</p>
+                    <Link href="/add-on-services" className="inline-flex items-center gap-2 text-primary text-xs font-black uppercase tracking-widest hover:gap-4 transition-all">
+                        View Pricing <span>→</span>
+                    </Link>
                   </div>
                 </div>
               </StaggerItem>
 
               {/* Green Grass */}
               <StaggerItem>
-                <div className="rounded-xl border border-border/50 bg-card overflow-hidden h-full">
-                  <div className="h-48 bg-muted flex items-center justify-center relative overflow-hidden group-hover:scale-105 transition-transform duration-500">
-                    <Image src={media.services_grass || "https://images.unsplash.com/photo-1588880331179-bc9b93a8cb65?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"} alt="Lush green grass editing" fill className="object-cover" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-background/90 to-transparent z-10"></div>
-                    <span className="z-20 font-bold text-lg text-primary shadow-sm">Green Grass Edit</span>
+                <div className="rounded-[2.5rem] border border-primary/20 bg-card overflow-hidden h-full shadow-gold hover:shadow-gold-heavy transition-all group">
+                  <div className="h-64 bg-black relative overflow-hidden">
+                    {media.services_grass_before ? (
+                      <ImageComparison 
+                        beforeImage={media.services_grass_before}
+                        afterImage={media.services_grass}
+                      />
+                    ) : (
+                      <Image 
+                        src={media.services_grass || "https://images.unsplash.com/photo-1595874249110-394f9e15967b?q=80&w=1471&auto=format&fit=crop"} 
+                        alt="Premium Curb Appeal Enhancement" 
+                        fill 
+                        className="object-cover transition-transform duration-1000 group-hover:scale-110" 
+                      />
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none"></div>
+                    <div className="absolute bottom-6 left-6 pointer-events-none">
+                        <span className="text-primary font-black text-[10px] uppercase tracking-[0.3em] block mb-1">Curb Appeal</span>
+                        <h3 className="text-2xl font-black text-white italic">Lush Grass <span className="text-primary italic">Edit</span></h3>
+                    </div>
                   </div>
-                  <div className="p-6">
-                    <h3 className="text-xl font-bold mb-2">Green Grass Edit</h3>
-                    <p className="text-sm text-muted-foreground mb-4">Enhance brown, patchy, or dormant lawns to a vibrant, lush green to maximize curb appeal.</p>
-                    <Link href="/book" className="text-primary text-sm hover:underline font-medium">Add to Package →</Link>
+                  <div className="p-8">
+                    <p className="text-sm text-muted-foreground mb-6 leading-relaxed">Enhance patchy or dormant lawns to a vibrant, lush green. Perfect for maximizing first impressions and property value throughout the year.</p>
+                    <Link href="/add-on-services" className="inline-flex items-center gap-2 text-primary text-xs font-black uppercase tracking-widest hover:gap-4 transition-all">
+                        View Pricing <span>→</span>
+                    </Link>
                   </div>
                 </div>
               </StaggerItem>
@@ -124,7 +174,23 @@ export default async function Services() {
                </ScrollReveal>
                <ScrollReveal direction="right" delay={0.2} className="flex-1 w-full relative">
                  <div className="aspect-video bg-muted rounded-xl overflow-hidden border border-border/50 flex items-center justify-center relative group shadow-2xl">
-                    <Image src={media.services_drone || "https://images.unsplash.com/photo-1628611225249-6c4c9258dcc0?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80"} alt="Cinematic Drone Aerial" fill className="object-cover transition-transform duration-700 group-hover:scale-105" />
+                    {media.services_drone_type === 'video' ? (
+                      <video 
+                        src={media.services_drone} 
+                        autoPlay 
+                        muted 
+                        loop 
+                        playsInline 
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                      />
+                    ) : (
+                      <Image 
+                        src={media.services_drone || "https://images.unsplash.com/photo-1628611225249-6c4c9258dcc0?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80"} 
+                        alt="Cinematic Drone Aerial" 
+                        fill 
+                        className="object-cover transition-transform duration-700 group-hover:scale-105" 
+                      />
+                    )}
                     <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors duration-300 flex items-center justify-center">
                        <div className="w-16 h-16 rounded-full bg-background/80 backdrop-blur flex items-center justify-center text-primary group-hover:scale-110 transition-transform cursor-pointer shadow-lg border border-primary/20">
                           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8 ml-1">

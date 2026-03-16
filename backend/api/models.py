@@ -164,6 +164,7 @@ class SiteMedia(models.Model):
     key = models.CharField(max_length=100, unique=True, help_text="A unique identifier for the frontend component, e.g., 'home_hero_video'")
     title = models.CharField(max_length=200, help_text="A human-readable title for the admin portal")
     url = models.URLField(max_length=1000, help_text="The full URL to the media file (e.g., Unsplash, Cloudinary, S3)")
+    url_before = models.URLField(max_length=1000, blank=True, null=True, help_text="Optional 'Before' image for comparison (e.g., for staging or grass edits)")
     media_type = models.CharField(max_length=20, choices=[('image', 'Image'), ('video', 'Video')], default='image')
     description = models.TextField(blank=True, help_text="Optional description of where this is used")
     updated_at = models.DateTimeField(auto_now=True)

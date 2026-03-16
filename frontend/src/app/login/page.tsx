@@ -14,8 +14,31 @@ export default function Login() {
   const [lastName, setLastName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [isRegistering, setIsRegistering] = useState(false); // Toggle state
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetMessage, setResetMessage] = useState("");
   const router = useRouter();
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetLoading(true);
+    setResetMessage("");
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/password-reset/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: resetEmail }),
+      });
+      const data = await res.json();
+      setResetMessage(data.detail);
+    } catch (err) {
+      setResetMessage("Failed to request reset. Please try again.");
+    } finally {
+      setResetLoading(false);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,7 +108,7 @@ export default function Login() {
           <div className="rounded-[2.5rem] border border-primary/20 bg-card p-8 md:p-10 shadow-gold backdrop-blur-sm">
             <div className="text-center mb-8">
               <h1 className="text-3xl font-extrabold tracking-tight mb-2">
-                {isRegistering ? "Create Account" : "Agent Portal"}
+                {isRegistering ? "Create Account" : "Client Portal"}
               </h1>
               <p className="text-sm text-muted-foreground">
                 {isRegistering ? "Register to book shoots and track deliverables" : "Sign in to view your shoots, download media, and manage invoices."}
@@ -144,7 +167,15 @@ export default function Login() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label htmlFor="password" className="text-sm font-medium">Password</label>
-                  {!isRegistering && <Link href="#" className="text-xs text-primary hover:underline">Forgot password?</Link>}
+                  {!isRegistering && (
+                    <button 
+                      type="button" 
+                      onClick={() => { setShowForgotModal(true); setResetMessage(""); }}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      Forgot password?
+                    </button>
+                  )}
                 </div>
                 <input 
                   type="password" 
@@ -184,6 +215,51 @@ export default function Login() {
           </div>
         </ScrollReveal>
       </main>
+
+      {/* Forgot Password Modal */}
+      {showForgotModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-card w-full max-w-md rounded-[2.5rem] shadow-2xl border border-primary/20 p-10 animate-in zoom-in-95 duration-200">
+            <h2 className="text-2xl font-black mb-2">Forgot Password</h2>
+            <p className="text-sm text-muted-foreground mb-6">Enter your email and we'll send you a link to reset your password.</p>
+            
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              {resetMessage && (
+                <div className={`p-4 rounded-xl text-sm font-bold border ${resetMessage.includes('sent') ? 'bg-primary/10 border-primary/20 text-primary' : 'bg-destructive/10 border-destructive/20 text-destructive'}`}>
+                  {resetMessage}
+                </div>
+              )}
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium ml-1">Email Address</label>
+                <input 
+                  type="email" required
+                  className="w-full bg-background border border-border/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  placeholder="name@agency.com"
+                  value={resetEmail} onChange={e => setResetEmail(e.target.value)}
+                />
+              </div>
+
+              <div className="flex flex-col gap-3 pt-4">
+                <button 
+                  type="submit" 
+                  disabled={resetLoading}
+                  className="w-full py-4 bg-primary text-primary-foreground font-black text-xs uppercase tracking-widest rounded-2xl shadow-gold hover:shadow-gold-heavy transition-all disabled:opacity-50"
+                >
+                  {resetLoading ? <span className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin inline-block"></span> : "Send Reset Link"}
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => setShowForgotModal(false)}
+                  className="w-full py-4 bg-muted text-muted-foreground font-black text-xs uppercase tracking-widest rounded-2xl hover:bg-muted/80 transition-all font-bold"
+                >
+                  Back to Login
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <Footer />
     </div>

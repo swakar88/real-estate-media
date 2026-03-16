@@ -152,11 +152,26 @@ def send_photographer_invite_email(email, name, invite_link):
     html_content = _get_email_template("Welcome to the Team", content_html, "Accept Invitation & Set Password", invite_link)
     return send_email_dynamic(subject, email, html_content)
 
-def _send_mocked_email(subject, html_content):
-    # Keep the "mocked" behavior for now as per project context, 
-    # but use the dynamic sender.
-    to_email = "swakar88@gmail.com" # MOCKED FOR TESTING
-    return send_email_dynamic(subject, to_email, html_content)
+def send_admin_invite_email(email, name, invite_link):
+    default_body = """
+        <p>Hi {name},</p>
+        <p>You have been invited to join the <strong>KC Real Estate Media</strong> administrative team.</p>
+        <p>As an administrator, you will have access to manage bookings, services, media, and team members. Please click the button below to accept your invitation, set your password, and access the admin portal.</p>
+    """
+    subject, content_html = get_template_content(
+        "admin-invite", 
+        "Welcome to the Admin Team - KC Real Estate Media", 
+        default_body, 
+        {"name": name}
+    )
+    html_content = _get_email_template("Admin Invitation", content_html, "Accept Invitation & Activate Account", invite_link)
+    return send_email_dynamic(subject, email, html_content)
+
+def _send_mocked_email(subject, html_content, to_email=None):
+    # Use provided recipient or fallback to a default admin contact
+    # In production, this would use configurations from the database.
+    recipient = to_email or "swakar88@gmail.com" 
+    return send_email_dynamic(subject, recipient, html_content)
 
 def send_booking_created_emails(booking, customer_email, photographer_email, photographer_name):
     context = {
@@ -187,7 +202,8 @@ def send_booking_created_emails(booking, customer_email, photographer_email, pho
     )
     _send_mocked_email(
         subject=admin_subject,
-        html_content=_get_email_template("New Booking Alert", admin_content)
+        html_content=_get_email_template("New Booking Alert", admin_content),
+        to_email=settings.DEFAULT_FROM_EMAIL if hasattr(settings, 'DEFAULT_FROM_EMAIL') else "admin@example.com"
     )
 
     # Customer Confirmation
@@ -203,7 +219,8 @@ def send_booking_created_emails(booking, customer_email, photographer_email, pho
     )
     _send_mocked_email(
         subject=cust_subject,
-        html_content=_get_email_template("Booking Confirmed", cust_content)
+        html_content=_get_email_template("Booking Confirmed", cust_content),
+        to_email=customer_email
     )
 
     # Photographer Notification
@@ -217,14 +234,16 @@ def send_booking_created_emails(booking, customer_email, photographer_email, pho
         """
         _send_mocked_email(
             subject=f"New Shoot Assigned - {booking.shoot_date}",
-            html_content=_get_email_template("New Shoot Assigned", photog_content)
+            html_content=_get_email_template("New Shoot Assigned", photog_content),
+            to_email=photographer_email
         )
 
-def send_content_uploaded_emails(shoot_address):
+def send_content_uploaded_emails(shoot_address, to_email=None):
     admin_content = f"<p>Media has been uploaded for the property at <strong>{shoot_address}</strong>. It is now ready for client delivery.</p>"
     _send_mocked_email(
         subject=f"Shoot Media Uploaded - {shoot_address[:50]}",
-        html_content=_get_email_template("Media Uploaded", admin_content)
+        html_content=_get_email_template("Media Uploaded", admin_content),
+        to_email=settings.DEFAULT_FROM_EMAIL if hasattr(settings, 'DEFAULT_FROM_EMAIL') else "admin@example.com"
     )
 
     # Customer notification
@@ -239,10 +258,11 @@ def send_content_uploaded_emails(shoot_address):
     )
     _send_mocked_email(
         subject=subject,
-        html_content=_get_email_template("Processing Complete", content_html)
+        html_content=_get_email_template("Processing Complete", content_html),
+        to_email=to_email
     )
 
-def send_invoice_generated_email(shoot_address, payment_link):
+def send_invoice_generated_email(shoot_address, payment_link, to_email=None):
     subject, content_html = get_template_content(
         "invoice-ready",
         f"Invoice for Your Recent Shoot - {shoot_address[:50]}",
@@ -254,14 +274,16 @@ def send_invoice_generated_email(shoot_address, payment_link):
     )
     _send_mocked_email(
         subject=subject,
-        html_content=_get_email_template("Invoice Ready", content_html, "Pay Securely via Stripe", payment_link)
+        html_content=_get_email_template("Invoice Ready", content_html, "Pay Securely via Stripe", payment_link),
+        to_email=to_email
     )
 
 def send_payment_confirmed_emails(shoot_address, dashboard_link):
     admin_content = f"<p>Payment has been successfully received for <strong>{shoot_address}</strong>. Media access has been granted to the client.</p>"
     _send_mocked_email(
         subject=f"Payment Received - {shoot_address[:50]}",
-        html_content=_get_email_template("Payment Captured", admin_content)
+        html_content=_get_email_template("Payment Captured", admin_content),
+        to_email=settings.DEFAULT_FROM_EMAIL if hasattr(settings, 'DEFAULT_FROM_EMAIL') else "admin@example.com"
     )
 
     # Customer notification
@@ -276,5 +298,6 @@ def send_payment_confirmed_emails(shoot_address, dashboard_link):
     )
     _send_mocked_email(
         subject=subject,
-        html_content=_get_email_template("Payment Successful", content_html, "Go to Dashboard", dashboard_link)
+        html_content=_get_email_template("Payment Successful", content_html, "Go to Dashboard", dashboard_link),
+        to_email=None # Mocked
     )

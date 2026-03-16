@@ -146,7 +146,7 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Recent Activity */}
         <ScrollReveal delay={0.2}>
-          <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm h-full">
+          <div className="bg-card border border-primary/20 rounded-[2.5rem] p-10 shadow-gold h-full">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-bold flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-primary" />
@@ -187,7 +187,7 @@ export default function AdminDashboard() {
 
         {/* Upcoming Shoots */}
         <ScrollReveal delay={0.3}>
-          <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm h-full">
+          <div className="bg-card border border-primary/20 rounded-[2.5rem] p-10 shadow-gold h-full">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-bold flex items-center gap-2">
                 <Camera className="w-5 h-5 text-primary" />

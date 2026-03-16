@@ -80,7 +80,7 @@ export default function AdminClients() {
                 setSearchTerm(e.target.value);
                 setCurrentPage(1);
               }}
-              className="pl-10 pr-4 py-2.5 border border-border/50 rounded-xl bg-card focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm w-full md:w-80 transition-all shadow-sm"
+              className="pl-10 pr-4 py-2.5 border border-primary/20 rounded-xl bg-card focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm w-full md:w-80 transition-all shadow-gold"
             />
           </div>
         </div>
@@ -89,24 +89,24 @@ export default function AdminClients() {
       {/* Stats Cards */}
       <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 gap-6">
         <StaggerItem>
-          <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-info/10 text-info">
+          <div className="bg-card/80 backdrop-blur-sm border border-primary/20 rounded-2xl p-6 shadow-gold flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-primary/10 text-primary shadow-inner">
                <Users className="h-6 w-6" />
             </div>
             <div>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest">Total Clients</p>
-              <p className="text-2xl font-bold">{clients.length}</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Total Clients</p>
+              <p className="text-2xl font-black italic">{clients.length}</p>
             </div>
           </div>
         </StaggerItem>
         <StaggerItem>
-          <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-success/10 text-success">
+          <div className="bg-card/80 backdrop-blur-sm border border-primary/20 rounded-2xl p-6 shadow-gold flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-primary/10 text-primary shadow-inner">
                <UserPlus className="h-6 w-6" />
             </div>
             <div>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest">New (This Month)</p>
-              <p className="text-2xl font-bold">{newClientsThisMonth}</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">New (This Month)</p>
+              <p className="text-2xl font-black italic">{newClientsThisMonth}</p>
             </div>
           </div>
         </StaggerItem>
@@ -118,7 +118,7 @@ export default function AdminClients() {
         </div>
       ) : filteredClients.length > 0 ? (
         <div className="space-y-6">
-          <div className="bg-card border border-border/50 rounded-2xl overflow-hidden shadow-sm">
+          <div className="bg-card/80 backdrop-blur-sm border border-primary/20 rounded-[2.5rem] overflow-hidden shadow-gold">
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left border-collapse">
                 <thead>
