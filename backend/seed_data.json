@@ -1,0 +1,234 @@
+[
+  {
+    "model": "api.galleryimage",
+    "pk": 1,
+    "fields": {
+      "title": "Modern Living Room",
+      "category": "interior",
+      "image_url": "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80",
+      "featured": true,
+      "created_at": "2026-03-09T04:29:52.126Z"
+    }
+  },
+  {
+    "model": "api.galleryimage",
+    "pk": 2,
+    "fields": {
+      "title": "Luxury Exterior",
+      "category": "exterior",
+      "image_url": "https://images.unsplash.com/photo-1600607687931-ceeb66d11362?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80",
+      "featured": true,
+      "created_at": "2026-03-09T04:29:52.133Z"
+    }
+  },
+  {
+    "model": "api.galleryimage",
+    "pk": 3,
+    "fields": {
+      "title": "Minimalist Kitchen",
+      "category": "interior",
+      "image_url": "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80",
+      "featured": true,
+      "created_at": "2026-03-09T04:29:52.139Z"
+    }
+  },
+  {
+    "model": "api.galleryimage",
+    "pk": 4,
+    "fields": {
+      "title": "Twilight Pool",
+      "category": "twilight",
+      "image_url": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80",
+      "featured": true,
+      "created_at": "2026-03-09T04:29:52.146Z"
+    }
+  },
+  {
+    "model": "api.galleryimage",
+    "pk": 5,
+    "fields": {
+      "title": "Cozy Bedroom",
+      "category": "interior",
+      "image_url": "https://images.unsplash.com/photo-1600607686527-6fb886090705?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80",
+      "featured": true,
+      "created_at": "2026-03-09T04:29:52.153Z"
+    }
+  },
+  {
+    "model": "api.galleryimage",
+    "pk": 6,
+    "fields": {
+      "title": "Aerial Estate",
+      "category": "aerial",
+      "image_url": "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80",
+      "featured": true,
+      "created_at": "2026-03-09T04:29:52.160Z"
+    }
+  },
+  {
+    "model": "api.galleryimage",
+    "pk": 7,
+    "fields": {
+      "title": "Elegant Bathroom",
+      "category": "interior",
+      "image_url": "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80",
+      "featured": true,
+      "created_at": "2026-03-09T04:29:52.167Z"
+    }
+  },
+  {
+    "model": "api.galleryimage",
+    "pk": 8,
+    "fields": {
+      "title": "Home Office setup",
+      "category": "interior",
+      "image_url": "https://images.unsplash.com/photo-1600607687931-ceeb66d11362?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80",
+      "featured": true,
+      "created_at": "2026-03-09T04:29:52.173Z"
+    }
+  },
+  {
+    "model": "api.galleryimage",
+    "pk": 9,
+    "fields": {
+      "title": "Spacious Patio",
+      "category": "exterior",
+      "image_url": "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80",
+      "featured": true,
+      "created_at": "2026-03-09T04:29:52.179Z"
+    }
+  },
+  {
+    "model": "api.package",
+    "pk": 1,
+    "fields": {
+      "name": "Essential",
+      "price": "250.00",
+      "description": "Starter package",
+      "is_popular": false,
+      "features": [
+        "Up to 25 HDR Photos",
+        "Same-day Photo Delivery",
+        "Blue Sky Guarantee"
+      ],
+      "order": 1
+    }
+  },
+  {
+    "model": "api.package",
+    "pk": 2,
+    "fields": {
+      "name": "Premier Listing",
+      "price": "425.00",
+      "description": "The most popular choice",
+      "is_popular": true,
+      "features": [
+        "Up to 40 HDR Photos",
+        "3D Virtual Tour",
+        "Drone Photography (5 aerials)",
+        "Floor Plan with Dimensions"
+      ],
+      "order": 2
+    }
+  },
+  {
+    "model": "api.package",
+    "pk": 3,
+    "fields": {
+      "name": "Cinematic Video",
+      "price": "600.00",
+      "description": "High-end video package",
+      "is_popular": false,
+      "features": [
+        "4K Interior & Exterior Video",
+        "Drone Flythroughs",
+        "Social Media Reel Cut",
+        "Licensed Music Track"
+      ],
+      "order": 3
+    }
+  },
+  {
+    "model": "api.bookingrequest",
+    "pk": 1,
+    "fields": {
+      "first_name": "John",
+      "last_name": "Client",
+      "email": "john.realestate@example.com",
+      "phone": "555-555-5555",
+      "package_interest": null,
+      "property_details": "Beautiful sunset view at 123 Test Ave",
+      "status": "pending",
+      "created_at": "2026-03-09T05:43:40.732Z",
+      "updated_at": "2026-03-09T05:43:40.732Z"
+    }
+  },
+  {
+    "model": "api.clientshoot",
+    "pk": 1,
+    "fields": {
+      "client": 1,
+      "property_address": "123 Luxury Lane, Leawood, KS",
+      "shoot_date": "2026-03-08",
+      "r2_object_key": "orders/shoot_1/high-res.zip",
+      "status": "delivered",
+      "notes": "Beautiful twilight shots! Here is your download link.",
+      "amount_due": null,
+      "payment_status": "unpaid",
+      "stripe_payment_link": null,
+      "created_at": "2026-03-09T04:40:52.454Z"
+    }
+  },
+  {
+    "model": "api.clientshoot",
+    "pk": 2,
+    "fields": {
+      "client": 1,
+      "property_address": "456 Elm St, KC, MO",
+      "shoot_date": "2026-03-09",
+      "r2_object_key": null,
+      "status": "editing",
+      "notes": "",
+      "amount_due": null,
+      "payment_status": "unpaid",
+      "stripe_payment_link": null,
+      "created_at": "2026-03-09T04:40:52.463Z"
+    }
+  },
+  {
+    "model": "auth.user",
+    "pk": 1,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$Klz7zW946S5o9dr48VmYYH$plJcbKv0o7GeYqUx89V+XK8/Zk/lRPYbPYnXCL9mlWs=",
+      "last_login": null,
+      "is_superuser": false,
+      "username": "janesmith",
+      "first_name": "Jane",
+      "last_name": "Smith",
+      "email": "jane@example.com",
+      "is_staff": false,
+      "is_active": true,
+      "date_joined": "2026-03-09T04:40:52.130Z",
+      "groups": [],
+      "user_permissions": []
+    }
+  },
+  {
+    "model": "auth.user",
+    "pk": 2,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$OfQevv5XlGMMSjJuerKEqw$zQpgCMAO+rnr8fRawpCj3sr6L7X05zi3dH72iMOynyw=",
+      "last_login": null,
+      "is_superuser": true,
+      "username": "admin",
+      "first_name": "",
+      "last_name": "",
+      "email": "admin@example.com",
+      "is_staff": true,
+      "is_active": true,
+      "date_joined": "2026-03-09T05:33:00.552Z",
+      "groups": [],
+      "user_permissions": []
+    }
+  }
+]

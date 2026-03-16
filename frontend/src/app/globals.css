@@ -1,0 +1,120 @@
+@import "tailwindcss";
+
+@plugin "tailwindcss-animate";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* Premium Light Mode (Ivory & Champagne) */
+  --background: 0.98 0.01 90; /* Soft Ivory #FFFDF5 approx */
+  --foreground: 0.15 0 0; /* Deep Charcoal for readability */
+  --card: 1 0 0; /* Plain White */
+  --card-foreground: 0.15 0 0;
+  --popover: 1 0 0;
+  --popover-foreground: 0.15 0 0;
+  --primary: 0.82 0.08 86; /* Soft Champagne Gold #E8C88A approx */
+  --primary-foreground: 0.15 0 0;
+  --secondary: 0.95 0.02 90;
+  --secondary-foreground: 0.15 0 0;
+  --muted: 0.95 0.02 90;
+  --muted-foreground: 0.45 0 0;
+  --accent: 0.9 0.04 86;
+  --accent-foreground: 0.15 0 0;
+  --destructive: 0.6 0.2 25;
+  --destructive-foreground: 1 0 0;
+  --border: 0.9 0.02 90;
+  --input: 0.9 0.02 90;
+  --ring: 0.82 0.08 86;
+  --radius: 2rem;
+
+  /* Semantic Status Colors */
+  --success: 0.6 0.15 145;
+  --warning: 0.8 0.15 85;
+  --error: 0.5 0.2 25;
+  --info: 0.6 0.15 250;
+}
+
+.dark {
+  /* Premium Dark Mode (Pure Black & Metallic Gold) */
+  --background: 0 0 0; /* Pure Black #000000 */
+  --foreground: 0.98 0 0; /* Near White */
+  --card: 0.1 0 0; /* Very Dark Gray */
+  --card-foreground: 0.98 0 0;
+  --popover: 0.1 0 0;
+  --popover-foreground: 0.98 0 0;
+  --primary: 0.88 0.11 86; /* Metallic Champagne Gold #F5D67A */
+  --primary-foreground: 0 0 0; /* Black text on Gold */
+  --secondary: 0.22 0 0;
+  --secondary-foreground: 0.98 0 0;
+  --muted: 0.22 0 0;
+  --muted-foreground: 0.6 0 0; /* Muted gray #808080 */
+  --accent: 0.22 0.05 85;
+  --accent-foreground: 0.98 0 0;
+  --destructive: 0.4 0.15 25;
+  --destructive-foreground: 0.98 0 0;
+  --border: 0.2 0 0; /* Subtle dark gray border */
+  --input: 0.2 0 0;
+  --ring: 0.88 0.11 86;
+
+  /* Dark Semantic Status Colors */
+  --success: 0.7 0.15 145;
+  --warning: 0.85 0.15 85;
+  --error: 0.6 0.2 25;
+  --info: 0.7 0.15 250;
+}
+
+@theme inline {
+  --color-background: oklch(var(--background));
+  --color-foreground: oklch(var(--foreground));
+  --color-card: oklch(var(--card));
+  --color-card-foreground: oklch(var(--card-foreground));
+  --color-popover: oklch(var(--popover));
+  --color-popover-foreground: oklch(var(--popover-foreground));
+  --color-primary: oklch(var(--primary));
+  --color-primary-foreground: oklch(var(--primary-foreground));
+  --color-secondary: oklch(var(--secondary));
+  --color-secondary-foreground: oklch(var(--secondary-foreground));
+  --color-muted: oklch(var(--muted));
+  --color-muted-foreground: oklch(var(--muted-foreground));
+  --color-accent: oklch(var(--accent));
+  --color-accent-foreground: oklch(var(--accent-foreground));
+  --color-destructive: oklch(var(--destructive));
+  --color-destructive-foreground: oklch(var(--destructive-foreground));
+  --color-border: oklch(var(--border));
+  --color-input: oklch(var(--input));
+  --color-ring: oklch(var(--ring));
+  --color-success: oklch(var(--success));
+  --color-warning: oklch(var(--warning));
+  --color-error: oklch(var(--error));
+  --color-info: oklch(var(--info));
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --shadow-gold: 0 0 20px -5px oklch(var(--primary) / 0.5);
+  --shadow-gold-heavy: 0 0 30px 0 oklch(var(--primary) / 0.3);
+}
+
+/* Custom base aesthetic utilities */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground antialiased selection:bg-primary/30;
+    /* Force dark theme by default based on design reqs */
+  }
+}
