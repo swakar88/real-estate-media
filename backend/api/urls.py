@@ -16,6 +16,10 @@ router.register(r'admins', views.AdminViewSet, basename='admins')
 router.register(r'media-items', views.MediaItemViewSet, basename='media-items')
 router.register(r'email-configuration', views.EmailConfigurationViewSet, basename='email-configuration')
 router.register(r'email-templates', views.EmailTemplateViewSet, basename='email-templates')
+router.register(r'referrals', views.ReferralViewSet, basename='referrals')
+router.register(r'settings', views.GlobalSettingsViewSet, basename='settings')
+router.register(r'photographer-payments', views.PhotographerPaymentViewSet, basename='photographer-payments')
+router.register(r'support-tickets', views.SupportTicketViewSet, basename='support-tickets')
 
 urlpatterns = [
     path('availability/', views.get_availability, name='get_availability'),

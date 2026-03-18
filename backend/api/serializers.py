@@ -3,26 +3,37 @@ from django.contrib.auth.models import User
 from .models import (
     Service, GalleryImage, Package, BookingRequest, 
     ClientShoot, Photographer, PhotographerSlot, 
-    SiteMedia, EmailConfiguration, EmailTemplate, MediaItem
+    SiteMedia, EmailConfiguration, EmailTemplate, MediaItem,
+    Referral, GlobalSettings, PhotographerPayment, SupportTicket
 )
+
+class PhotographerPaymentSerializer(serializers.ModelSerializer):
+    photographer_name = serializers.CharField(source='photographer.user.get_full_name', read_only=True)
+    class Meta:
+        model = PhotographerPayment
+        fields = '__all__'
 
 class EmailTemplateSerializer(serializers.ModelSerializer):
     class Meta:
         model = EmailTemplate
         fields = '__all__'
 
-class EmailConfigurationSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = EmailConfiguration
-        fields = '__all__'
-        extra_kwargs = {
-            'email_password': {'write_only': True}
-        }
-
 class ServiceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Service
         fields = '__all__'
+
+class GlobalSettingsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GlobalSettings
+        fields = '__all__'
+
+class ReferralSerializer(serializers.ModelSerializer):
+    referrer_name = serializers.CharField(source='referrer.get_full_name', read_only=True)
+    class Meta:
+        model = Referral
+        fields = '__all__'
+        read_only_fields = ['referrer', 'created_at']
 
 class GalleryImageSerializer(serializers.ModelSerializer):
     class Meta:
@@ -35,9 +46,26 @@ class PackageSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class BookingRequestSerializer(serializers.ModelSerializer):
+    payment_status = serializers.SerializerMethodField()
+    photographer_name = serializers.SerializerMethodField()
+
     class Meta:
         model = BookingRequest
         fields = '__all__'
+
+    def get_photographer_name(self, obj):
+        if obj.assigned_photographer and hasattr(obj.assigned_photographer, 'user'):
+            return f"{obj.assigned_photographer.user.first_name} {obj.assigned_photographer.user.last_name}"
+        return None
+
+    def get_payment_status(self, obj):
+        # Dynamically link to ClientShoot payment status
+        details = obj.property_details or ""
+        shoot = ClientShoot.objects.filter(
+            property_address=details[:300],
+            contact_email=obj.email
+        ).first()
+        return shoot.payment_status if shoot else 'unpaid'
 
 class MediaItemSerializer(serializers.ModelSerializer):
     class Meta:
@@ -87,7 +115,8 @@ class ClientShootSerializer(serializers.ModelSerializer):
             'r2_object_key', 'status', 'notes', 'photographer', 'photographer_name',
             'beds', 'baths', 'sqft', 'property_price',
             'amount_due', 'payment_status', 'stripe_payment_link', 'created_at',
-            'media_items', 'thumbnail_url'
+            'media_items', 'thumbnail_url',
+            'contact_name', 'contact_phone', 'contact_email'
         ]
         read_only_fields = ['created_at', 'stripe_payment_link']
 
@@ -118,11 +147,17 @@ class PhotographerSerializer(serializers.ModelSerializer):
     last_name = serializers.CharField(source='user.last_name', read_only=True)
     user_name = serializers.CharField(source='user.get_full_name', read_only=True)
     role = serializers.CharField(source='bio', read_only=True) # Map bio to role for frontend
+    booking_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Photographer
-        fields = '__all__'
-        read_only_fields = ['user']
+        fields = [
+            'id', 'user', 'user_email', 'first_name', 'last_name', 'user_name',
+            'phone', 'bio', 'profile_image_url', 'equipment', 'social_links',
+            'is_active', 'is_archived', 'share_percentage', 'total_earned', 'total_paid',
+            'role', 'booking_count', 'stripe_account_id'
+        ]
+        read_only_fields = ['user', 'total_earned', 'total_paid']
 
 
 class PhotographerSlotSerializer(serializers.ModelSerializer):
@@ -174,3 +209,17 @@ class AdminSerializer(serializers.ModelSerializer):
         model = User
         fields = ['id', 'username', 'email', 'first_name', 'last_name', 'full_name', 'date_joined', 'is_active']
         read_only_fields = ['date_joined']
+
+class EmailConfigurationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EmailConfiguration
+        fields = '__all__'
+        extra_kwargs = {
+            'email_password': {'write_only': True, 'required': False}
+        }
+
+class SupportTicketSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SupportTicket
+        fields = '__all__'
+        read_only_fields = ['created_at', 'status']

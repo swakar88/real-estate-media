@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Camera, Plus, Trash2, Edit, Search, Filter, ExternalLink, CreditCard, CheckCircle2, AlertCircle, Clock, DollarSign, Calendar, MapPin } from "lucide-react";
+import { Camera, Plus, Trash2, Edit, Search, Filter, ExternalLink, CreditCard, CheckCircle2, AlertCircle, Clock, DollarSign, Calendar, MapPin, Mail } from "lucide-react";
 import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/ScrollReveal";
 
 export default function AdminShoots() {
@@ -17,7 +17,10 @@ export default function AdminShoots() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [addFormData, setAddFormData] = useState({
     property_address: "",
-    shoot_date: new Date().toISOString().split('T')[0]
+    shoot_date: new Date().toISOString().split('T')[0],
+    contact_name: "",
+    contact_phone: "",
+    contact_email: ""
   });
   const [adding, setAdding] = useState(false);
 
@@ -58,7 +61,13 @@ export default function AdminShoots() {
         const newShoot = await res.json();
         setShoots([newShoot, ...shoots]);
         setShowAddModal(false);
-        setAddFormData({ property_address: "", shoot_date: new Date().toISOString().split('T')[0] });
+        setAddFormData({ 
+          property_address: "", 
+          shoot_date: new Date().toISOString().split('T')[0],
+          contact_name: "",
+          contact_phone: "",
+          contact_email: ""
+        });
       } else {
         alert("Failed to create shoot");
       }
@@ -102,6 +111,29 @@ export default function AdminShoots() {
     } finally {
       setGenerating(false);
     }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm("Are you sure you want to delete this shoot record? This cannot be undone.")) return;
+    try {
+      const token = localStorage.getItem("access_token");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/shoots/${id}/`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setShoots(shoots.filter(s => s.id !== id));
+      } else {
+        alert("Failed to delete shoot");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleEdit = (shoot: any) => {
+    // For now, just alert or we could implement an edit modal
+    alert("Edit functionality coming soon. Currently, please delete and recreate or contact support for manual DB changes.");
   };
 
   const filteredShoots = shoots
@@ -241,10 +273,16 @@ export default function AdminShoots() {
 
                                 <div className="w-px h-4 bg-border/50 mx-1 hidden sm:block"></div>
 
-                                <button className="p-2 text-muted-foreground hover:text-primary transition-colors opacity-40 group-hover:opacity-100">
+                                <button 
+                                   onClick={() => handleEdit(shoot)}
+                                   className="p-2 text-muted-foreground hover:text-primary transition-colors opacity-40 group-hover:opacity-100"
+                                >
                                    <Edit className="w-4 h-4" />
                                 </button>
-                                <button className="p-2 text-muted-foreground hover:text-destructive transition-colors opacity-40 group-hover:opacity-100">
+                                <button 
+                                   onClick={() => handleDelete(shoot.id)}
+                                   className="p-2 text-muted-foreground hover:text-destructive transition-colors opacity-40 group-hover:opacity-100"
+                                >
                                    <Trash2 className="w-4 h-4" />
                                 </button>
                              </div>
@@ -338,6 +376,43 @@ export default function AdminShoots() {
                      className="w-full rounded-xl border border-border bg-background pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 shadow-sm"
                      value={addFormData.shoot_date} 
                      onChange={e => setAddFormData({...addFormData, shoot_date: e.target.value})}
+                   />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider">Contact Name</label>
+                  <input 
+                    type="text"
+                    className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 shadow-sm"
+                    placeholder="John Doe"
+                    value={addFormData.contact_name} 
+                    onChange={e => setAddFormData({...addFormData, contact_name: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider">Contact Phone</label>
+                  <input 
+                    type="text"
+                    className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 shadow-sm"
+                    placeholder="555-0123"
+                    value={addFormData.contact_phone} 
+                    onChange={e => setAddFormData({...addFormData, contact_phone: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-xs font-bold uppercase tracking-wider">Contact Email</label>
+                <div className="relative">
+                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                   <input 
+                     type="email"
+                     className="w-full rounded-xl border border-border bg-background pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 shadow-sm"
+                     placeholder="client@example.com"
+                     value={addFormData.contact_email} 
+                     onChange={e => setAddFormData({...addFormData, contact_email: e.target.value})}
                    />
                 </div>
               </div>

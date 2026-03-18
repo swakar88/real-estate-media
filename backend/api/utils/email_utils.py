@@ -40,42 +40,42 @@ def _get_email_template(title, content_html, button_text=None, button_url=None):
     <html>
     <head>
         <meta charset="utf-8">
-        <style>
-            body {{ font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }}
-            .container {{ max-width: 600px; margin: 20px auto; padding: 40px; border: 1px solid #f0f0f0; border-radius: 12px; }}
-            .header {{ text-align: center; margin-bottom: 30px; }}
-            .logo {{ font-size: 24px; font-weight: bold; letter-spacing: -1px; color: #000; text-transform: uppercase; }}
-            .content {{ font-size: 16px; color: #444; }}
-            .footer {{ margin-top: 40px; padding-top: 20px; border-top: 1px solid #f0f0f0; font-size: 12px; color: #999; text-align: center; }}
-            h1 {{ font-size: 22px; font-weight: 800; margin-bottom: 20px; color: #1a1a1a; }}
-            p {{ margin-bottom: 15px; }}
-        </style>
     </head>
-    <body>
-        <div class="container">
-            <div class="header">
-                <div class="logo">KC REAL ESTATE MEDIA</div>
-            </div>
-            <div class="content">
-                <h1>{title}</h1>
+    <body style="font-family: sans-serif; line-height: 1.5; color: #333;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="font-size: 18px; font-weight: bold; margin-bottom: 20px;">{title}</div>
+            <div style="white-space: pre-wrap; font-size: 14px; line-height: 1.6;">
                 {content_html}
-                {button_html}
             </div>
-            <div class="footer">
-                &copy; 2026 KC Real Estate Media. All rights reserved.<br>
-                Professional Media Solutions for Modern Real Estate.
+            {button_html}
+            <div style="margin-top: 40px; border-top: 1px solid #eee; padding-top: 20px; font-size: 13px; color: #555;">
+                Best regards,
+                KC Real Estate Media Team
             </div>
         </div>
     </body>
     </html>
     """
 
-def send_email_dynamic(subject, recipient_email, html_content, from_email=None, from_name=None):
+def send_email_dynamic(subject, recipient_email, html_content, from_email=None, from_name=None, cc=None, bcc=None):
     """
     Sends an email using either the configured SMTP backend or Resend as a fallback.
     """
     connection, config = get_email_connection()
     
+    # Process cc and bcc to ensure they are lists
+    cc_list = [cc] if cc and isinstance(cc, str) else (cc or [])
+    bcc_list = [bcc] if bcc and isinstance(bcc, str) else (bcc or [])
+
+    # Merge with global defaults if config exists
+    if config:
+        if hasattr(config, 'default_cc') and config.default_cc:
+            if config.default_cc not in cc_list:
+                cc_list.append(config.default_cc)
+        if hasattr(config, 'default_bcc') and config.default_bcc:
+            if config.default_bcc not in bcc_list:
+                bcc_list.append(config.default_bcc)
+
     if connection:
         try:
             email_from = f"{from_name or config.email_from_name} <{from_email or config.email_from_address}>"
@@ -84,6 +84,8 @@ def send_email_dynamic(subject, recipient_email, html_content, from_email=None, 
                 html_content,
                 email_from,
                 [recipient_email],
+                cc=cc_list,
+                bcc=bcc_list,
                 connection=connection
             )
             email.content_subtype = "html"
@@ -104,6 +106,8 @@ def send_email_dynamic(subject, recipient_email, html_content, from_email=None, 
         response = resend.Emails.send({
             "from": resend_from,
             "to": recipient_email,
+            "cc": cc_list,
+            "bcc": bcc_list,
             "subject": subject,
             "html": html_content
         })
@@ -124,54 +128,58 @@ def _render_template(body, context):
 def get_template_content(slug, default_subject, default_body, context=None):
     """
     Fetches a template from the database and renders it with context.
-    Returns (subject, rendered_body).
+    Returns (subject, rendered_body, cc, bcc).
     """
+    cc = None
+    bcc = None
     try:
         template = EmailTemplate.objects.filter(slug=slug).first()
         if template:
             subject = _render_template(template.subject, context or {})
             body = _render_template(template.body, context or {})
-            return subject, body
+            return subject, body, template.cc, template.bcc
     except Exception as e:
         print(f"Error fetching template {slug}: {e}")
     
-    return default_subject, _render_template(default_body, context or {})
+    return default_subject, _render_template(default_body, context or {}), cc, bcc
 
 def send_photographer_invite_email(email, name, invite_link):
-    default_body = """
-        <p>Hi {name},</p>
-        <p>You have been invited to join the <strong>KC Real Estate Media</strong> team as a photographer.</p>
-        <p>We're excited to have you on board! Please click the button below to accept your invitation, set your password, and access your photographer portal where you can manage your schedule and uploads.</p>
+    default_body = """Hi {name},
+
+You have been invited to join the KC Real Estate Media team as a photographer.
+
+We're excited to have you on board! Please click the button below to accept your invitation, set your password, and access your photographer portal where you can manage your schedule and uploads.
     """
-    subject, content_html = get_template_content(
+    subject, content_html, t_cc, t_bcc = get_template_content(
         "photographer-invite", 
         "Invitation: Join the KC Real Estate Media Team", 
         default_body, 
         {"name": name}
     )
     html_content = _get_email_template("Welcome to the Team", content_html, "Accept Invitation & Set Password", invite_link)
-    return send_email_dynamic(subject, email, html_content)
+    return send_email_dynamic(subject, email, html_content, cc=t_cc, bcc=t_bcc)
 
 def send_admin_invite_email(email, name, invite_link):
-    default_body = """
-        <p>Hi {name},</p>
-        <p>You have been invited to join the <strong>KC Real Estate Media</strong> administrative team.</p>
-        <p>As an administrator, you will have access to manage bookings, services, media, and team members. Please click the button below to accept your invitation, set your password, and access the admin portal.</p>
+    default_body = """Hi {name},
+
+You have been invited to join the KC Real Estate Media administrative team.
+
+As an administrator, you will have access to manage bookings, services, media, and team members. Please click the button below to accept your invitation, set your password, and access the admin portal.
     """
-    subject, content_html = get_template_content(
+    subject, content_html, t_cc, t_bcc = get_template_content(
         "admin-invite", 
         "Welcome to the Admin Team - KC Real Estate Media", 
         default_body, 
         {"name": name}
     )
     html_content = _get_email_template("Admin Invitation", content_html, "Accept Invitation & Activate Account", invite_link)
-    return send_email_dynamic(subject, email, html_content)
+    return send_email_dynamic(subject, email, html_content, cc=t_cc, bcc=t_bcc)
 
-def _send_mocked_email(subject, html_content, to_email=None):
+def _send_mocked_email(subject, html_content, to_email=None, cc=None, bcc=None):
     # Use provided recipient or fallback to a default admin contact
     # In production, this would use configurations from the database.
     recipient = to_email or "swakar88@gmail.com" 
-    return send_email_dynamic(subject, recipient, html_content)
+    return send_email_dynamic(subject, recipient, html_content, cc=cc, bcc=bcc)
 
 def send_booking_created_emails(booking, customer_email, photographer_email, photographer_name):
     context = {
@@ -185,53 +193,55 @@ def send_booking_created_emails(booking, customer_email, photographer_email, pho
     }
 
     # Admin Alert
-    admin_subject, admin_content = get_template_content(
+    admin_subject, admin_content, a_cc, a_bcc = get_template_content(
         "new-booking-alert",
         f"New Booking Received - {booking.property_details[:50]}",
-        """
-        <p>A new booking request has been received and automatically processed.</p>
-        <ul style="list-style: none; padding: 0;">
-            <li><strong>Property:</strong> {property_address}</li>
-            <li><strong>Client:</strong> {customer_name} ({customer_email})</li>
-            <li><strong>Package:</strong> {package_name}</li>
-            <li><strong>Date:</strong> {shoot_date} at {time_slot}</li>
-            <li><strong>Assigned:</strong> {photographer_name}</li>
-        </ul>
-        """,
+        """A new booking request has been received and automatically processed.
+
+Property: {property_address}
+Client: {customer_name} ({customer_email})
+Package: {package_name}
+Date: {shoot_date} at {time_slot}
+Assigned: {photographer_name}""",
         context
     )
     _send_mocked_email(
         subject=admin_subject,
         html_content=_get_email_template("New Booking Alert", admin_content),
-        to_email=settings.DEFAULT_FROM_EMAIL if hasattr(settings, 'DEFAULT_FROM_EMAIL') else "admin@example.com"
+        to_email=settings.DEFAULT_FROM_EMAIL if hasattr(settings, 'DEFAULT_FROM_EMAIL') else "admin@example.com",
+        cc=a_cc,
+        bcc=a_bcc
     )
 
     # Customer Confirmation
-    cust_subject, cust_content = get_template_content(
+    cust_subject, cust_content, c_cc, c_bcc = get_template_content(
         "booking-confirmation",
         "Booking Confirmation - KC Real Estate Media",
-        """
-        <p>Hi {customer_name},</p>
-        <p>Your booking request for <strong>{property_address}</strong> has been received and confirmed!</p>
-        <p>Our photographer {photographer_name}. We look forward to capturing your property.</p>
-        """,
+        """Hi {customer_name},
+
+Your booking request for {property_address} has been received and confirmed!
+
+Our photographer {photographer_name}. We look forward to capturing your property.""",
         context
     )
     _send_mocked_email(
         subject=cust_subject,
         html_content=_get_email_template("Booking Confirmed", cust_content),
-        to_email=customer_email
+        to_email=customer_email,
+        cc=c_cc,
+        bcc=c_bcc
     )
 
     # Photographer Notification
     if photographer_email:
-        photog_content = f"""
-            <p>Hi {photographer_name},</p>
-            <p>A new shoot has been assigned to you.</p>
-            <p><strong>Property:</strong> {booking.property_details}</p>
-            <p><strong>Scheduled:</strong> {booking.shoot_date} at {booking.time_slot}</p>
-            <p>Please log in to your portal to view more details and upload media once the shoot is complete.</p>
-        """
+        photog_content = f"""Hi {photographer_name},
+
+A new shoot has been assigned to you.
+
+Property: {booking.property_details}
+Scheduled: {booking.shoot_date} at {booking.time_slot}
+
+Please log in to your portal to view more details and upload media once the shoot is complete."""
         _send_mocked_email(
             subject=f"New Shoot Assigned - {booking.shoot_date}",
             html_content=_get_email_template("New Shoot Assigned", photog_content),
@@ -239,7 +249,7 @@ def send_booking_created_emails(booking, customer_email, photographer_email, pho
         )
 
 def send_content_uploaded_emails(shoot_address, to_email=None):
-    admin_content = f"<p>Media has been uploaded for the property at <strong>{shoot_address}</strong>. It is now ready for client delivery.</p>"
+    admin_content = f"Media has been uploaded for the property at {shoot_address}. It is now ready for client delivery."
     _send_mocked_email(
         subject=f"Shoot Media Uploaded - {shoot_address[:50]}",
         html_content=_get_email_template("Media Uploaded", admin_content),
@@ -247,39 +257,41 @@ def send_content_uploaded_emails(shoot_address, to_email=None):
     )
 
     # Customer notification
-    subject, content_html = get_template_content(
+    subject, content_html, m_cc, m_bcc = get_template_content(
         "media-ready",
         "Your Media is Ready!",
-        """
-        <p>Great news! The media for <strong>{property_address}</strong> has been processed and is ready.</p>
-        <p>You will receive an invoice shortly. Once paid, your download links will be automatically enabled on your dashboard.</p>
-        """,
+        """Great news! The media for {property_address} has been processed and is ready.
+
+You will receive an invoice shortly. Once paid, your download links will be automatically enabled on your dashboard.""",
         {"property_address": shoot_address}
     )
     _send_mocked_email(
         subject=subject,
         html_content=_get_email_template("Processing Complete", content_html),
-        to_email=to_email
+        to_email=to_email,
+        cc=m_cc,
+        bcc=m_bcc
     )
 
 def send_invoice_generated_email(shoot_address, payment_link, to_email=None):
-    subject, content_html = get_template_content(
+    subject, content_html, i_cc, i_bcc = get_template_content(
         "invoice-ready",
         f"Invoice for Your Recent Shoot - {shoot_address[:50]}",
-        """
-        <p>The invoice for your recent shoot at <strong>{property_address}</strong> is now ready for payment.</p>
-        <p>Please click the button below to complete your payment securely via Stripe. Your media will be available for download immediately after payment.</p>
-        """,
+        """The invoice for your recent shoot at {property_address} is now ready for payment.
+
+Please click the button below to complete your payment securely via Stripe. Your media will be available for download immediately after payment.""",
         {"property_address": shoot_address}
     )
     _send_mocked_email(
         subject=subject,
         html_content=_get_email_template("Invoice Ready", content_html, "Pay Securely via Stripe", payment_link),
-        to_email=to_email
+        to_email=to_email,
+        cc=i_cc,
+        bcc=i_bcc
     )
 
 def send_payment_confirmed_emails(shoot_address, dashboard_link):
-    admin_content = f"<p>Payment has been successfully received for <strong>{shoot_address}</strong>. Media access has been granted to the client.</p>"
+    admin_content = f"Payment has been successfully received for {shoot_address}. Media access has been granted to the client."
     _send_mocked_email(
         subject=f"Payment Received - {shoot_address[:50]}",
         html_content=_get_email_template("Payment Captured", admin_content),
@@ -287,17 +299,18 @@ def send_payment_confirmed_emails(shoot_address, dashboard_link):
     )
 
     # Customer notification
-    subject, content_html = get_template_content(
+    subject, content_html, p_cc, p_bcc = get_template_content(
         "payment-confirmed",
         "Payment Receipt & Media Download Link",
-        """
-        <p>Thank you for your payment!</p>
-        <p>Payment for <strong>{property_address}</strong> has been confirmed. You can now access and download all high-resolution media directly from your dashboard.</p>
-        """,
+        """Thank you for your payment!
+
+Payment for {property_address} has been confirmed. You can now access and download all high-resolution media directly from your dashboard.""",
         {"property_address": shoot_address}
     )
     _send_mocked_email(
         subject=subject,
         html_content=_get_email_template("Payment Successful", content_html, "Go to Dashboard", dashboard_link),
-        to_email=None # Mocked
+        to_email=None, # Mocked
+        cc=p_cc,
+        bcc=p_bcc
     )

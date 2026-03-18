@@ -77,3 +77,30 @@ def get_object_content(object_key):
     except Exception as e:
         print(f"Error fetching object content: {e}")
         return None
+
+def upload_to_r2(file_obj, destination_path):
+    """
+    Upload a file object to R2 and return its public URL.
+    """
+    s3_client = get_boto3_client()
+    try:
+        # Determine content type
+        content_type = getattr(file_obj, 'content_type', 'application/octet-stream')
+        
+        s3_client.upload_fileobj(
+            file_obj,
+            settings.AWS_STORAGE_BUCKET_NAME,
+            destination_path,
+            ExtraArgs={'ContentType': content_type}
+        )
+        
+        # Use R2_PUBLIC_DOMAIN from settings
+        public_domain = getattr(settings, 'R2_PUBLIC_DOMAIN', '').strip()
+        if not public_domain:
+            # Fallback if domain is not set
+            return f"https://{settings.AWS_STORAGE_BUCKET_NAME}.r2.cloudflarestorage.com/{destination_path}"
+            
+        return f"{public_domain}/{destination_path}"
+    except Exception as e:
+        print(f"Error uploading to R2: {e}")
+        return None

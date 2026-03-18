@@ -1,36 +1,48 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle2, Clock, XCircle, Search, CalendarCheck, MapPin, Mail, Phone, Filter } from "lucide-react";
+import { CheckCircle2, Clock, XCircle, Search, CalendarCheck, MapPin, Mail, Phone, AlertCircle, User as UserIcon, MessageSquare, RefreshCw } from "lucide-react";
 import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/ScrollReveal";
+import CustomModal from "@/components/CustomModal";
 
 export default function AdminBookings() {
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
   const [filter, setFilter] = useState<'active' | 'historical'>('active');
-
-  useEffect(() => {
-    fetchBookings();
-  }, []);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  
+  const [modalConfig, setModalConfig] = useState({ isOpen: false, title: "", message: "", type: "info" as any });
+  const [completionModal, setCompletionModal] = useState({ isOpen: false, bookingId: null as number | null, notes: "" });
 
   const fetchBookings = async () => {
     try {
+      setLoading(true);
+      setError(null);
       const token = localStorage.getItem("access_token");
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/bookings/`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
-        setBookings(await res.json());
+        const data = await res.json();
+        setBookings(Array.isArray(data) ? data : []);
+      } else {
+        if (res.status === 401) setError("Session expired. Please log in again.");
+        else setError("Failed to load bookings.");
       }
     } catch (err) {
       console.error("Failed to fetch bookings", err);
+      setError("Network error. Please check your connection.");
     } finally {
       setLoading(false);
     }
   };
 
-  const updateStatus = async (id: number, newStatus: string) => {
+  useEffect(() => {
+    fetchBookings();
+  }, []);
+
+  const updateStatus = async (id: number, newStatus: string, notes: string = "") => {
     try {
       const token = localStorage.getItem("access_token");
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/bookings/${id}/`, {
@@ -39,34 +51,59 @@ export default function AdminBookings() {
           "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ status: newStatus })
+        body: JSON.stringify({ 
+          status: newStatus,
+          completion_notes: notes 
+        })
       });
       
       if (res.ok) {
-        setBookings(bookings.map(b => b.id === id ? { ...b, status: newStatus } : b));
+        setBookings(prev => prev.map(b => b.id === id ? { ...b, status: newStatus, completion_notes: notes } : b));
+        setCompletionModal({ isOpen: false, bookingId: null, notes: "" });
+      } else {
+        const errorData = await res.json();
+        setModalConfig({
+          isOpen: true,
+          title: "Update Failed",
+          message: errorData.completion_notes || errorData.detail || "Failed to update booking status.",
+          type: "error"
+        });
       }
     } catch (err) {
       console.error("Failed to update status", err);
     }
   };
 
-  const filteredBookings = bookings
+  const handleComplete = (booking: any) => {
+    if (booking.payment_status !== 'paid') {
+      setCompletionModal({
+        isOpen: true,
+        bookingId: booking.id,
+        notes: ""
+      });
+    } else {
+      updateStatus(booking.id, 'completed');
+    }
+  };
+
+  const filteredBookings = (bookings || [])
     .filter(b => {
-      const matchesSearch = 
-        b.first_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        b.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        b.property_details.toLowerCase().includes(searchTerm.toLowerCase());
+      const s = searchTerm.toLowerCase().trim();
+      const matchesSearch = !s || 
+        (b.first_name || '').toLowerCase().includes(s) || 
+        (b.last_name || '').toLowerCase().includes(s) ||
+        (b.property_details || '').toLowerCase().includes(s);
       
-      const isHistorical = b.status === 'completed' || b.status === 'cancelled';
-      const matchesFilter = filter === 'historical' ? isHistorical : !isHistorical;
+      const status = (b.status || '').toLowerCase().trim();
+      const isHistorical = status === 'completed' || status === 'cancelled';
+      const isMatch = filter === 'historical' ? isHistorical : !isHistorical;
       
-      return matchesSearch && matchesFilter;
+      return matchesSearch && isMatch;
     })
     .sort((a, b) => {
-       // Sort by shoot date if available, otherwise created_at
        const dateA = a.shoot_date ? new Date(a.shoot_date).getTime() : new Date(a.created_at).getTime();
        const dateB = b.shoot_date ? new Date(b.shoot_date).getTime() : new Date(b.created_at).getTime();
-       return dateA - dateB;
+       return (dateB || 0) - (dateA || 0); // Newest first
     });
 
   return (
@@ -92,7 +129,10 @@ export default function AdminBookings() {
             
             <div className="flex bg-muted p-1 rounded-lg">
               <button 
-                onClick={() => setFilter('active')}
+                onClick={() => {
+                  setFilter('active');
+                  fetchBookings();
+                }}
                 className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-all ${
                   filter === 'active' ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'
                 }`}
@@ -100,7 +140,10 @@ export default function AdminBookings() {
                 Active
               </button>
               <button 
-                onClick={() => setFilter('historical')}
+                onClick={() => {
+                  setFilter('historical');
+                  fetchBookings();
+                }}
                 className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-all ${
                   filter === 'historical' ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'
                 }`}
@@ -112,9 +155,17 @@ export default function AdminBookings() {
         </div>
       </ScrollReveal>
 
+      {error && (
+        <div className="p-4 bg-error/10 border border-error/20 rounded-2xl text-error text-center text-sm font-bold flex items-center justify-center gap-2">
+          <AlertCircle className="w-4 h-4" />
+          {error}
+        </div>
+      )}
+
       {loading ? (
-        <div className="py-20 flex justify-center">
+        <div className="py-20 flex justify-center flex-col items-center gap-4">
            <span className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></span>
+           <p className="text-xs font-black uppercase tracking-widest text-muted-foreground animate-pulse">Loading Bookings...</p>
         </div>
       ) : filteredBookings.length > 0 ? (
         <StaggerContainer className="grid grid-cols-1 gap-4">
@@ -136,8 +187,19 @@ export default function AdminBookings() {
                         ${booking.status === 'completed' ? 'bg-success/10 text-success' : ''}
                         ${booking.status === 'cancelled' ? 'bg-error/10 text-error' : ''}
                       `}>
-                        {booking.status}
+                        {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
                       </span>
+                      {booking.payment_status === 'paid' && (
+                        <span className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                          Paid
+                        </span>
+                      )}
+                      {booking.status === 'completed' && booking.payment_status !== 'paid' && (
+                        <span className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                          Unpaid (Manual)
+                        </span>
+                      )}
+                      
                       {booking.shoot_date && (
                         <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium bg-muted/50 px-2.5 py-1 rounded-full">
                           <CalendarCheck className="w-3.5 h-3.5" />
@@ -163,6 +225,12 @@ export default function AdminBookings() {
                             <Phone className="w-4 h-4 text-primary/60" />
                             <a href={`tel:${booking.phone}`}>{booking.phone}</a>
                          </div>
+                         {(booking.photographer_name || booking.status === 'completed') && (
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground bg-primary/5 px-3 py-1 rounded-full border border-primary/10">
+                               <UserIcon className="w-4 h-4 text-primary" />
+                               <span className="font-bold">Photographer: {booking.photographer_name || "Unassigned"}</span>
+                            </div>
+                          )}
                       </div>
                     </div>
                   </div>
@@ -171,18 +239,18 @@ export default function AdminBookings() {
                     {booking.status !== 'completed' && booking.status !== 'cancelled' && (
                        <div className="flex gap-2">
                           <button 
-                            onClick={() => updateStatus(booking.id, 'completed')}
-                            className="px-4 py-2 bg-success/10 text-success hover:bg-success hover:text-white border border-success/20 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-sm"
+                            onClick={() => handleComplete(booking)}
+                            className="px-6 py-2.5 bg-success text-white hover:bg-success/90 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 shadow-gold"
                           >
-                            <CheckCircle2 className="w-3.5 h-3.5" /> Complete
-                          </button>
-                          <button 
-                            onClick={() => updateStatus(booking.id, 'cancelled')}
-                            className="px-4 py-2 bg-destructive/10 text-destructive hover:bg-destructive hover:text-white border border-destructive/20 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-sm"
-                          >
-                            <XCircle className="w-3.5 h-3.5" /> Cancel
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Mark Completed
                           </button>
                        </div>
+                    )}
+                    {booking.completion_notes && (
+                        <div className="mt-2 p-3 bg-muted/30 rounded-2xl text-[11px] italic border border-primary/5 flex gap-2 max-w-[250px]">
+                            <MessageSquare className="w-3 h-3 text-primary shrink-0 mt-0.5" />
+                            <span>Notes: {booking.completion_notes}</span>
+                        </div>
                     )}
                     <div className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight">
                        Received: {new Date(booking.created_at).toLocaleString()}
@@ -200,6 +268,71 @@ export default function AdminBookings() {
           <p className="text-muted-foreground text-sm max-w-xs mx-auto">We couldn't find any {filter} booking requests matching your search.</p>
         </div>
       )}
+
+      {/* Manual Completion Modal */}
+      {completionModal.isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-card border border-primary/20 w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl animate-in zoom-in-95 duration-200">
+                <div className="flex items-center gap-4 mb-6">
+                    <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center">
+                        <AlertCircle className="w-6 h-6 text-amber-500" />
+                    </div>
+                    <div>
+                        <h2 className="text-xl font-black uppercase tracking-tight">Manual Completion</h2>
+                        <p className="text-xs text-muted-foreground">This shoot is currently <b>unpaid</b>.</p>
+                    </div>
+                </div>
+
+                <div className="space-y-6">
+                    <p className="text-sm text-center font-bold px-4">
+                        Are you sure you want to mark this as completed without payment? 
+                        Please provide a reason below.
+                    </p>
+
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest ml-1 text-muted-foreground">Reason / Internal Note</label>
+                        <textarea 
+                            value={completionModal.notes}
+                            onChange={(e) => setCompletionModal(prev => ({ ...prev, notes: e.target.value }))}
+                            placeholder="e.g. Paid via check, recurring client adjustment, local cash payment..."
+                            className="w-full bg-black/20 border border-primary/10 rounded-2xl p-4 text-sm font-medium focus:ring-2 focus:ring-primary/50 outline-none h-32 resize-none"
+                        />
+                    </div>
+
+                    <div className="flex gap-3">
+                        <button 
+                            onClick={() => setCompletionModal({ isOpen: false, bookingId: null, notes: "" })}
+                            className="flex-1 px-4 py-4 rounded-2xl text-xs font-black uppercase tracking-widest text-muted-foreground hover:bg-muted transition-all"
+                        >
+                            Back
+                        </button>
+                        <button 
+                            disabled={!completionModal.notes.trim()}
+                            onClick={() => {
+                                if (completionModal.bookingId) {
+                                    updateStatus(completionModal.bookingId, 'completed', completionModal.notes);
+                                }
+                            }}
+                            className="flex-1 px-4 py-4 bg-primary text-primary-foreground rounded-2xl text-xs font-black uppercase tracking-widest shadow-gold hover:opacity-90 transition-all disabled:opacity-50"
+                        >
+                            Complete Shoot
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+      )}
+
+      {/* Global Alerts */}
+      <CustomModal 
+        isOpen={modalConfig.isOpen}
+        onClose={() => setModalConfig({ ...modalConfig, isOpen: false })}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        type={modalConfig.type}
+        showCancel={false}
+        confirmText="Acknowledged"
+      />
     </div>
   );
 }

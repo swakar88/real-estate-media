@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { Save, Link as LinkIcon, Image as ImageIcon, Video, Loader2, AlertCircle, Upload, CheckCircle2 } from "lucide-react";
+import { Save, Link as LinkIcon, Image as ImageIcon, Video, Loader2, AlertCircle, Upload, CheckCircle2, X } from "lucide-react";
 import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/ScrollReveal";
 
 interface SiteMedia {
@@ -19,6 +19,7 @@ export default function SiteMediaAdminPage() {
   const [loading, setLoading] = useState(true);
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [uploadingKey, setUploadingKey] = useState<string | null>(null);
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | null }>({ message: '', type: null });
 
   useEffect(() => {
     fetchMedia();
@@ -101,7 +102,7 @@ export default function SiteMediaAdminPage() {
       }
     } catch (err: any) {
       console.error("Upload error details:", err);
-      alert(`Failed to upload media to Cloudflare: ${err.message || 'Unknown error'}`);
+      setNotification({ message: `Failed to upload media: ${err.message || 'Unknown error'}`, type: 'error' });
     } finally {
       setUploadingKey(null);
     }
@@ -130,12 +131,15 @@ export default function SiteMediaAdminPage() {
       }
       
       // Success feedback
-      alert("Changes applied successfully!");
-      setTimeout(() => setSavingKey(null), 1000);
+      setNotification({ message: "Changes applied successfully!", type: 'success' });
+      setTimeout(() => {
+        setSavingKey(null);
+        setNotification({ message: '', type: null });
+      }, 3000);
       
     } catch (err: any) {
       console.error("Failed to update media:", err);
-      alert(`Failed to update media: ${err.message || 'Unknown error'}`);
+      setNotification({ message: `Failed to update media: ${err.message || 'Unknown error'}`, type: 'error' });
       setSavingKey(null);
     }
   };
@@ -154,6 +158,26 @@ export default function SiteMediaAdminPage() {
             </p>
         </div>
       </ScrollReveal>
+
+      {/* Notification Toast */}
+      {notification.type && (
+        <div className={`fixed bottom-8 right-8 z-[100] animate-in slide-in-from-right duration-300`}>
+          <div className={`flex items-center gap-3 px-6 py-4 rounded-2xl shadow-gold-heavy backdrop-blur-xl border ${
+            notification.type === 'success' 
+            ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-500' 
+            : 'bg-destructive/10 border-destructive/50 text-destructive'
+          }`}>
+            {notification.type === 'success' ? <CheckCircle2 className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+            <p className="text-sm font-bold">{notification.message}</p>
+            <button 
+              onClick={() => setNotification({ message: '', type: null })}
+              className="ml-4 opacity-50 hover:opacity-100 transition-opacity"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       <StaggerContainer className="grid grid-cols-1 xl:grid-cols-2 gap-8">
         {mediaItems.map((item) => (

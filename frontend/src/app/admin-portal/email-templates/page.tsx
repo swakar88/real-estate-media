@@ -20,6 +20,8 @@ interface EmailTemplate {
   title: string;
   subject: string;
   body: string;
+  cc: string;
+  bcc: string;
   updated_at: string;
 }
 
@@ -164,6 +166,29 @@ export default function EmailTemplatesPage() {
               </div>
 
               <div className="p-6 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider text-[10px]">CC Address (Optional)</label>
+                    <input
+                      type="email"
+                      value={selectedTemplate.cc || ""}
+                      onChange={(e) => setSelectedTemplate({...selectedTemplate, cc: e.target.value})}
+                      className="w-full px-4 py-3 rounded-xl bg-black/40 border border-primary/10 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all text-sm font-medium"
+                      placeholder="e.g. admin@example.com"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider text-[10px]">BCC Address (Optional)</label>
+                    <input
+                      type="email"
+                      value={selectedTemplate.bcc || ""}
+                      onChange={(e) => setSelectedTemplate({...selectedTemplate, bcc: e.target.value})}
+                      className="w-full px-4 py-3 rounded-xl bg-black/40 border border-primary/10 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all text-sm font-medium"
+                      placeholder="e.g. backup@example.com"
+                    />
+                  </div>
+                </div>
+
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Email Subject</label>
                   <input
@@ -177,11 +202,7 @@ export default function EmailTemplatesPage() {
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">HTML Body</label>
-                    <div className="flex items-center gap-1.5 text-[10px] font-black text-primary bg-primary/10 px-2 py-1 rounded-md uppercase tracking-widest border border-primary/20">
-                      <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
-                      LIVE EDITOR
-                    </div>
+                    <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Email Body (Plain Text Recommended)</label>
                   </div>
                   <div className="relative group">
                     <textarea
@@ -189,11 +210,8 @@ export default function EmailTemplatesPage() {
                       value={selectedTemplate.body}
                       onChange={(e) => setSelectedTemplate({...selectedTemplate, body: e.target.value})}
                       className="w-full px-4 py-4 rounded-2xl bg-muted/20 border border-border/50 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary transition-all font-mono text-sm leading-relaxed min-h-[400px]"
-                      placeholder="Email body (HTML supported)..."
+                      placeholder="Enter email body..."
                     />
-                    <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                       <code className="text-[10px] bg-background/80 backdrop-blur px-2 py-1 rounded border border-border/50 text-muted-foreground">HTML5</code>
-                    </div>
                   </div>
                 </div>
 
@@ -304,5 +322,7 @@ function renderPreviewBody(body: string) {
   Object.entries(sampleData).forEach(([key, value]) => {
     rendered = rendered.replace(new RegExp(`\\{${key}\\}`, "g"), `<strong>${value}</strong>`);
   });
-  return rendered;
+  
+  // Convert newlines to HTML breaks for preview display
+  return rendered.replace(/\n/g, '<br/>');
 }

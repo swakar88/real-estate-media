@@ -10,9 +10,10 @@ import {
   LogOut,
   Menu,
   X,
-  Sun,
-  Moon,
+  Sun, 
+  Moon, 
   CreditCard,
+  AlertCircle,
   Settings
 } from "lucide-react";
 import { toast } from "sonner";
@@ -37,8 +38,12 @@ export default function DashboardLayout({
         return;
       }
 
+      const queryParams = new URLSearchParams(window.location.search);
+      const impId = queryParams.get('impersonate_id');
+      const url = `${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/me/${impId ? `?impersonate_id=${impId}` : ''}`;
+
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/me/`, {
+        const res = await fetch(url, {
           headers: {
             "Authorization": `Bearer ${token}`
           }
@@ -83,7 +88,10 @@ export default function DashboardLayout({
   const navLinks = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Bookings", href: "/dashboard/bookings", icon: Calendar },
-    { name: "Profile", href: "/dashboard/profile", icon: User },
+    { name: "Billing History", href: "/dashboard/billing", icon: CreditCard },
+    { name: "Support Hub", href: "/dashboard/support", icon: AlertCircle },
+    { name: "Referrals", href: "/dashboard/referrals", icon: User },
+    { name: "Profile", href: "/dashboard/profile", icon: Settings },
   ];
 
   return (

@@ -29,7 +29,9 @@ export default function EmailConfigPage() {
     email_from_name: "KC Real Estate Media",
     use_tls: true,
     use_ssl: false,
-    is_active: true
+    is_active: true,
+    default_cc: "",
+    default_bcc: ""
   });
 
   useEffect(() => {
@@ -252,6 +254,27 @@ export default function EmailConfigPage() {
                     className="w-full px-4 py-3 bg-black/40 border border-primary/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm"
                     placeholder="KC Real Estate Media"
                     required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Default CC</label>
+                  <input
+                    type="email"
+                    value={config.default_cc || ""}
+                    onChange={e => setConfig({...config, default_cc: e.target.value})}
+                    className="w-full px-4 py-3 bg-black/40 border border-primary/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm font-mono"
+                    placeholder="manager@kcremedia.com (optional)"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Default BCC</label>
+                  <input
+                    type="email"
+                    value={config.default_bcc || ""}
+                    onChange={e => setConfig({...config, default_bcc: e.target.value})}
+                    className="w-full px-4 py-3 bg-black/40 border border-primary/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm font-mono"
+                    placeholder="backup@kcremedia.com (optional)"
                   />
                 </div>
               </div>

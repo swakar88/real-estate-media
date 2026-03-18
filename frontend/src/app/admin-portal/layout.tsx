@@ -17,7 +17,8 @@ import {
   Mail,
   FileText,
   Sun,
-  Moon
+  Moon,
+  Settings
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
@@ -87,15 +88,18 @@ export default function AdminLayout({
   const navLinks = [
     { name: "Dashboard", href: "/admin-portal", icon: LayoutDashboard },
     { name: "Bookings", href: "/admin-portal/bookings", icon: CalendarCheck },
+    { name: "Calendar", href: "/admin-portal/calendar", icon: CalendarCheck },
     { name: "Client Shoots", href: "/admin-portal/shoots", icon: Camera },
     { name: "Photographers", href: "/admin-portal/photographers", icon: Users },
     { name: "Clients", href: "/admin-portal/clients", icon: UserCircle },
+    { name: "Referrals", href: "/admin-portal/referrals", icon: Users },
     { name: "Portfolio", href: "/admin-portal/gallery", icon: ImageIcon },
     { name: "Site Media", href: "/admin-portal/site-media", icon: MonitorPlay },
     { name: "Admins", href: "/admin-portal/admins", icon: Users },
     { name: "Pricing & Packages", href: "/admin-portal/pricing", icon: FileText },
     { name: "Email Config", href: "/admin-portal/email-config", icon: Mail },
     { name: "Email Templates", href: "/admin-portal/email-templates", icon: FileText },
+    { name: "Site Settings", href: "/admin-portal/site-settings", icon: Settings },
   ];
 
   return (

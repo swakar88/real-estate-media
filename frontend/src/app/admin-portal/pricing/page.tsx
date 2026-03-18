@@ -197,15 +197,17 @@ export default function PricingManagementPage() {
 
                                 <div className="space-y-4 flex-1">
                                     <div className="flex items-center justify-between">
-                                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1">Included Features (JSON)</label>
+                                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1">Included Features (One per line)</label>
                                         {pkg.is_popular && <span className="bg-primary/20 text-primary text-[8px] font-black uppercase px-2 py-0.5 rounded-full border border-primary/30">Popular Choice</span>}
                                     </div>
                                     <textarea 
-                                        value={JSON.stringify(pkg.features, null, 2)}
+                                        value={pkg.features?.join('\n') || ''}
                                         onChange={(e) => {
-                                            try { updatePackageField(pkg.id, 'features', JSON.parse(e.target.value)); } catch (err) {}
+                                            const lines = e.target.value.split('\n').filter(line => line.trim() !== '');
+                                            updatePackageField(pkg.id, 'features', lines);
                                         }}
-                                        className="w-full h-48 bg-black/40 border border-primary/10 rounded-2xl p-6 text-xs font-mono focus:border-primary/50 outline-none transition-all text-foreground resize-none"
+                                        className="w-full h-48 bg-black/40 border border-primary/10 rounded-2xl p-6 text-sm focus:border-primary/50 outline-none transition-all text-foreground resize-none font-bold"
+                                        placeholder="Feature 1&#10;Feature 2&#10;Feature 3..."
                                     />
                                 </div>
 

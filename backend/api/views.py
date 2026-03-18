@@ -16,9 +16,10 @@ import io
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 from .models import (
-    Service, GalleryImage, Package, BookingRequest, ClientShoot, 
-    Photographer, PhotographerSlot, SiteMedia, 
-    EmailConfiguration, EmailTemplate, MediaItem
+    Service, GalleryImage, Package, BookingRequest, 
+    ClientShoot, Photographer, PhotographerSlot, PhotographerPayment,
+    SiteMedia, EmailConfiguration, EmailTemplate, MediaItem,
+    Referral, GlobalSettings, SupportTicket
 )
 from .serializers import (
     ServiceSerializer,
@@ -31,9 +32,13 @@ from .serializers import (
     SiteMediaSerializer,
     ClientSerializer,
     AdminSerializer,
-    EmailConfigurationSerializer,
     EmailTemplateSerializer,
-    MediaItemSerializer
+    EmailConfigurationSerializer,
+    MediaItemSerializer,
+    ReferralSerializer,
+    GlobalSettingsSerializer,
+    PhotographerPaymentSerializer,
+    SupportTicketSerializer
 )
 
 class ServiceViewSet(viewsets.ModelViewSet):
@@ -140,6 +145,17 @@ class BookingRequestViewSet(viewsets.ModelViewSet):
 
         # Auto-assign an available photographer if requested
         instance = serializer.save()
+        
+        # Check for pending referral match
+        if instance.email:
+            # Case-insensitive match on email for pending referrals
+            referral = Referral.objects.filter(referee_email__iexact=instance.email, status='pending').first()
+            if referral:
+                referral.status = 'completed'
+                referral.notes = f"{referral.notes}\nAuto-completed by Booking #{instance.id}".strip()
+                referral.save()
+        
+        # Determine status and shoot generation
         if instance.shoot_date and instance.time_slot:
             # Try to find an available photographer slot
             slot = PhotographerSlot.objects.filter(
@@ -156,7 +172,7 @@ class BookingRequestViewSet(viewsets.ModelViewSet):
                 instance.status = 'confirmed' # Auto-confirm
                 instance.save()
                 
-                # Automatically generate the ClientShoot so it appears in photographer portal
+                # Automatically generate the ClientShoot
                 if client_user:
                     ClientShoot.objects.create(
                         client=client_user,
@@ -164,8 +180,12 @@ class BookingRequestViewSet(viewsets.ModelViewSet):
                         shoot_date=instance.shoot_date,
                         photographer=instance.assigned_photographer,
                         status='scheduled',
+                        payment_status='unpaid',
                         amount_due=instance.package_interest.price if instance.package_interest else None,
-                        notes=f"Auto-generated from Booking #{instance.id}\nPackage: {instance.package_interest}\nContact: {instance.phone}"
+                        notes=f"Auto-generated from Booking #{instance.id}\nPackage: {instance.package_interest}\nContact: {instance.phone}",
+                        contact_name=f"{instance.first_name} {instance.last_name}",
+                        contact_phone=instance.phone,
+                        contact_email=instance.email
                     )
 
                 # SEND MOCKED EMAILS
@@ -179,6 +199,27 @@ class BookingRequestViewSet(viewsets.ModelViewSet):
         instance = self.get_object()
         new_status = serializer.validated_data.get('status', instance.status)
         
+        # If transitioning to completed (manual completion)
+        if instance.status != 'completed' and new_status == 'completed':
+            # Check if it was paid
+            # Find the associated ClientShoot to check payment
+            shoot = ClientShoot.objects.filter(
+                property_address=instance.property_details[:300],
+                contact_email=instance.email
+            ).first()
+            
+            if shoot and shoot.payment_status != 'paid':
+                # Frontend should have sent completion_notes
+                completion_notes = serializer.validated_data.get('completion_notes')
+                if not completion_notes:
+                    from rest_framework.exceptions import ValidationError
+                    raise ValidationError({"completion_notes": "Reason for manual completion of unpaid booking is required."})
+
+            # If it's confirmed -> completed transition, we might need to update the shoot too
+            if shoot:
+                shoot.status = 'completed'
+                shoot.save()
+
         # If transitioning to confirmed
         if instance.status != 'confirmed' and new_status == 'confirmed':
             super().perform_update(serializer)
@@ -209,7 +250,10 @@ class BookingRequestViewSet(viewsets.ModelViewSet):
                 photographer=instance.assigned_photographer,
                 status='scheduled',
                 amount_due=instance.package_interest.price if instance.package_interest else None,
-                notes=f"Auto-generated from Booking #{instance.id}\nPackage: {instance.package_interest}\nContact: {instance.phone}\nPhotographer: {instance.assigned_photographer}"
+                notes=f"Auto-generated from Booking #{instance.id}\nPackage: {instance.package_interest}\nContact: {instance.phone}\nPhotographer: {instance.assigned_photographer}",
+                contact_name=f"{instance.first_name} {instance.last_name}",
+                contact_phone=instance.phone,
+                contact_email=instance.email
             )
 
             # SEND MOCKED EMAILS
@@ -238,7 +282,20 @@ class ClientShootViewSet(viewsets.ModelViewSet):
             return ClientShoot.objects.all().order_by('-created_at')
 
         if self.request.user.is_staff:
-            return ClientShoot.objects.all().order_by('-created_at')
+            queryset = ClientShoot.objects.all().order_by('-created_at')
+            impersonate_id = self.request.query_params.get('impersonate_id')
+            if impersonate_id:
+                role = self.request.query_params.get('role')
+                if role == 'photographer':
+                    queryset = queryset.filter(photographer__user_id=impersonate_id)
+                else:
+                    queryset = queryset.filter(client_id=impersonate_id)
+            
+            photographer_id = self.request.query_params.get('photographer')
+            if photographer_id:
+                queryset = queryset.filter(photographer_id=photographer_id)
+                
+            return queryset
             
         # Photographers see shoots assigned to them
         try:
@@ -286,15 +343,16 @@ class ClientShootViewSet(viewsets.ModelViewSet):
                 shoot.save()
             
             # Mock Stripe for local development without actual API keys
-            if getattr(settings, 'STRIPE_SECRET_KEY', 'sk_test_placeholder') == 'sk_test_placeholder':
+            if getattr(settings, 'STRIPE_SECRET_KEY', 'sk_test_placeholder') in ['sk_test_placeholder', '']:
                 session_url = "https://checkout.stripe.com/pay/cs_test_mock123_please_add_real_key"
             else:
                     # Safely fallback to localhost if CORS origins are not explicitly defined in settings
-                    base_url = settings.CORS_ALLOWED_ORIGINS[0] if hasattr(settings, 'CORS_ALLOWED_ORIGINS') and settings.CORS_ALLOWED_ORIGINS else "http://localhost:3000"
+                    cors_origins = getattr(settings, 'CORS_ALLOWED_ORIGINS', [])
+                    base_url = cors_origins[0] if cors_origins else "http://localhost:3000"
                     
-                    session = stripe.checkout.Session.create(
-                        payment_method_types=['card'],
-                        line_items=[{
+                    session_kwargs = {
+                        'payment_method_types': ['card'],
+                        'line_items': [{
                             'price_data': {
                                 'currency': 'usd',
                                 'product_data': {
@@ -305,11 +363,28 @@ class ClientShootViewSet(viewsets.ModelViewSet):
                             },
                             'quantity': 1,
                         }],
-                        mode='payment',
-                        metadata={'shoot_id': shoot.id},
-                        success_url=f"{base_url}/dashboard?payment=success&session_id={{CHECKOUT_SESSION_ID}}",
-                        cancel_url=f"{base_url}/dashboard?payment=cancelled",
-                    )
+                        'mode': 'payment',
+                        'metadata': {'shoot_id': shoot.id},
+                        'success_url': f"{base_url}/dashboard?payment=success&session_id={{CHECKOUT_SESSION_ID}}",
+                        'cancel_url': f"{base_url}/dashboard?payment=cancelled",
+                    }
+
+                    # Split payment if photographer is assigned and has a Stripe account
+                    if shoot.photographer and shoot.photographer.stripe_account_id:
+                        # Calculate photographer share based on their share_percentage
+                        photographer_share = (float(amount_due) * float(shoot.photographer.share_percentage)) / 100
+                        # Convert to cents for Stripe
+                        transfer_amount = int(photographer_share * 100)
+                        
+                        if transfer_amount > 0:
+                            session_kwargs['payment_intent_data'] = {
+                                'transfer_data': {
+                                    'destination': shoot.photographer.stripe_account_id,
+                                    'amount': transfer_amount,
+                                }
+                            }
+
+                    session = stripe.checkout.Session.create(**session_kwargs)
                     session_url = session.url
             
             shoot.stripe_payment_link = session_url
@@ -326,6 +401,9 @@ class ClientShootViewSet(viewsets.ModelViewSet):
             })
             
         except Exception as e:
+            import traceback
+            print(f"ERROR GENERATING INVOICE: {str(e)}")
+            print(traceback.format_exc())
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @action(detail=False, methods=['post'], url_path='verify-payment')
@@ -344,7 +422,7 @@ class ClientShootViewSet(viewsets.ModelViewSet):
 
             session = stripe.checkout.Session.retrieve(session_id)
             if session.payment_status == 'paid':
-                shoot_id = session.get('metadata', {}).get('shoot_id')
+                shoot_id = session.metadata.get('shoot_id')
                 if shoot_id:
                     shoot = ClientShoot.objects.get(id=shoot_id)
                     shoot.payment_status = 'paid'
@@ -352,11 +430,16 @@ class ClientShootViewSet(viewsets.ModelViewSet):
                     
                     from .utils.email_utils import send_payment_confirmed_emails
                     from django.conf import settings
-                    base_url = settings.CORS_ALLOWED_ORIGINS[0] if hasattr(settings, 'CORS_ALLOWED_ORIGINS') and settings.CORS_ALLOWED_ORIGINS else "http://localhost:3000"
+                    base_url = "http://localhost:3000"
+                    if hasattr(settings, 'CORS_ALLOWED_ORIGINS') and settings.CORS_ALLOWED_ORIGINS:
+                        base_url = settings.CORS_ALLOWED_ORIGINS[0]
                     send_payment_confirmed_emails(shoot.property_address, f"{base_url}/dashboard")
                 return Response({"detail": "Payment verified", "status": "paid"})
             return Response({"detail": "Payment not completed"}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
+            import traceback
+            print(f"ERROR VERIFYING PAYMENT: {str(e)}")
+            print(traceback.format_exc())
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @action(detail=True, methods=['get'], url_path='get-upload-url')
@@ -623,23 +706,91 @@ class PhotographerSlotViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         # Admins can see all slots, photographers only see theirs
         if self.request.user.is_staff:
-            return PhotographerSlot.objects.all()
+            queryset = PhotographerSlot.objects.all()
+            impersonate_id = self.request.query_params.get('impersonate_id')
+            if impersonate_id:
+                queryset = queryset.filter(photographer__user_id=impersonate_id)
+            return queryset
         try:
             photographer = self.request.user.photographer_profile
             return PhotographerSlot.objects.filter(photographer=photographer)
         except Exception:
             return PhotographerSlot.objects.none()
-
     def perform_create(self, serializer):
-        if self.request.user.is_staff and 'photographer_id' in self.request.data:
-            try:
-                photographer = Photographer.objects.get(id=self.request.data['photographer_id'])
-            except Photographer.DoesNotExist:
-                pass # Fallback to below if not found or handled differently
+        photographer_id = self.request.data.get('photographer_id')
+        
+        # If admin provides a photographer_id, use it.
+        # Otherwise, use the authenticated photographer's profile.
+        if self.request.user.is_staff and photographer_id:
+            photographer = Photographer.objects.get(id=photographer_id)
         else:
             photographer = self.request.user.photographer_profile
             
         serializer.save(photographer=photographer)
+
+class ReferralViewSet(viewsets.ModelViewSet):
+    queryset = Referral.objects.all().order_by('-created_at')
+    serializer_class = ReferralSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        if self.request.user.is_staff:
+            return Referral.objects.all().order_by('-created_at')
+        return Referral.objects.filter(referrer=self.request.user).order_by('-created_at')
+
+    def perform_create(self, serializer):
+        serializer.save(referrer=self.request.user)
+
+class GlobalSettingsViewSet(viewsets.ModelViewSet):
+    queryset = GlobalSettings.objects.all()
+    serializer_class = GlobalSettingsSerializer
+    
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [AllowAny()]
+        return [IsAdminUser()]
+
+    def list(self, request, *args, **kwargs):
+        # Always return the first one (singleton-ish)
+        settings = GlobalSettings.objects.first()
+        if not settings:
+            settings = GlobalSettings.objects.create()
+        serializer = self.get_serializer(settings)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['post'], permission_classes=[IsAdminUser])
+    def update_global(self, request):
+        settings = GlobalSettings.objects.first()
+        if not settings:
+            settings = GlobalSettings.objects.create()
+        
+        from .utils.r2_utils import upload_to_r2
+        
+        # Handle file uploads
+        if 'logo' in request.FILES:
+            logo_url = upload_to_r2(request.FILES['logo'], "branding/logo")
+            if logo_url: settings.logo_url = logo_url
+            
+        if 'favicon' in request.FILES:
+            favicon_url = upload_to_r2(request.FILES['favicon'], "branding/favicon")
+            if favicon_url: settings.favicon_url = favicon_url
+            
+        if 'invoice_logo' in request.FILES:
+            invoice_logo_url = upload_to_r2(request.FILES['invoice_logo'], "branding/invoice")
+            if invoice_logo_url: settings.invoice_logo_url = invoice_logo_url
+            
+        if 'sidebar_logo' in request.FILES:
+            sidebar_logo_url = upload_to_r2(request.FILES['sidebar_logo'], "branding/sidebar")
+            if sidebar_logo_url: settings.sidebar_logo_url = sidebar_logo_url
+            
+        # Handle other fields
+        for field in ['site_name', 'logo_url', 'favicon_url', 'invoice_logo_url', 'sidebar_logo_url']:
+            if field in request.data and field not in request.FILES:
+                setattr(settings, field, request.data[field])
+                
+        settings.save()
+        serializer = self.get_serializer(settings)
+        return Response(serializer.data)
 
 class PhotographerViewSet(viewsets.ModelViewSet):
     """
@@ -650,12 +801,17 @@ class PhotographerViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        from django.db.models import Count
         if self.request.user.is_staff:
-            return Photographer.objects.all().order_by('user__first_name')
+            return Photographer.objects.filter(is_archived=False).annotate(
+                booking_count=Count('assigned_bookings')
+            ).order_by('user__first_name')
         
         # Photographers can see their own profile
         if hasattr(self.request.user, 'photographer_profile'):
-            return Photographer.objects.filter(user=self.request.user)
+            return Photographer.objects.filter(user=self.request.user).annotate(
+                 booking_count=Count('assigned_bookings')
+            )
             
         return Photographer.objects.none()
 
@@ -665,6 +821,56 @@ class PhotographerViewSet(viewsets.ModelViewSet):
         photographers = Photographer.objects.filter(is_active=True).order_by('user__first_name')
         serializer = self.get_serializer(photographers, many=True)
         return Response(serializer.data)
+
+    @action(detail=True, methods=['post'], url_path='stripe-connect')
+    def stripe_connect(self, request, pk=None):
+        """
+        Creates a Stripe Express account and returns an onboarding link.
+        """
+        photographer = self.get_object()
+        
+        # Verify permissions
+        if photographer.user != request.user and not request.user.is_staff:
+            return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
+            
+        try:
+            # 1. Create account if not already exists
+            if not photographer.stripe_account_id:
+                account = stripe.Account.create(
+                    type="express",
+                    country="US",
+                    email=photographer.user.email,
+                    capabilities={
+                        "card_payments": {"requested": True},
+                        "transfers": {"requested": True},
+                    },
+                    business_type="individual",
+                    individual={
+                        "first_name": photographer.user.first_name,
+                        "last_name": photographer.user.last_name,
+                    }
+                )
+                photographer.stripe_account_id = account.id
+                photographer.save()
+            
+            # 2. Get onboarding link
+            # For local dev, NextJS is usually on 3000
+            frontend_url = 'http://localhost:3000' if settings.DEBUG else 'https://kcmedia-frontend.vercel.app'
+            
+            # Since this is a single page app portal, we return to the portal tab
+            return_url = f"{frontend_url}/photographer-portal?tab=profile&stripe=success"
+            refresh_url = f"{frontend_url}/photographer-portal?tab=profile&stripe=refresh"
+
+            account_link = stripe.AccountLink.create(
+                account=photographer.stripe_account_id,
+                refresh_url=refresh_url,
+                return_url=return_url,
+                type="account_onboarding",
+            )
+            
+            return Response({"url": account_link.url})
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def perform_create(self, serializer):
         from django.contrib.auth.models import User
@@ -713,17 +919,22 @@ class PhotographerViewSet(viewsets.ModelViewSet):
         
     def perform_destroy(self, instance):
         hard_delete = self.request.query_params.get('hard') == 'true'
+        has_bookings = ClientShoot.objects.filter(photographer=instance).exists()
         
         if hard_delete:
-            # Permanent delete: remove User and Photographer profile
+            if has_bookings:
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError("Cannot permanently delete photographer with existing bookings. Please archive instead.")
+            
             user = instance.user
             instance.delete()
             user.delete()
         else:
-            # Soft delete: mark as inactive to preserve history
+            # Archiving logic
+            instance.is_archived = True
             instance.is_active = False
             instance.save()
-            # Also disable login
+            # Disable login
             instance.user.is_active = False
             instance.user.save()
 
@@ -865,7 +1076,7 @@ def request_password_reset(request):
     # Simulate sending email
     from .utils.email_utils import send_email_dynamic
     subject = "Password Reset Request - KC Real Estate Media"
-    body = f"<p>Hello,</p><p>We received a request to reset your password. Please click the link below to set a new password:</p><p><a href='#'>Reset Password Link</a></p><p>If you didn't request this, please ignore this email.</p>"
+    body = f"Hello,\n\nWe received a request to reset your password. Please click the link below to set a new password:\n\nReset Password Link: #\n\nIf you didn't request this, please ignore this email."
     
     # Mocking successful "send"
     return Response({'detail': 'If an account exists with that email, a reset link has been sent.'}, status=status.HTTP_200_OK)
@@ -913,24 +1124,32 @@ class CurrentUserView(views.APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        user = request.user
+        impersonate_id = request.query_params.get('impersonate_id')
+        if impersonate_id and request.user.is_staff:
+            try:
+                user = User.objects.get(id=impersonate_id)
+            except User.DoesNotExist:
+                pass
+
         is_photo = False
         photo_id = None
         photo_url = None
         try:
-            if hasattr(request.user, 'photographer_profile') and request.user.photographer_profile.is_active:
+            if hasattr(user, 'photographer_profile') and user.photographer_profile.is_active:
                 is_photo = True
-                photo_id = request.user.photographer_profile.id
-                photo_url = request.user.photographer_profile.profile_image_url
+                photo_id = user.photographer_profile.id
+                photo_url = user.photographer_profile.profile_image_url
         except Exception:
             pass
             
         serializer = {
-            'id': request.user.id,
-            'username': request.user.username,
-            'email': request.user.email,
-            'first_name': request.user.first_name,
-            'last_name': request.user.last_name,
-            'is_staff': request.user.is_staff,
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'is_staff': user.is_staff,
             'is_photographer': is_photo,
             'photographer_id': photo_id,
             'profile_image_url': photo_url
@@ -1009,6 +1228,32 @@ def stripe_webhook(request):
             try:
                 shoot = ClientShoot.objects.get(id=shoot_id)
                 shoot.payment_status = 'paid'
+                # User requested: when payment is made, it should auto complete
+                shoot.status = 'completed'
+                
+                # Update photographer balance and records if it was a split payment
+                if shoot.photographer:
+                    # Fee is already calculated in shoot.save() via save override
+                    photographer = shoot.photographer
+                    fee = shoot.photographer_fee
+                    
+                    # If this was a split payment (transfer_data was present in PI)
+                    # We check if they have a stripe id to record the payout and update status
+                    if photographer.stripe_account_id:
+                        # Mark it as paid for this photographer
+                        shoot.photographer_paid_amount = fee
+                        # Note: photographer_payment_status will be updated in shoot.save()
+                        
+                        # Create a payment record for historical tracking
+                        # PhotographerPayment.save() will handleographer.total_paid increment
+                        PhotographerPayment.objects.create(
+                            photographer=photographer,
+                            amount=fee,
+                            reference_number=f"Stripe Transfer: {session.get('payment_intent')}",
+                            notes=f"Automated split from shoot at {shoot.property_address}"
+                        )
+                    
+                # shoot.save() will handleographer.total_earned increment because payment_status becomes 'paid'
                 shoot.save()
                 
                 from .utils.email_utils import send_payment_confirmed_emails
@@ -1315,3 +1560,106 @@ class EmailTemplateViewSet(viewsets.ModelViewSet):
     serializer_class = EmailTemplateSerializer
     permission_classes = [permissions.IsAdminUser]
     lookup_field = 'slug'
+
+class PhotographerPaymentViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for managing photographer payments.
+    """
+    queryset = PhotographerPayment.objects.all().order_by('-payment_date', '-created_at')
+    serializer_class = PhotographerPaymentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_staff:
+            return PhotographerPayment.objects.all()
+        # Photographers can only see their own payments
+        return PhotographerPayment.objects.filter(photographer__user=user)
+
+
+
+class SupportTicketViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for managing support tickets.
+    """
+    queryset = SupportTicket.objects.all().order_by('-created_at')
+    serializer_class = SupportTicketSerializer
+    permission_classes = [permissions.AllowAny] # Allow guest submissions, handle user assignment in perform_create
+
+    def perform_create(self, serializer):
+        user = self.request.user if self.request.user.is_authenticated else None
+        ticket = serializer.save(user=user)
+        
+        # Send email notification to admin
+        try:
+            settings_obj = GlobalSettings.objects.first()
+            admin_email = settings_obj.admin_email_for_alerts if settings_obj else "admin@example.com"
+            
+            email_config = EmailConfiguration.objects.filter(is_active=True).first()
+            if email_config:
+                connection = get_connection(
+                    host=email_config.email_host,
+                    port=email_config.email_port,
+                    username=email_config.email_username,
+                    password=email_config.email_password,
+                    use_tls=email_config.use_tls,
+                    use_ssl=email_config.use_ssl
+                )
+                
+                subject = f"New Support Ticket: {ticket.subject}"
+                body = f"New support ticket received from {ticket.name} ({ticket.email}).\n\nTopic: {ticket.get_topic_display()}\nSubject: {ticket.subject}\n\nMessage:\n{ticket.message}\n\nView in admin portal for details."
+                
+                email = EmailMessage(
+                    subject,
+                    body,
+                    f"{email_config.email_from_name} <{email_config.email_from_address}>",
+                    [admin_email],
+                    connection=connection
+                )
+                email.send()
+        except Exception as e:
+            print(f"Error sending support ticket notification: {e}")
+
+
+class SupportTicketViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for managing support tickets.
+    """
+    queryset = SupportTicket.objects.all().order_by('-created_at')
+    serializer_class = SupportTicketSerializer
+    permission_classes = [permissions.AllowAny] # Allow guest submissions, handle user assignment in perform_create
+
+    def perform_create(self, serializer):
+        user = self.request.user if self.request.user.is_authenticated else None
+        ticket = serializer.save(user=user)
+        
+        # Send email notification to admin
+        try:
+            settings_obj = GlobalSettings.objects.first()
+            admin_email = settings_obj.admin_email_for_alerts if settings_obj else "admin@example.com"
+            
+            email_config = EmailConfiguration.objects.filter(is_active=True).first()
+            if email_config:
+                from django.core.mail import get_connection, EmailMessage
+                connection = get_connection(
+                    host=email_config.email_host,
+                    port=email_config.email_port,
+                    username=email_config.email_username,
+                    password=email_config.email_password,
+                    use_tls=email_config.use_tls,
+                    use_ssl=email_config.use_ssl
+                )
+                
+                subject = f"New Support Ticket: {ticket.subject}"
+                body = f"New support ticket received from {ticket.name} ({ticket.email}).\n\nTopic: {ticket.get_topic_display()}\nSubject: {ticket.subject}\n\nMessage:\n{ticket.message}\n\nView in admin portal for details."
+                
+                email = EmailMessage(
+                    subject,
+                    body,
+                    f"{email_config.email_from_name} <{email_config.email_from_address}>",
+                    [admin_email],
+                    connection=connection
+                )
+                email.send()
+        except Exception as e:
+            print(f"Error sending support ticket notification: {e}")

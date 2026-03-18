@@ -10,9 +10,11 @@ import {
   Camera,
   CheckCircle2,
   AlertCircle,
-  User
+  User,
+  CreditCard
 } from "lucide-react";
 import Link from "next/link";
+import ImpersonationBanner from "@/components/ImpersonationBanner";
 
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
@@ -23,6 +25,7 @@ export default function DashboardPage() {
     pendingPayments: 0
   });
   const [recentShoots, setRecentShoots] = useState<any[]>([]);
+  const [impersonatedUser, setImpersonatedUser] = useState<any>(null);
 
   useEffect(() => {
     const queryParams = new URLSearchParams(window.location.search);
@@ -61,8 +64,21 @@ export default function DashboardPage() {
 
   const fetchData = async () => {
     const token = localStorage.getItem("access_token");
+    const queryParams = new URLSearchParams(window.location.search);
+    const impId = queryParams.get('impersonate_id');
+    const role = queryParams.get('role');
+
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/shoots/`, {
+      // Fetch user identity first if impersonating
+      if (impId) {
+        const meRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/me/?impersonate_id=${impId}`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (meRes.ok) setImpersonatedUser(await meRes.json());
+      }
+
+      const shootsUrl = `${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/shoots/${impId ? `?impersonate_id=${impId}${role ? `&role=${role}` : ''}` : ''}`;
+      const res = await fetch(shootsUrl, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
@@ -102,9 +118,17 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-10">
+      {impersonatedUser && (
+        <ImpersonationBanner 
+          userName={impersonatedUser.full_name || impersonatedUser.first_name || impersonatedUser.username} 
+          role={impersonatedUser.is_photographer ? "Photographer" : "Client"} 
+        />
+      )}
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-black tracking-tight mb-2">Welcome Back</h1>
+        <h1 className="text-3xl font-black tracking-tight mb-2">
+          {impersonatedUser ? `Viewing: ${impersonatedUser.first_name || impersonatedUser.username}` : 'Welcome Back'}
+        </h1>
         <p className="text-muted-foreground font-medium">Manage your properties and media assets in one place.</p>
       </div>
 
@@ -203,8 +227,8 @@ export default function DashboardPage() {
             <div className="space-y-3">
               {[
                 { name: "My Profile", href: "/dashboard/profile", icon: User },
-                { name: "Support Hub", href: "#", icon: AlertCircle },
-                { name: "Billing History", href: "#", icon: CheckCircle2 },
+                { name: "Support Hub", href: "/dashboard/support", icon: AlertCircle },
+                { name: "Billing History", href: "/dashboard/billing", icon: CreditCard },
               ].map((link) => (
                 <Link 
                   key={link.name} 

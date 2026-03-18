@@ -13,9 +13,14 @@ import {
   User as UserIcon, 
   Clock, 
   Camera, 
-  CheckCircle2
+  CheckCircle2,
+  DollarSign,
+  History,
+  TrendingUp,
+  CreditCard
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import ImpersonationBanner from "@/components/ImpersonationBanner";
 
 export default function PhotographerPortal() {
   const router = useRouter();
@@ -23,7 +28,10 @@ export default function PhotographerPortal() {
   const [slots, setSlots] = useState<any[]>([]);
   const [shoots, setShoots] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"shoots" | "availability" | "profile">("shoots");
+  const [activeTab, setActiveTab] = useState<"shoots" | "earnings" | "availability" | "profile">("shoots");
+  
+  // Payment State
+  const [payments, setPayments] = useState<any[]>([]);
 
   // Profile Form State
   const [bio, setBio] = useState("");
@@ -31,8 +39,12 @@ export default function PhotographerPortal() {
   const [socials, setSocials] = useState<any>({});
 
   // Availability Form State
-  const [date, setDate] = useState("");
+  const [date, setDate] = useState(() => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  });
   const [timeSlot, setTimeSlot] = useState("09:00");
+  const [uploadStatus, setUploadStatus] = useState<{message: string, type: 'success' | 'error' | 'none'}>({message: '', type: 'none'});
 
   useEffect(() => {
     fetchData();
@@ -42,12 +54,27 @@ export default function PhotographerPortal() {
     const token = localStorage.getItem("access_token");
     if (!token) return router.push("/login");
 
+    const queryParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+    const impId = queryParams.get('impersonate_id');
+    const tabParam = queryParams.get('tab');
+    const stripeParam = queryParams.get('stripe');
+
+    if (tabParam === 'profile') setActiveTab('profile');
+    if (stripeParam === 'success') {
+      // Show a temporary success toast/alert if needed
+      // alert("Stripe account successfully connected!");
+    }
+
     try {
       // Fetch User
-      const userRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/me/`, {
+      const userRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/me/${impId ? `?impersonate_id=${impId}` : ''}`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       const userData = await userRes.json();
+      
+      // If we are an admin impersonating, allowed. Otherwise check role.
+      const isImpersonating = impId && userData.is_staff;
+      
       if (!userData.is_photographer && !userData.is_staff) {
         return router.push("/dashboard");
       }
@@ -67,18 +94,26 @@ export default function PhotographerPortal() {
       }
 
       // Fetch Slots
-      const slotsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/photographer/slots/`, {
+      const slotsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/photographer/slots/${impId ? `?impersonate_id=${impId}` : ''}`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (slotsRes.ok) setSlots(await slotsRes.json());
 
       // Fetch assigned bookings (ClientShoots)
-      const shootsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/shoots/`, {
+      const shootsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/shoots/${impId ? `?impersonate_id=${impId}&role=photographer` : ''}`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (shootsRes.ok) {
         const data = await shootsRes.json();
         setShoots(data.results || data);
+      }
+
+      // Fetch Payments
+      const paymentsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/photographer-payments/${impId ? `?impersonate_id=${impId}` : ''}`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (paymentsRes.ok) {
+        setPayments(await paymentsRes.json());
       }
     } catch (err) {
       console.error(err);
@@ -102,8 +137,11 @@ export default function PhotographerPortal() {
       if (res.ok) {
         const newSlot = await res.json();
         setSlots([...slots, newSlot]);
+        setUploadStatus({ message: "Session slot published!", type: 'success' });
+        setTimeout(() => setUploadStatus({message: '', type: 'none'}), 3000);
       } else {
-        alert("Failed to add slot (maybe it already exists?)");
+        const errorData = await res.json().catch(() => ({}));
+        setUploadStatus({ message: errorData.detail || "Failed to add slot - it might already exist.", type: 'error' });
       }
     } catch (err) {
       console.error(err);
@@ -143,9 +181,10 @@ export default function PhotographerPortal() {
         })
       });
       if (res.ok) {
-        alert("Profile updated successfully!");
+        setUploadStatus({ message: "Profile updated successfully!", type: 'success' });
+        setTimeout(() => setUploadStatus({message: '', type: 'none'}), 3000);
       } else {
-        alert("Failed to update profile.");
+        setUploadStatus({ message: "Failed to update profile.", type: 'error' });
       }
     } catch (err) {
       console.error(err);
@@ -188,9 +227,17 @@ export default function PhotographerPortal() {
         <main className={`flex-1 p-6 md:p-10 container mx-auto max-w-6xl ${!user?.is_staff ? 'pt-24 pb-20' : ''}`}>
           
           {/* Header Section */}
+          {typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('impersonate_id') && (
+            <ImpersonationBanner 
+              userName={user?.full_name || user?.first_name || user?.username} 
+              role="Photographer" 
+            />
+          )}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
             <div>
-              <h1 className="text-4xl font-black tracking-tight mb-2">Photographer Portal</h1>
+              <h1 className="text-4xl font-black tracking-tight mb-2">
+                {typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('impersonate_id') ? `Viewing: ${user?.first_name || user?.username}` : 'Photographer Portal'}
+              </h1>
               <p className="text-muted-foreground font-medium">Manage your shoots, availability and portfolio assets.</p>
             </div>
             <div className="flex items-center gap-4 bg-card p-2 pr-6 rounded-2xl border border-primary/20 backdrop-blur-sm shadow-gold">
@@ -209,6 +256,7 @@ export default function PhotographerPortal() {
           <div className="flex items-center gap-2 mb-10 overflow-x-auto no-scrollbar">
             {[
               { id: 'shoots', label: 'My Bookings', icon: ShoppingBag, count: activeShoots.length },
+              { id: 'earnings', label: 'My Earnings', icon: DollarSign },
               { id: 'availability', label: 'Availability', icon: Calendar },
               { id: 'profile', label: 'My Profile', icon: UserIcon }
             ].map((tab: any) => (
@@ -225,6 +273,93 @@ export default function PhotographerPortal() {
           </div>
 
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {activeTab === 'earnings' && user?.photographer_profile && (
+               <div className="space-y-10">
+                  {/* Financial Summary Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                     <div className="bg-card/80 backdrop-blur-md border border-primary/20 p-8 rounded-[2.5rem] shadow-gold flex items-center gap-6">
+                        <div className="w-14 h-14 bg-emerald-500/10 text-emerald-500 rounded-2xl flex items-center justify-center">
+                           <TrendingUp className="w-6 h-6" />
+                        </div>
+                        <div>
+                           <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Total Earned</p>
+                           <h4 className="text-2xl font-black italic">${parseFloat(user.photographer_profile.total_earned || 0).toFixed(2)}</h4>
+                        </div>
+                     </div>
+                     <div className="bg-card/80 backdrop-blur-md border border-primary/20 p-8 rounded-[2.5rem] shadow-gold flex items-center gap-6">
+                        <div className="w-14 h-14 bg-blue-500/10 text-blue-500 rounded-2xl flex items-center justify-center">
+                           <CreditCard className="w-6 h-6" />
+                        </div>
+                        <div>
+                           <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Total Paid Out</p>
+                           <h4 className="text-2xl font-black italic">${parseFloat(user.photographer_profile.total_paid || 0).toFixed(2)}</h4>
+                        </div>
+                     </div>
+                     <div className="bg-card/80 backdrop-blur-md border border-primary/20 p-8 rounded-[2.5rem] shadow-gold-heavy flex items-center gap-6 bg-primary/5">
+                        <div className="w-14 h-14 bg-primary/10 text-primary rounded-2xl flex items-center justify-center">
+                           <DollarSign className="w-6 h-6" />
+                        </div>
+                        <div>
+                           <p className="text-[10px] font-black uppercase tracking-widest text-primary/60">Current Balance</p>
+                           <h4 className="text-2xl font-black italic">${(parseFloat(user.photographer_profile.total_earned || 0) - parseFloat(user.photographer_profile.total_paid || 0)).toFixed(2)}</h4>
+                        </div>
+                     </div>
+                  </div>
+
+                  {/* Payment History Table */}
+                  <div className="bg-card border border-primary/20 p-10 rounded-[3rem] shadow-gold">
+                     <h2 className="text-xl font-black mb-8 flex items-center gap-3">
+                        <History className="w-5 h-5 text-primary" /> Payment History
+                     </h2>
+                     
+                     <div className="space-y-4">
+                        {payments.length === 0 ? (
+                           <div className="text-center py-20 bg-muted/20 rounded-[2.5rem] border border-dashed border-primary/10">
+                              <p className="text-[10px] font-black text-muted-foreground/30 uppercase tracking-widest">No payments recorded yet</p>
+                           </div>
+                        ) : (
+                           <div className="overflow-hidden border border-primary/5 rounded-3xl divide-y divide-primary/5">
+                              {payments.map((payment: any) => (
+                                 <div key={payment.id} className="p-6 bg-muted/10 hover:bg-muted/30 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                    <div className="flex items-center gap-5">
+                                       <div className="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center text-xl">
+                                          🏦
+                                       </div>
+                                       <div>
+                                          <p className="font-black text-lg italic tracking-tight">${parseFloat(payment.amount).toFixed(2)}</p>
+                                           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                                              {(() => {
+                                                 const [y, m, d] = payment.payment_date.split('-');
+                                                 return new Date(parseInt(y), parseInt(m) - 1, parseInt(d)).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
+                                              })()}
+                                           </p>
+                                       </div>
+                                    </div>
+                                    <div className="text-right">
+                                       <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 block mb-1">Ref / Notes</span>
+                                       <p className="text-xs font-bold text-foreground truncate max-w-[200px]">
+                                          {payment.reference_number || 'N/A'} {payment.notes && ` • ${payment.notes}`}
+                                       </p>
+                                    </div>
+                                 </div>
+                              ))}
+                           </div>
+                        )}
+                     </div>
+
+                     <div className="mt-10 p-6 bg-primary/5 border border-primary/10 rounded-3xl">
+                        <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-2 flex items-center gap-2">
+                           💡 Note to Photographer
+                        </p>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                           Payments are typically processed within 3-5 business days of reach the payout threshold. 
+                           The "Current Balance" represents your share of earnings from all delivered and paid shoots that haven't been disbursed yet.
+                        </p>
+                     </div>
+                  </div>
+               </div>
+            )}
+
             {activeTab === 'shoots' && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
                 {/* Active Shoots Section */}
@@ -249,8 +384,13 @@ export default function PhotographerPortal() {
                       <div className="flex justify-between items-start gap-4 mb-6">
                         <div className="min-w-0">
                           <h3 className="text-xl font-black truncate group-hover:text-primary transition-colors">{shoot.property_address}</h3>
-                          <div className="flex items-center gap-3 mt-2">
-                             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{new Date(shoot.shoot_date).toDateString()}</span>
+                           <div className="flex items-center gap-3 mt-2">
+                              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                                 {(() => {
+                                    const [y, m, d] = shoot.shoot_date.split('-');
+                                    return new Date(parseInt(y), parseInt(m) - 1, parseInt(d)).toDateString();
+                                 })()}
+                              </span>
                              <span className="w-1 h-1 rounded-full bg-border"></span>
                              <span className="text-[10px] font-bold text-primary uppercase tracking-widest">{shoot.status.replace('_', ' ')}</span>
                           </div>
@@ -373,10 +513,10 @@ export default function PhotographerPortal() {
                                           }
                                        }
 
-                                       alert(`Successfully uploaded ${files.length} file(s)!`);
+                                       setUploadStatus({ message: `Successfully uploaded ${files.length} file(s)!`, type: 'success' });
                                        fetchData();
                                     } catch (err: any) {
-                                       alert(`Upload Error: ${err.message}`);
+                                       setUploadStatus({ message: `Upload Error: ${err.message}`, type: 'error' });
                                     } finally {
                                        btn.innerHTML = originalText;
                                        (btn as HTMLButtonElement).disabled = false;
@@ -393,6 +533,14 @@ export default function PhotographerPortal() {
                               Choose & Upload
                            </button>
                         </div>
+                        
+                        {uploadStatus.type !== 'none' && (
+                           <div className={`mt-4 p-4 rounded-xl border text-[10px] font-black uppercase tracking-widest flex items-center gap-3 animate-in fade-in slide-in-from-top-2 ${uploadStatus.type === 'success' ? 'bg-success/10 border-success/20 text-success' : 'bg-rose-500/10 border-rose-500/20 text-rose-500'}`}>
+                              {uploadStatus.type === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <div className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" />}
+                              {uploadStatus.message}
+                              <button onClick={() => setUploadStatus({message: '', type: 'none'})} className="ml-auto opacity-50 hover:opacity-100">✕</button>
+                           </div>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -452,12 +600,19 @@ export default function PhotographerPortal() {
                          <option value="15:00" className="bg-card text-foreground">3:00 PM - Late Afternoon</option>
                          <option value="17:00" className="bg-card text-foreground">5:00 PM - Twilight/Evening</option>
                        </select>
-                    </div>
-                    <button type="submit" className="w-full bg-primary text-primary-foreground h-[60px] rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-gold hover:shadow-gold-heavy hover:scale-[1.02] transition-all active:scale-95">
-                      Publish Session Slot
-                    </button>
-                  </form>
-                </div>
+                     </div>
+                     <button type="submit" className="w-full bg-primary text-primary-foreground h-[60px] rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-gold hover:shadow-gold-heavy hover:scale-[1.02] transition-all active:scale-95 disabled:opacity-50">
+                       Publish Session Slot
+                     </button>
+                     {uploadStatus.message && activeTab === 'availability' && (
+                       <div className={`mt-4 p-4 rounded-xl border text-[10px] font-black uppercase tracking-widest flex items-center gap-3 animate-in fade-in slide-in-from-top-2 ${uploadStatus.type === 'success' ? 'bg-success/10 border-success/20 text-success' : 'bg-rose-500/10 border-rose-500/20 text-rose-500'}`}>
+                          {uploadStatus.type === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <div className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" />}
+                          {uploadStatus.message}
+                          <button onClick={() => setUploadStatus({message: '', type: 'none'})} className="ml-auto opacity-50 hover:opacity-100">✕</button>
+                       </div>
+                     )}
+                   </form>
+                 </div>
 
                 <div className="space-y-6">
                    <h3 className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] ml-2">Currently Listed Slots</h3>
@@ -474,7 +629,12 @@ export default function PhotographerPortal() {
                              <Calendar className="w-4 h-4" />
                           </div>
                           <div>
-                            <span className="font-black text-sm block">{new Date(slot.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                            <span className="font-black text-sm block">
+                              {(() => {
+                                const [y, m, d] = slot.date.split('-');
+                                return new Date(parseInt(y), parseInt(m) - 1, parseInt(d)).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                              })()}
+                            </span>
                             <span className="text-[10px] font-bold text-muted-foreground tracking-widest uppercase">{slot.time_slot} Window</span>
                           </div>
                         </div>
@@ -536,6 +696,62 @@ export default function PhotographerPortal() {
                           <div className="w-2 h-2 rounded-full bg-success animate-pulse"></div>
                           <p className="text-[10px] font-black uppercase tracking-widest">Active & Accepting Bookings</p>
                        </div>
+                    </div>
+
+                    {/* Stripe Connect Section */}
+                    <div className="mt-6 p-6 bg-indigo-500/5 rounded-3xl border border-indigo-500/20 text-left group">
+                       <div className="flex items-center gap-3 mb-4">
+                          <div className="p-2 bg-indigo-500/10 text-indigo-500 rounded-xl group-hover:scale-110 transition-transform">
+                             <CreditCard className="w-4 h-4" />
+                          </div>
+                          <div>
+                             <h3 className="text-xs font-black tracking-tight italic">Stripe Connect</h3>
+                             <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">Automated Splits</p>
+                          </div>
+                       </div>
+
+                       {user.photographer_profile?.stripe_account_id ? (
+                          <div className="space-y-3">
+                             <div className="flex items-center gap-2 text-emerald-500 bg-emerald-500/10 px-3 py-2 rounded-xl border border-emerald-500/10">
+                                <CheckCircle2 className="w-3 h-3" />
+                                <span className="text-[9px] font-black uppercase tracking-widest">Connected</span>
+                             </div>
+                             <p className="text-[10px] font-bold text-muted-foreground/60 px-1 truncate">
+                                ID: {user.photographer_profile.stripe_account_id}
+                             </p>
+                          </div>
+                       ) : (
+                          <div className="space-y-4">
+                             <p className="text-[10px] text-muted-foreground leading-relaxed">
+                                Connect to receive instant automated payouts.
+                             </p>
+                             <button 
+                               onClick={async () => {
+                                 const token = localStorage.getItem("access_token");
+                                 try {
+                                   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/photographers/${user.photographer_profile.id}/stripe-connect/`, {
+                                     method: "POST",
+                                     headers: { "Authorization": `Bearer ${token}` }
+                                   });
+                                   if (res.ok) {
+                                     const { url } = await res.json();
+                                     window.location.href = url;
+                                   } else {
+                                     const err = await res.json();
+                                     alert(`Failed to start onboarding: ${err.detail || 'Unknown error'}`);
+                                   }
+                                 } catch (err) {
+                                   console.error(err);
+                                   alert("An error occurred. Please try again.");
+                                 }
+                               }}
+                               className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 text-white rounded-xl font-black text-[9px] uppercase tracking-widest shadow-lg shadow-indigo-600/20 hover:shadow-indigo-600/40 hover:scale-[1.02] transition-all active:scale-95"
+                             >
+                                <div className="w-3 h-3 bg-white text-indigo-600 rounded-sm flex items-center justify-center font-black text-[7px] italic">S</div>
+                                Connect Stripe
+                             </button>
+                          </div>
+                       )}
                     </div>
                   </div>
 

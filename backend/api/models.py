@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
+from decimal import Decimal
 import datetime
 
 class Service(models.Model):
@@ -63,9 +65,43 @@ class Photographer(models.Model):
     equipment = models.TextField(blank=True, help_text="List of equipment used (e.g. Sony A7IV, RS3 Mini)")
     social_links = models.JSONField(default=dict, blank=True, help_text="Social media handles (e.g. {'instagram': 'user', 'website': 'link'})")
     is_active = models.BooleanField(default=True)
+    is_archived = models.BooleanField(default=False)
+    share_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=50.00, help_text="Photographer's share percentage (e.g. 70.00 for 70%)")
+    total_earned = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    total_paid = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    stripe_account_id = models.CharField(max_length=100, blank=True, null=True, help_text="Stripe Connected Account ID (Express/Custom)")
 
     def __str__(self):
         return f"Photographer: {self.user.get_full_name() or self.user.username}"
+
+
+class PhotographerPayment(models.Model):
+    photographer = models.ForeignKey(Photographer, on_delete=models.CASCADE, related_name='payments')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    payment_date = models.DateField(default=timezone.now)
+    reference_number = models.CharField(max_length=100, blank=True, null=True, help_text="Transaction ID or check number")
+    notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-payment_date', '-created_at']
+
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        if is_new:
+            # New payment record, update photographer's total_paid
+            self.photographer.total_paid += self.amount
+            self.photographer.save()
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        # Subtract from total_paid before deleting
+        self.photographer.total_paid -= self.amount
+        self.photographer.save()
+        super().delete(*args, **kwargs)
+
+    def __str__(self):
+        return f"Payment of ${self.amount} to {self.photographer} on {self.payment_date}"
 
 
 class PhotographerSlot(models.Model):
@@ -111,7 +147,10 @@ class BookingRequest(models.Model):
     time_slot = models.CharField(max_length=10, choices=PhotographerSlot.TIME_SLOTS, null=True, blank=True)
     assigned_photographer = models.ForeignKey(Photographer, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_bookings')
     
+    referral_source = models.CharField(max_length=255, blank=True, null=True, help_text="How they heard about us or referral email")
+    
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    completion_notes = models.TextField(blank=True, null=True, help_text="Reason for manual completion if unpaid")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -139,6 +178,11 @@ class ClientShoot(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='scheduled')
     notes = models.TextField(blank=True)
     photographer = models.ForeignKey(Photographer, on_delete=models.SET_NULL, null=True, blank=True, related_name='client_shoots')
+
+    # Contact Details (New)
+    contact_name = models.CharField(max_length=200, blank=True, null=True)
+    contact_phone = models.CharField(max_length=20, blank=True, null=True)
+    contact_email = models.EmailField(blank=True, null=True)
     
     # Property Metadata (for realistic listing view)
     beds = models.IntegerField(null=True, blank=True)
@@ -151,7 +195,49 @@ class ClientShoot(models.Model):
     payment_status = models.CharField(max_length=20, choices=PAYMENT_CHOICES, default='unpaid')
     stripe_payment_link = models.URLField(max_length=1000, blank=True, null=True, help_text="Generated Stripe Checkout Session URL")
     
+    # Photographer Payout tracking
+    photographer_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, help_text="Amount owed to photographer for this shoot")
+    photographer_paid_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, help_text="Amount already paid to photographer")
+    photographer_payment_status = models.CharField(max_length=20, choices=[('unpaid', 'Unpaid'), ('partial', 'Partial'), ('paid', 'Paid')], default='unpaid')
+    
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        # Check if payment_status is changing from unpaid to paid
+        old_instance = None
+        if self.pk:
+            try:
+                old_instance = ClientShoot.objects.get(pk=self.pk)
+            except ClientShoot.DoesNotExist:
+                pass
+
+        # Auto-calculate photographer fee if not set or if amount/photographer changed
+        if self.photographer and self.amount_due:
+            # Ensure values are Decimals to avoid "can't multiply sequence by non-int" error
+            # This can happen if amount_due is passed as a string from the API
+            try:
+                amount = Decimal(str(self.amount_due))
+                share = Decimal(str(self.photographer.share_percentage))
+                self.photographer_fee = (amount * share) / Decimal('100')
+            except (ValueError, TypeError, ArithmeticError):
+                # Fallback to zero if calculation fails
+                self.photographer_fee = Decimal('0.00')
+        
+        # Update photographer payment status based on paid amount
+        if self.photographer_paid_amount >= self.photographer_fee and self.photographer_fee > 0:
+            self.photographer_payment_status = 'paid'
+        elif self.photographer_paid_amount > 0:
+            self.photographer_payment_status = 'partial'
+        else:
+            self.photographer_payment_status = 'unpaid'
+            
+        # Update photographer's total_earned when payment is confirmed
+        if self.payment_status == 'paid' and (not old_instance or old_instance.payment_status != 'paid'):
+            if self.photographer:
+                self.photographer.total_earned += self.photographer_fee
+                self.photographer.save()
+
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.property_address} ({self.client.username})"
@@ -186,6 +272,8 @@ class EmailConfiguration(models.Model):
     use_tls = models.BooleanField(default=True)
     use_ssl = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True, help_text="If active, this configuration will be used for all system emails.")
+    default_cc = models.EmailField(blank=True, null=True, help_text="Default CC address for all automated emails")
+    default_bcc = models.EmailField(blank=True, null=True, help_text="Default BCC address for all automated emails (e.g. admin backup)")
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
@@ -202,7 +290,9 @@ class EmailTemplate(models.Model):
     slug = models.SlugField(unique=True, help_text="Unique identifier for the template (e.g., 'booking-created')")
     title = models.CharField(max_length=100, help_text="Human readable title")
     subject = models.CharField(max_length=255)
-    body = models.TextField(help_text="HTML content with placeholders like {customer_name}")
+    body = models.TextField(help_text="Plain text body with placeholders like {name}")
+    cc = models.EmailField(max_length=255, blank=True, null=True, help_text="Template-specific CC address")
+    bcc = models.EmailField(max_length=255, blank=True, null=True, help_text="Template-specific BCC address")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -237,3 +327,63 @@ class MediaItem(models.Model):
 
     def __str__(self):
         return f"{self.shoot.property_address} - {self.get_media_type_display()} ({self.id})"
+
+
+class Referral(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('completed', 'Completed (Lead Booked)'),
+        ('paid', 'Reward Paid'),
+    ]
+    referrer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='referrals_made')
+    referee_name = models.CharField(max_length=200)
+    referee_email = models.EmailField()
+    referee_phone = models.CharField(max_length=20, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Referral: {self.referrer.username} -> {self.referee_email}"
+
+
+class GlobalSettings(models.Model):
+    site_name = models.CharField(max_length=100, default="KC Real Estate Media")
+    site_logo_url = models.URLField(max_length=1000, blank=True, null=True)
+    favicon_url = models.URLField(max_length=1000, blank=True, null=True)
+    invoice_logo_url = models.URLField(max_length=1000, blank=True, null=True)
+    sidebar_logo_url = models.URLField(max_length=1000, blank=True, null=True)
+    admin_email_for_alerts = models.EmailField(default="admin@example.com")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Global Settings"
+        verbose_name_plural = "Global Settings"
+
+    def __str__(self):
+        return self.site_name
+
+class SupportTicket(models.Model):
+    TOPIC_CHOICES = [
+        ('billing', 'Billing Inquiry'),
+        ('technical', 'Technical Issue'),
+        ('booking', 'Booking Question'),
+        ('other', 'Other'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('resolved', 'Resolved'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='support_tickets')
+    name = models.CharField(max_length=200)
+    email = models.EmailField()
+    topic = models.CharField(max_length=20, choices=TOPIC_CHOICES, default='other')
+    subject = models.CharField(max_length=255)
+    message = models.TextField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Support: {self.subject} ({self.email})"

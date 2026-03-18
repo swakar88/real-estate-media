@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { FolderGit2, Users, Calendar, ArrowUpRight, DollarSign, Clock, CheckCircle2, Camera } from "lucide-react";
 import Link from "next/link";
 import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/ScrollReveal";
+import UserSelectionModal from "@/components/UserSelectionModal";
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({
@@ -14,6 +15,17 @@ export default function AdminDashboard() {
   const [openBookings, setOpenBookings] = useState<any[]>([]);
   const [upcomingShoots, setUpcomingShoots] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Impersonation Modal State
+  const [impersonateModal, setImpersonateModal] = useState<{
+    isOpen: boolean;
+    mode: "clients" | "photographers";
+    title: string;
+  }>({
+    isOpen: false,
+    mode: "clients",
+    title: "Impersonate Client",
+  });
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -108,9 +120,27 @@ export default function AdminDashboard() {
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-10">
       <ScrollReveal>
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight mb-2">Admin Dashboard</h1>
-          <p className="text-muted-foreground">Real-time overview of media operations and revenue.</p>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight mb-2">Admin Dashboard</h1>
+            <p className="text-muted-foreground">Real-time overview of media operations and revenue.</p>
+          </div>
+          
+          <div className="flex items-center gap-3">
+             <div className="text-xs font-black uppercase tracking-widest text-primary/60 mr-2">Quick Portals:</div>
+             <button 
+                onClick={() => setImpersonateModal({ isOpen: true, mode: "clients", title: "Impersonate Client" })}
+                className="flex items-center gap-2 px-4 py-2 bg-card border border-primary/20 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-gold hover:bg-primary/10 transition-all active:scale-95"
+             >
+                <Users className="w-3 h-3" /> Client Hub
+             </button>
+             <button 
+                onClick={() => setImpersonateModal({ isOpen: true, mode: "photographers", title: "Impersonate Photographer" })}
+                className="flex items-center gap-2 px-4 py-2 bg-card border border-primary/20 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-gold hover:bg-primary/10 transition-all active:scale-95"
+             >
+                <Camera className="w-3 h-3" /> Photographer Portal
+             </button>
+          </div>
         </div>
       </ScrollReveal>
 
@@ -225,6 +255,13 @@ export default function AdminDashboard() {
           </div>
         </ScrollReveal>
       </div>
+
+      <UserSelectionModal 
+        isOpen={impersonateModal.isOpen}
+        onClose={() => setImpersonateModal({ ...impersonateModal, isOpen: false })}
+        mode={impersonateModal.mode}
+        title={impersonateModal.title}
+      />
     </div>
   );
 }

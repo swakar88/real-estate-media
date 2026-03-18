@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Users, UserPlus, Search, Mail, Calendar, Clock, ChevronLeft, ChevronRight, UserCircle } from "lucide-react";
+import { Users, UserPlus, Search, Mail, Calendar, Clock, ChevronLeft, ChevronRight, UserCircle, X, Phone, Shield, Archive, Trash2, Eye, AlertCircle } from "lucide-react";
+import Link from "next/link";
 import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/ScrollReveal";
+import CustomModal from "@/components/CustomModal";
 
 interface Client {
   id: number;
@@ -19,6 +21,15 @@ export default function AdminClients() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [modalConfig, setModalConfig] = useState<any>({ 
+    isOpen: false, 
+    title: "", 
+    message: "", 
+    type: "info", 
+    onConfirm: null,
+    showCancel: true
+  });
   const itemsPerPage = 10;
 
   useEffect(() => {
@@ -131,7 +142,11 @@ export default function AdminClients() {
                 </thead>
                 <tbody className="divide-y divide-border/40">
                   {paginatedClients.map(client => (
-                    <tr key={client.id} className="hover:bg-muted/20 transition-colors group">
+                    <tr 
+                      key={client.id} 
+                      onClick={() => setSelectedClient(client)}
+                      className="hover:bg-muted/20 transition-colors group cursor-pointer"
+                    >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">
@@ -223,6 +238,140 @@ export default function AdminClients() {
           </p>
         </div>
       )}
+
+      {/* Client Detail Slide-over */}
+      {selectedClient && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          <div 
+            className="absolute inset-0 bg-background/80 backdrop-blur-sm transition-opacity"
+            onClick={() => setSelectedClient(null)}
+          />
+          <div className="relative w-full max-w-md bg-card border-l border-primary/20 shadow-2xl h-full flex flex-col animate-in slide-in-from-right duration-300">
+            <div className="flex items-center justify-between p-6 border-b border-border">
+              <h2 className="text-xl font-bold">Client Details</h2>
+              <button 
+                onClick={() => setSelectedClient(null)}
+                className="p-2 hover:bg-muted rounded-full transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-8 space-y-8">
+              <div className="flex flex-col items-center text-center">
+                <div className="h-24 w-24 rounded-3xl bg-primary/10 text-primary flex items-center justify-center font-bold text-3xl mb-4 shadow-gold">
+                  {selectedClient.full_name ? selectedClient.full_name[0] : (selectedClient.username ? selectedClient.username[0] : '?')}
+                </div>
+                <h3 className="text-2xl font-black italic">{selectedClient.full_name || selectedClient.username}</h3>
+                <p className="text-muted-foreground">{selectedClient.email}</p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4">
+                <div className="p-4 rounded-2xl bg-muted/30 border border-border/50">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 mb-1">User ID</p>
+                  <p className="font-mono text-sm">#{selectedClient.id}</p>
+                </div>
+                <div className="p-4 rounded-2xl bg-muted/30 border border-border/50">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 mb-1">Total Bookings</p>
+                  <p className="font-bold flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-primary" />
+                    {selectedClient.booking_count}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h4 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Account Information</h4>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 text-sm">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span>Joined on {new Date(selectedClient.date_joined).toLocaleDateString(undefined, { dateStyle: 'long' })}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <span>Last login: {selectedClient.last_login ? new Date(selectedClient.last_login).toLocaleString() : 'Never'}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-8 space-y-3">
+                <Link 
+                  href={`/dashboard?impersonate_id=${selectedClient.id}`}
+                  className="w-full py-3 px-4 rounded-xl bg-primary text-primary-foreground font-black text-xs uppercase tracking-widest hover:opacity-90 transition-all flex items-center justify-center gap-2 shadow-gold group"
+                >
+                  <Eye className="h-4 w-4 transition-transform group-hover:scale-110" />
+                  View Dashboard as Client
+                </Link>
+                <button className="w-full py-3 px-4 rounded-xl border border-primary/20 font-bold text-sm hover:bg-primary/10 transition-colors flex items-center justify-center gap-2">
+                  <Mail className="h-4 w-4" />
+                  Email Client
+                </button>
+                <div className="grid grid-cols-2 gap-3">
+                   <button 
+                    onClick={() => {
+                        setModalConfig({
+                          isOpen: true,
+                          title: "Client Archived",
+                          message: "Client history has been preserved. (Simulation)",
+                          type: "success",
+                          showCancel: false,
+                          onConfirm: () => {
+                            setSelectedClient(null);
+                            setModalConfig(prev => ({ ...prev, isOpen: false }));
+                          }
+                        });
+                    }}
+                    className="py-3 px-4 rounded-xl border border-border bg-muted/20 font-bold text-xs hover:bg-amber-500/10 hover:text-amber-600 transition-colors flex items-center justify-center gap-2"
+                   >
+                    <Archive className="h-4 w-4" />
+                    Archive
+                  </button>
+                  <button 
+                    onClick={() => {
+                        if (selectedClient.booking_count > 0) {
+                            setModalConfig({
+                              isOpen: true,
+                              title: "Cannot Delete",
+                              message: "Cannot delete client with existing bookings. Please archive instead.",
+                              type: "warning",
+                              showCancel: false
+                            });
+                        } else {
+                            setModalConfig({
+                              isOpen: true,
+                              title: "Confirm Deletion",
+                              message: "Are you sure you want to permanently delete this client?",
+                              type: "warning",
+                              showCancel: true,
+                              onConfirm: () => {
+                                // Real deletion logic would go here
+                                setModalConfig(prev => ({ ...prev, isOpen: false }));
+                                setSelectedClient(null);
+                              }
+                            });
+                        }
+                    }}
+                    className="py-3 px-4 rounded-xl border border-border bg-muted/20 font-bold text-xs hover:bg-red-500/10 hover:text-red-600 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <CustomModal 
+        isOpen={modalConfig.isOpen}
+        onClose={() => setModalConfig(prev => ({ ...prev, isOpen: false }))}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        type={modalConfig.type}
+        onConfirm={modalConfig.onConfirm}
+        showCancel={modalConfig.showCancel}
+      />
     </div>
   );
 }

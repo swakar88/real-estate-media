@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, UserPlus, Shield, Mail, Trash2, Loader2, Power, ShieldAlert, Trash } from "lucide-react";
+import { Plus, UserPlus, Shield, Mail, Trash2, Loader2, Power, ShieldAlert, Trash, Camera, CheckCircle2, UserCircle } from "lucide-react";
+import Link from "next/link";
 import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/ScrollReveal";
 
 export default function AdminsPage() {
@@ -137,6 +138,28 @@ export default function AdminsPage() {
     }
   };
 
+  const handleImageUpload = async (adminId: number, file: File) => {
+    const formData = new FormData();
+    formData.append('profile_image', file);
+    
+    setActionLoading(`img-${adminId}`);
+    try {
+      const token = localStorage.getItem("access_token");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/admins/${adminId}/`, {
+        method: "PATCH",
+        headers: { "Authorization": `Bearer ${token}` },
+        body: formData
+      });
+      if (res.ok) {
+        fetchAdmins();
+      }
+    } catch (err) {
+      console.error("Failed to upload image", err);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <ScrollReveal>
@@ -169,10 +192,30 @@ export default function AdminsPage() {
                 </div>
                 
                 <div className="flex items-center gap-4 mb-4">
-                  <div className="h-12 w-12 rounded-2xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center font-black text-xl shadow-inner">
-                    {admin.full_name?.[0] || admin.username?.[0] || "A"}
+                  <div className="relative group/avatar">
+                    <div className="h-16 w-16 rounded-[1.25rem] bg-primary/10 border border-primary/20 text-primary flex items-center justify-center font-black text-2xl shadow-gold overflow-hidden">
+                      {admin.profile_image ? (
+                        <img src={admin.profile_image} alt={admin.full_name} className="w-full h-full object-cover" />
+                      ) : (
+                        admin.full_name?.[0] || admin.username?.[0] || "A"
+                      )}
+                    </div>
+                    {admin.id === currentUser?.id && (
+                      <label className="absolute inset-0 bg-black/60 opacity-0 group-hover/avatar:opacity-100 flex items-center justify-center rounded-[1.25rem] cursor-pointer transition-all border border-primary/40">
+                        <Camera className="w-5 h-5 text-white" />
+                        <input 
+                          type="file" 
+                          className="hidden" 
+                          accept="image/*" 
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleImageUpload(admin.id, file);
+                          }}
+                        />
+                      </label>
+                    )}
                   </div>
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <h3 className="font-bold text-foreground truncate">{admin.full_name || admin.username}</h3>
                     <div className="flex items-center gap-1 text-[10px] uppercase tracking-wider font-black text-primary/80">
                         <Shield className="w-3 h-3" />
@@ -196,7 +239,14 @@ export default function AdminsPage() {
                     <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Joined {new Date(admin.date_joined).toLocaleDateString()}</span>
                     
                     {admin.id !== currentUser?.id && (
-                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Link 
+                          href={`/?as=${admin.id}`}
+                          className="p-2 text-primary hover:bg-primary/10 rounded-lg transition-all"
+                          title="View Site as this Admin"
+                        >
+                          <UserCircle className="w-4 h-4" />
+                        </Link>
                         <button 
                           onClick={() => handleToggleActive(admin)}
                           disabled={actionLoading === admin.id}

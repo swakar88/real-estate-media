@@ -8,6 +8,7 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 export default function Navbar() {
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [isPhotographer, setIsPhotographer] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -28,7 +29,8 @@ export default function Navbar() {
       });
       if (res.ok) {
         const data = await res.json();
-        setIsPhotographer(data.is_photographer || data.is_staff);
+        setIsPhotographer(data.is_photographer);
+        setIsAdmin(data.is_staff);
       }
     } catch (err) {
       console.error("Error fetching user role:", err);
@@ -40,13 +42,24 @@ export default function Navbar() {
     localStorage.removeItem('refresh_token');
     setIsLoggedIn(false);
     setIsPhotographer(false);
+    setIsAdmin(false);
     setIsMobileMenuOpen(false);
     router.push('/login');
   };
 
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
-  const showPublicLinks = !isPhotographer;
+  // Admins and Photographers are "staff", Clients are not.
+  const isStaff = isAdmin || isPhotographer;
+  const showPublicLinks = !isStaff;
+
+  const getDashboardLink = () => {
+    if (isAdmin) return '/admin-portal';
+    if (isPhotographer) return '/photographer-portal';
+    return '/dashboard';
+  };
+
+  const dashboardLabel = isAdmin ? "Admin Portal" : (isPhotographer ? "Photographer Portal" : "My Dashboard");
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -61,6 +74,9 @@ export default function Navbar() {
               <Link href="/gallery" className="transition-colors hover:text-primary">Gallery & Video</Link>
               <Link href="/about" className="transition-colors hover:text-primary">About Us</Link>
             </>
+          )}
+          {isLoggedIn && (
+            <Link href={getDashboardLink()} className="transition-colors text-primary font-bold">{dashboardLabel}</Link>
           )}
         </nav>
         <div className="flex items-center space-x-4">
@@ -119,6 +135,10 @@ export default function Navbar() {
                 <Link href="/gallery" onClick={closeMobileMenu} className="transition-colors hover:text-primary p-2">Gallery & Video</Link>
                 <Link href="/about" onClick={closeMobileMenu} className="transition-colors hover:text-primary p-2">About Us</Link>
               </>
+            )}
+
+            {isLoggedIn && (
+              <Link href={getDashboardLink()} onClick={closeMobileMenu} className="transition-colors text-primary font-bold p-2">{dashboardLabel}</Link>
             )}
             
             <div className="h-px w-full bg-border/40 my-2"></div>

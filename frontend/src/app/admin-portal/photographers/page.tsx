@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { Users, Calendar as CalendarIcon, Plus, Trash2, ChevronLeft, ChevronRight, Clock, AlertTriangle, ShieldAlert } from "lucide-react";
+import { Users, Calendar as CalendarIcon, Plus, Trash2, ChevronLeft, ChevronRight, Clock, AlertTriangle, ShieldAlert, DollarSign, Percent, Upload, Award, CheckCircle2, Eye, History, Trash } from "lucide-react";
+import Link from "next/link";
 import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/ScrollReveal";
+import CustomModal from "@/components/CustomModal";
 
 export default function AdminPhotographers() {
   const [photographers, setPhotographers] = useState<any[]>([]);
@@ -13,7 +15,10 @@ export default function AdminPhotographers() {
   
   // Calendar State
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [date, setDate] = useState("");
+  const [date, setDate] = useState(() => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  });
   const [timeFrom, setTimeFrom] = useState("09:00");
   const [timeTo, setTimeTo] = useState("17:00");
   const [adding, setAdding] = useState(false);
@@ -22,6 +27,25 @@ export default function AdminPhotographers() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newPhotoData, setNewPhotoData] = useState({ first_name: "", last_name: "", email: "" });
   const [addingPhoto, setAddingPhoto] = useState(false);
+  
+  // Payment History State
+  const [payments, setPayments] = useState<any[]>([]);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [recordingPayment, setRecordingPayment] = useState(false);
+  const [paymentData, setPaymentData] = useState({ amount: "", payment_date: new Date().toISOString().split('T')[0], reference_number: "", notes: "" });
+  const [pendingShoots, setPendingShoots] = useState<any[]>([]);
+
+  // Modal states
+  const [modalConfig, setModalConfig] = useState<any>({ 
+    isOpen: false, 
+    title: "", 
+    message: "", 
+    type: "info", 
+    onConfirm: null,
+    showCancel: true,
+    confirmText: "Confirm",
+    cancelText: "Cancel"
+  });
 
   useEffect(() => {
     fetchData();
@@ -45,12 +69,52 @@ export default function AdminPhotographers() {
         const slotsData = await slotsRes.json();
         setPhotographers(photoData);
         setAllSlots(slotsData);
-        if (photoData.length > 0) setSelectedPhotographer(photoData[0]);
+        if (photoData.length > 0) {
+            setSelectedPhotographer(photoData[0]);
+            fetchPayments(photoData[0].id);
+            fetchPendingShoots(photoData[0].id);
+        }
       }
     } catch (err) {
       console.error("Failed to fetch", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPayments = async (photographerId: number) => {
+    try {
+      const token = localStorage.getItem("access_token");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/photographer-payments/?photographer=${photographerId}`, {
+          headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        // The API returns all payments if admin, so we might need to client-side filter
+        // although our viewset get_queryset could be improved to filter by photographer id from query params
+        setPayments(data.filter((p: any) => p.photographer === photographerId));
+      }
+    } catch (err) {
+      console.error("Failed to fetch payments", err);
+    }
+  };
+
+  const fetchPendingShoots = async (photographerId: number) => {
+    try {
+      const token = localStorage.getItem("access_token");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/shoots/?photographer=${photographerId}`, {
+          headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        // Filter for unpaid/partial delivered/archived
+        setPendingShoots(data.filter((s: any) => 
+            (s.status === 'delivered' || s.status === 'archived') && 
+            s.photographer_payment_status !== 'paid'
+        ));
+      }
+    } catch (err) {
+      console.error("Failed to fetch pending shoots", err);
     }
   };
 
@@ -64,7 +128,13 @@ export default function AdminPhotographers() {
     const endIndex = validSlots.indexOf(timeTo);
     
     if (startIndex > endIndex) {
-        alert("End time must be after start time");
+        setModalConfig({
+            isOpen: true,
+            title: "Invalid Range",
+            message: "The 'End Time' must be after the 'Start Time' for slot synchronization.",
+            type: "warning",
+            showCancel: false
+        });
         setAdding(false);
         return;
     }
@@ -104,9 +174,15 @@ export default function AdminPhotographers() {
         setAllSlots(prev => [...prev, ...newSlots]);
       }
       
-      if (hadError) {
-        alert("Some slots failed to add. They might already exist.");
-      }
+       if (hadError) {
+         setModalConfig({
+             isOpen: true,
+             title: "Partial Success",
+             message: "Some slots could not be added. This usually happens if they were already scheduled for this photographer on this day.",
+             type: "warning",
+             showCancel: false
+         });
+       }
     } catch (err) {
       console.error(err);
     } finally {
@@ -128,28 +204,173 @@ export default function AdminPhotographers() {
   };
 
   const removePhotographer = async (id: number, hard: boolean = false) => {
+    const title = hard ? "Permanent Delete" : "Deactivate Profile";
     const msg = hard 
-      ? "PERMANENT DELETE: This will completely remove the photographer and their user account. This action cannot be undone. Proceed?" 
+      ? "This will completely remove the photographer and their user account. This action cannot be undone. Proceed?" 
       : "Are you sure you want to deactivate this photographer?";
     
-    if (!confirm(msg)) return;
+    setModalConfig({
+        isOpen: true,
+        title,
+        message: msg,
+        type: hard ? 'error' : 'warning',
+        onConfirm: async () => {
+            try {
+              const token = localStorage.getItem("access_token");
+              const url = `${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/photographers/${id}/${hard ? '?hard=true' : ''}`;
+              const res = await fetch(url, {
+                method: "DELETE",
+                headers: { "Authorization": `Bearer ${token}` }
+              });
+              
+              if (res.ok) {
+                if (hard) {
+                  setPhotographers(photographers.filter(p => p.id !== id));
+                  if (selectedPhotographer?.id === id) setSelectedPhotographer(photographers.find(p => p.id !== id) || null);
+                } else {
+                  setPhotographers(photographers.map(p => p.id === id ? { ...p, is_active: false } : p));
+                  if (selectedPhotographer?.id === id) setSelectedPhotographer({ ...selectedPhotographer, is_active: false });
+                }
+              } else {
+                  const data = await res.json();
+                  setModalConfig({
+                      isOpen: true,
+                      title: "Error",
+                      message: data.detail || data[0] || "Failed to delete photographer.",
+                      type: "error",
+                      showCancel: false
+                  });
+              }
+            } catch (err) {
+              console.error(err);
+            }
+        }
+    });
+  };
 
+  const updatePhotographer = async (id: number, data: any) => {
     try {
       const token = localStorage.getItem("access_token");
-      const url = `${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/photographers/${id}/${hard ? '?hard=true' : ''}`;
-      const res = await fetch(url, {
-        method: "DELETE",
-        headers: { "Authorization": `Bearer ${token}` }
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/photographers/${id}/`, {
+        method: "PATCH",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(data)
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setPhotographers(photographers.map(p => p.id === id ? updated : p));
+        setSelectedPhotographer(updated);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const recordPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedPhotographer) return;
+    setRecordingPayment(true);
+    try {
+      const token = localStorage.getItem("access_token");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/photographer-payments/`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          ...paymentData,
+          photographer: selectedPhotographer.id,
+          amount: parseFloat(paymentData.amount)
+        })
       });
       
       if (res.ok) {
-        if (hard) {
-          setPhotographers(photographers.filter(p => p.id !== id));
-          if (selectedPhotographer?.id === id) setSelectedPhotographer(photographers.find(p => p.id !== id) || null);
-        } else {
-          setPhotographers(photographers.map(p => p.id === id ? { ...p, is_active: false } : p));
-          if (selectedPhotographer?.id === id) setSelectedPhotographer({ ...selectedPhotographer, is_active: false });
+        const newPayment = await res.json();
+        setPayments([newPayment, ...payments]);
+        setPaymentData({ amount: "", payment_date: new Date().toISOString().split('T')[0], reference_number: "", notes: "" });
+        
+        // Refresh photographer to get updated total_paid
+        const photoRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/photographers/${selectedPhotographer.id}/`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (photoRes.ok) {
+            const updated = await photoRes.json();
+            setPhotographers(photographers.map(p => p.id === selectedPhotographer.id ? updated : p));
+            setSelectedPhotographer(updated);
+            fetchPendingShoots(selectedPhotographer.id);
         }
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        setModalConfig({
+            isOpen: true,
+            title: "Payment Error",
+            message: errorData.detail || "Failed to record the payment record. Please check the amount and try again.",
+            type: "error",
+            showCancel: false
+        });
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setRecordingPayment(false);
+    }
+  };
+
+  const deletePayment = async (id: number) => {
+    setModalConfig({
+        isOpen: true,
+        title: "Delete Payment Record",
+        message: "Are you sure you want to delete this payment record? The photographer's balance will be adjusted.",
+        type: "warning",
+        onConfirm: async () => {
+            try {
+              const token = localStorage.getItem("access_token");
+              const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/photographer-payments/${id}/`, {
+                method: "DELETE",
+                headers: { "Authorization": `Bearer ${token}` }
+              });
+              
+              if (res.ok) {
+                setPayments(payments.filter(p => p.id !== id));
+                // Refresh photographer to get updated total_paid
+                const photoRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/photographers/${selectedPhotographer.id}/`, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                if (photoRes.ok) {
+                    const updated = await photoRes.json();
+                    setPhotographers(photographers.map(p => p.id === selectedPhotographer.id ? updated : p));
+                    setSelectedPhotographer(updated);
+                    fetchPendingShoots(selectedPhotographer.id);
+                }
+              }
+            } catch (err) {
+              console.error(err);
+            }
+        }
+    });
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files?.[0] || !selectedPhotographer) return;
+    const file = e.target.files[0];
+    const formData = new FormData();
+    formData.append("profile_image", file);
+
+    try {
+      const token = localStorage.getItem("access_token");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/photographers/${selectedPhotographer.id}/`, {
+        method: "PATCH",
+        headers: { "Authorization": `Bearer ${token}` },
+        body: formData
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setPhotographers(photographers.map(p => p.id === selectedPhotographer.id ? updated : p));
+        setSelectedPhotographer(updated);
       }
     } catch (err) {
       console.error(err);
@@ -177,7 +398,14 @@ export default function AdminPhotographers() {
         setNewPhotoData({ first_name: "", last_name: "", email: "" });
         setSelectedPhotographer(newPhoto);
       } else {
-        alert("Failed to add photographer.");
+        const errorData = await res.json().catch(() => ({}));
+        setModalConfig({
+            isOpen: true,
+            title: "Error Adding Member",
+            message: errorData.detail || errorData.email?.[0] || "We couldn't add the team member. Usually this happens if the email is already in use.",
+            type: "error",
+            showCancel: false
+        });
       }
     } catch (err) {
       console.error(err);
@@ -270,7 +498,11 @@ export default function AdminPhotographers() {
               ) : photographers.map(photo => (
                 <button
                   key={photo.id}
-                  onClick={() => setSelectedPhotographer(photo)}
+                  onClick={() => {
+                    setSelectedPhotographer(photo);
+                    fetchPayments(photo.id);
+                    fetchPendingShoots(photo.id);
+                  }}
                   className={`w-full text-left p-4 transition-all relative group flex items-center gap-3 ${
                     selectedPhotographer?.id === photo.id 
                     ? 'bg-primary/5 border-l-4 border-l-primary' 
@@ -302,27 +534,50 @@ export default function AdminPhotographers() {
                 {/* Header Info */}
                 <div className="bg-card/80 backdrop-blur-sm p-8 rounded-[2.5rem] border border-primary/20 shadow-gold flex flex-col md:flex-row md:items-center justify-between gap-8">
                    <div className="flex items-center gap-6">
-                      <div className={`h-20 w-20 rounded-[1.5rem] flex items-center justify-center font-black text-3xl shadow-inner border border-primary/10
-                         ${selectedPhotographer.is_active ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
-                        {selectedPhotographer.user_name?.[0] || selectedPhotographer.first_name?.[0] || "P"}
+                      <div className="relative group/img">
+                         <div className={`h-20 w-20 rounded-[1.5rem] flex items-center justify-center font-black text-3xl shadow-inner border border-primary/10 overflow-hidden
+                            ${selectedPhotographer.is_active ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                           {selectedPhotographer.profile_image ? (
+                              <img src={selectedPhotographer.profile_image} alt="" className="w-full h-full object-cover" />
+                           ) : (
+                              selectedPhotographer.user_name?.[0] || selectedPhotographer.first_name?.[0] || "P"
+                           )}
+                         </div>
+                         <label className="absolute inset-0 flex items-center justify-center bg-black/60 text-white opacity-0 group-hover/img:opacity-100 transition-opacity cursor-pointer rounded-[1.5rem]">
+                            <Upload className="w-6 h-6" />
+                            <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
+                         </label>
                       </div>
                       <div>
                         <h2 className="text-3xl font-black italic text-foreground flex items-center gap-3">
                           {selectedPhotographer.user_name || `${selectedPhotographer.first_name} ${selectedPhotographer.last_name}`}
                         </h2>
-                        <p className="text-[10px] text-primary font-black uppercase tracking-[0.2em] bg-primary/10 px-3 py-1 rounded-full mt-2 inline-block">
-                           {selectedPhotographer.email}
-                        </p>
+                        <div className="flex flex-wrap items-center gap-2 mt-2">
+                           <p className="text-[10px] text-primary font-black uppercase tracking-[0.2em] bg-primary/10 px-3 py-1 rounded-full">
+                              {selectedPhotographer.email}
+                           </p>
+                           <div className="flex items-center gap-1.5 text-[10px] font-black uppercase text-muted-foreground bg-muted/30 px-3 py-1 rounded-full">
+                              <Award className="w-3 h-3 text-amber-500" />
+                              ID: {selectedPhotographer.id}
+                           </div>
+                        </div>
                       </div>
                    </div>
                    
-                   <div className="flex items-center gap-3">
+                   <div className="flex flex-wrap items-center gap-3">
+                      <Link 
+                        href={`/photographer-portal?impersonate_id=${selectedPhotographer.user}`}
+                        className="h-12 px-6 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest rounded-xl hover:opacity-90 transition-all flex items-center gap-2 shadow-gold group border border-primary/30"
+                      >
+                        <Eye className="w-4 h-4 transition-transform group-hover:scale-110" />
+                        View as Photographer
+                      </Link>
                       {selectedPhotographer.is_active ? (
                         <button 
                           onClick={() => removePhotographer(selectedPhotographer.id)}
-                          className="h-12 px-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 hover:text-warning hover:bg-warning/10 rounded-xl transition-all border border-primary/10 flex items-center gap-2 active:scale-95"
+                          className="h-12 px-5 text-[10px] font-black uppercase tracking-widest bg-warning text-primary-foreground hover:opacity-90 rounded-xl transition-all border border-warning/30 flex items-center gap-2 active:scale-95 shadow-lg group"
                         >
-                          <AlertTriangle className="w-4 h-4" /> Deactivate
+                          <AlertTriangle className="w-4 h-4 transition-transform group-hover:rotate-12" /> Deactivate
                         </button>
                       ) : (
                          <div className="px-5 py-3 bg-destructive/10 text-destructive text-[10px] font-black uppercase tracking-widest rounded-xl border border-destructive/20 select-none">
@@ -330,12 +585,195 @@ export default function AdminPhotographers() {
                          </div>
                       )}
                       
-                      <button 
-                        onClick={() => removePhotographer(selectedPhotographer.id, true)}
-                        className="h-12 px-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 hover:text-error hover:bg-error/10 rounded-xl transition-all border border-primary/10 flex items-center gap-2 active:scale-95"
-                      >
-                        <ShieldAlert className="w-4 h-4" /> Permanent Delete
-                      </button>
+                      {selectedPhotographer.booking_count === 0 && (
+                        <button 
+                            onClick={() => removePhotographer(selectedPhotographer.id, true)}
+                            className="h-12 px-5 text-[10px] font-black uppercase tracking-widest bg-destructive text-destructive-foreground hover:opacity-90 rounded-xl transition-all border border-destructive/30 flex items-center gap-2 active:scale-95 shadow-lg group"
+                        >
+                            <Trash2 className="w-4 h-4 transition-transform group-hover:scale-110" /> Permanent Delete
+                        </button>
+                      )}
+                   </div>
+                </div>
+
+                {/* Financial Overview Section Header */}
+                <div className="flex items-center gap-3 mt-4 mb-2">
+                  <div className="h-px flex-1 bg-primary/10"></div>
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/60">Financial Performance</h3>
+                  <div className="h-px flex-1 bg-primary/10"></div>
+                </div>
+
+                {/* Financial Overview */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                   <div className="bg-card/80 backdrop-blur-sm p-6 rounded-3xl border border-primary/20 shadow-gold flex items-center gap-4">
+                      <div className="p-3 bg-primary/10 text-primary rounded-2xl">
+                         <Percent className="w-5 h-5" />
+                      </div>
+                      <div className="flex-1">
+                         <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Share Setting</p>
+                         <div className="flex items-center gap-2">
+                            <input 
+                               type="number" 
+                               className="bg-transparent font-black italic text-xl w-16 focus:outline-none focus:text-primary transition-colors"
+                               value={selectedPhotographer.share_percentage || 0}
+                               onChange={(e) => updatePhotographer(selectedPhotographer.id, { share_percentage: parseFloat(e.target.value) })}
+                            />
+                            <span className="font-black text-xl italic text-primary">%</span>
+                         </div>
+                      </div>
+                   </div>
+                   <div className="bg-card/80 backdrop-blur-sm p-6 rounded-3xl border border-primary/20 shadow-gold flex items-center gap-4">
+                      <div className="p-3 bg-emerald-500/10 text-emerald-500 rounded-2xl">
+                         <DollarSign className="w-5 h-5" />
+                      </div>
+                      <div>
+                         <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Total Earned</p>
+                         <p className="font-black italic text-xl">${parseFloat(selectedPhotographer.total_earned || 0).toFixed(2)}</p>
+                      </div>
+                   </div>
+                    <div className="bg-card/80 backdrop-blur-sm p-6 rounded-3xl border border-primary/20 shadow-gold flex items-center justify-between group">
+                      <div className="flex items-center gap-4">
+                         <div className="p-3 bg-blue-500/10 text-blue-500 rounded-2xl">
+                            <CheckCircle2 className="w-5 h-5" />
+                         </div>
+                         <div>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Total Paid</p>
+                            <p className="font-black italic text-xl">${parseFloat(selectedPhotographer.total_paid || 0).toFixed(2)}</p>
+                         </div>
+                      </div>
+                   </div>
+                </div>
+
+                {/* Photographer Payment History Section */}
+                <div className="bg-card/80 backdrop-blur-sm border border-primary/20 rounded-[2.5rem] shadow-gold overflow-hidden flex flex-col lg:flex-row min-h-[400px]">
+                   {/* Left: Transaction History */}
+                   <div className="flex-1 p-8 space-y-8">
+                      <div className="flex items-center justify-between">
+                         <div>
+                            <h3 className="text-xl font-black italic tracking-tight">Payment History</h3>
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 italic">Historical records of all manual & automated payouts</p>
+                         </div>
+                         <div className={`px-4 py-2 rounded-2xl flex items-center gap-2 border ${
+                            selectedPhotographer.stripe_account_id 
+                               ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' 
+                               : 'bg-amber-500/10 border-amber-500/20 text-amber-500'
+                         }`}>
+                            <div className={`w-2 h-2 rounded-full animate-pulse ${selectedPhotographer.stripe_account_id ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                            <span className="text-[10px] font-black uppercase tracking-widest">{selectedPhotographer.stripe_account_id ? 'Stripe Connected' : 'Manual Payouts Only'}</span>
+                         </div>
+                      </div>
+                      
+                      <div className="overflow-x-auto">
+                        {payments.length === 0 ? (
+                           <div className="py-32 text-center bg-muted/5 rounded-[2.5rem] border border-dashed border-border/40 text-sm italic opacity-40">
+                              No payout records found for this photographer.
+                           </div>
+                        ) : (
+                           <table className="w-full text-left text-xs border-collapse">
+                              <thead>
+                                 <tr className="border-b border-primary/10">
+                                    <th className="px-4 py-4 font-black uppercase tracking-widest text-[10px] text-muted-foreground/60 text-left">Date</th>
+                                    <th className="px-4 py-4 font-black uppercase tracking-widest text-[10px] text-muted-foreground/60 text-left">Amount</th>
+                                    <th className="px-4 py-4 font-black uppercase tracking-widest text-[10px] text-muted-foreground/60 text-left">Ref / Method</th>
+                                    <th className="px-4 py-4"></th>
+                                 </tr>
+                              </thead>
+                              <tbody className="divide-y divide-primary/5">
+                                 {payments.map((p: any) => (
+                                    <tr key={p.id} className="hover:bg-primary/5 transition-colors group/row">
+                                        <td className="px-4 py-4 font-bold whitespace-nowrap">
+                                           {(() => {
+                                              const [y, m, d] = p.payment_date.split('-');
+                                              return new Date(parseInt(y), parseInt(m) - 1, parseInt(d)).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+                                           })()}
+                                        </td>
+                                       <td className="px-4 py-4 text-emerald-500 font-black italic text-sm">
+                                          ${parseFloat(p.amount).toFixed(2)}
+                                       </td>
+                                    <td className="px-4 py-4">
+                                       <div className="font-bold text-foreground/80">{p.reference_number || 'N/A'}</div>
+                                       {p.notes && <div className="text-[10px] text-muted-foreground line-clamp-1 italic" title={p.notes}>{p.notes}</div>}
+                                    </td>
+                                    <td className="px-4 py-4 text-right">
+                                       <button 
+                                          onClick={() => deletePayment(p.id)} 
+                                          className="p-2 text-destructive opacity-0 group-hover/row:opacity-100 hover:bg-destructive/10 rounded-xl transition-all"
+                                       >
+                                          <Trash2 className="w-4 h-4" />
+                                       </button>
+                                    </td>
+                                 </tr>
+                              ))}
+                           </tbody>
+                        </table>
+                     )}
+                   </div>
+                </div>
+ 
+                   {/* Right: Inline Recording Form */}
+                   <div className="w-full lg:w-96 border-t lg:border-t-0 lg:border-l border-primary/10 p-8 bg-primary/5 space-y-6">
+                      <div>
+                         <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary mb-4">Record Manual Payout</h3>
+                         <p className="text-[10px] text-muted-foreground/60 mb-6 leading-relaxed">Use this for Zelle, Checks, or Cash payments. Automated Stripe splits are logged here automatically.</p>
+                         <form onSubmit={recordPayment} className="space-y-4">
+                            <div className="space-y-2">
+                               <label className="text-[10px] font-black uppercase text-muted-foreground/60 ml-1">Amount ($)</label>
+                               <div className="relative">
+                                  <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
+                                  <input 
+                                     type="number" step="0.01" required
+                                     className="w-full bg-background/50 border border-primary/10 rounded-2xl pl-11 pr-4 py-3.5 text-sm font-black focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all shadow-inner"
+                                     value={paymentData.amount}
+                                     onChange={(e) => setPaymentData({ ...paymentData, amount: e.target.value })}
+                                     placeholder="0.00"
+                                  />
+                               </div>
+                            </div>
+                            
+                            <div className="space-y-2">
+                               <label className="text-[10px] font-black uppercase text-muted-foreground/60 ml-1">Payment Date</label>
+                               <div className="relative">
+                                  <CalendarIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
+                                  <input 
+                                     type="date" required
+                                     className="w-full bg-background/50 border border-primary/10 rounded-2xl pl-11 pr-4 py-3.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all shadow-inner"
+                                     value={paymentData.payment_date}
+                                     onChange={(e) => setPaymentData({ ...paymentData, payment_date: e.target.value })}
+                                  />
+                               </div>
+                            </div>
+ 
+                            <div className="space-y-2">
+                               <label className="text-[10px] font-black uppercase text-muted-foreground/60 ml-1">Reference # / Method</label>
+                               <input 
+                                  type="text"
+                                  className="w-full bg-background/50 border border-primary/10 rounded-2xl px-5 py-3.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all shadow-inner"
+                                  value={paymentData.reference_number}
+                                  onChange={(e) => setPaymentData({ ...paymentData, reference_number: e.target.value })}
+                                  placeholder="Zelle, Check #, etc."
+                               />
+                            </div>
+ 
+                            <div className="space-y-2">
+                               <label className="text-[10px] font-black uppercase text-muted-foreground/60 ml-1">Admin Notes</label>
+                               <textarea
+                                  className="w-full bg-background/50 border border-primary/10 rounded-2xl px-5 py-3.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all shadow-inner resize-none"
+                                  rows={3}
+                                  value={paymentData.notes}
+                                  onChange={(e) => setPaymentData({ ...paymentData, notes: e.target.value })}
+                                  placeholder="Internal payout notes..."
+                               />
+                            </div>
+ 
+                            <button 
+                               type="submit"
+                               disabled={recordingPayment || !paymentData.amount}
+                               className="w-full flex items-center justify-center gap-3 py-4 bg-primary text-primary-foreground rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-gold hover:shadow-gold-heavy hover:scale-[1.02] transition-all active:scale-95 disabled:opacity-50"
+                            >
+                               {recordingPayment ? "Recording..." : <><CheckCircle2 className="h-4 w-4" /> Record Payout</>}
+                            </button>
+                         </form>
+                      </div>
                    </div>
                 </div>
 
@@ -450,7 +888,11 @@ export default function AdminPhotographers() {
 
                       <div className="space-y-4">
                          <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                            {date ? `Slots for ${new Date(date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}` : 'Manage Selected Day'}
+                            {date ? (() => {
+                               const [y, m, d] = date.split('-');
+                               const dateObj = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+                               return `Slots for ${dateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`;
+                            })() : 'Manage Selected Day'}
                          </h4>
                          <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
                             {date ? (
@@ -568,6 +1010,142 @@ export default function AdminPhotographers() {
           </div>
         </div>
       )}
+      {/* Payment History & Recording Modal */}
+      {showPaymentModal && selectedPhotographer && (
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+            <div className="bg-card w-full max-w-4xl rounded-[2.5rem] shadow-gold-heavy border border-primary/20 overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+                <div className="p-8 border-b border-primary/10 flex items-center justify-between bg-primary/5">
+                    <div>
+                        <h2 className="text-3xl font-black italic">Payment <span className="text-primary">History</span></h2>
+                        <p className="text-sm text-muted-foreground">Managing payouts for {selectedPhotographer.user_name || `${selectedPhotographer.first_name} ${selectedPhotographer.last_name}`}</p>
+                    </div>
+                    <button onClick={() => setShowPaymentModal(false)} className="p-2 hover:bg-muted rounded-full transition-all text-muted-foreground">
+                        <Plus className="w-6 h-6 rotate-45" />
+                    </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-8 grid grid-cols-1 md:grid-cols-2 gap-12">
+                    {/* Left: History List */}
+                    <div className="space-y-6 flex flex-col h-full">
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Recent Transactions</h3>
+                        <div className="flex-1 overflow-y-auto pr-2">
+                            {payments.length === 0 ? (
+                                <div className="p-8 text-center bg-muted/20 rounded-2xl border border-dashed border-border/50 text-sm italic opacity-40">No payments recorded yet.</div>
+                            ) : (
+                                <div className="bg-black/20 rounded-2xl border border-primary/10 overflow-hidden">
+                                    <table className="w-full text-left text-xs border-collapse">
+                                        <thead>
+                                            <tr className="bg-primary/5 border-b border-primary/10">
+                                                <th className="px-4 py-3 font-black uppercase tracking-tighter text-[10px] text-muted-foreground">Date</th>
+                                                <th className="px-4 py-3 font-black uppercase tracking-tighter text-[10px] text-muted-foreground">Amount</th>
+                                                <th className="px-4 py-3 font-black uppercase tracking-tighter text-[10px] text-muted-foreground">Ref / Notes</th>
+                                                <th className="px-4 py-3 text-right"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-primary/5">
+                                            {payments.map((p: any) => (
+                                                <tr key={p.id} className="hover:bg-primary/5 transition-colors group/row">
+                                                    <td className="px-4 py-3 font-bold whitespace-nowrap">
+                                                        {(() => {
+                                                            const [y, m, d] = p.payment_date.split('-');
+                                                            return new Date(parseInt(y), parseInt(m) - 1, parseInt(d)).toLocaleDateString();
+                                                        })()}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-emerald-500 font-black italic">
+                                                        ${parseFloat(p.amount).toFixed(2)}
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <div className="font-bold text-foreground/80">{p.reference_number || '-'}</div>
+                                                        {p.notes && <div className="text-[9px] text-muted-foreground line-clamp-1 italic" title={p.notes}>{p.notes}</div>}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-right">
+                                                        <button 
+                                                            onClick={() => deletePayment(p.id)} 
+                                                            className="p-1.5 text-destructive opacity-0 group-hover/row:opacity-100 hover:bg-destructive/10 rounded-lg transition-all"
+                                                            title="Delete Record"
+                                                        >
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Right: Record Form */}
+                    <div className="bg-primary/5 p-8 rounded-3xl border border-primary/10 space-y-6">
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Record New Payment</h3>
+                        <form onSubmit={recordPayment} className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black uppercase text-muted-foreground">Amount ($)</label>
+                                    <input 
+                                        type="number" step="0.01" required
+                                        className="w-full bg-background border border-primary/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                        placeholder="0.00"
+                                        value={paymentData.amount}
+                                        onChange={e => setPaymentData({...paymentData, amount: e.target.value})}
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black uppercase text-muted-foreground">Date</label>
+                                    <input 
+                                        type="date" required
+                                        className="w-full bg-background border border-primary/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                        value={paymentData.payment_date}
+                                        onChange={e => setPaymentData({...paymentData, payment_date: e.target.value})}
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase text-muted-foreground">Reference Number (Optional)</label>
+                                <input 
+                                    type="text"
+                                    className="w-full bg-background border border-primary/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                    placeholder="Check # or Transaction ID"
+                                    value={paymentData.reference_number}
+                                    onChange={e => setPaymentData({...paymentData, reference_number: e.target.value})}
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase text-muted-foreground">Notes</label>
+                                <textarea 
+                                    className="w-full bg-background border border-primary/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 h-24 resize-none"
+                                    placeholder="Add any internal payout notes..."
+                                    value={paymentData.notes}
+                                    onChange={e => setPaymentData({...paymentData, notes: e.target.value})}
+                                />
+                            </div>
+                            <button 
+                                type="submit" 
+                                disabled={recordingPayment || !paymentData.amount}
+                                className="w-full bg-primary text-primary-foreground py-4 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-primary/90 transition-all shadow-gold active:scale-95 disabled:opacity-50"
+                            >
+                                {recordingPayment ? "Recording..." : "Confirm Payment Payout"}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+          </div>
+      )}
+
+      {/* Reusable Custom Modal */}
+      <CustomModal 
+        isOpen={modalConfig.isOpen}
+        onClose={() => setModalConfig({ ...modalConfig, isOpen: false })}
+        onConfirm={modalConfig.onConfirm}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        type={modalConfig.type}
+        confirmText={modalConfig.confirmText}
+        cancelText={modalConfig.cancelText}
+        showCancel={modalConfig.showCancel}
+      />
     </div>
   );
 }
