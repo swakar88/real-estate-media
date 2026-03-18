@@ -22,12 +22,22 @@ export default function AdminClients() {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-  const [modalConfig, setModalConfig] = useState<any>({ 
+  interface ModalConfig {
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: "info" | "success" | "warning" | "error";
+    onConfirm?: () => void;
+    showCancel?: boolean;
+    confirmText?: string;
+  }
+
+  const [modalConfig, setModalConfig] = useState<ModalConfig>({ 
     isOpen: false, 
     title: "", 
     message: "", 
     type: "info", 
-    onConfirm: null,
+    onConfirm: undefined,
     showCancel: true
   });
   const itemsPerPage = 10;
@@ -317,7 +327,7 @@ export default function AdminClients() {
                           showCancel: false,
                           onConfirm: () => {
                             setSelectedClient(null);
-                            setModalConfig(prev => ({ ...prev, isOpen: false }));
+                            setModalConfig((prev) => ({ ...prev, isOpen: false }));
                           }
                         });
                     }}
@@ -345,7 +355,7 @@ export default function AdminClients() {
                               showCancel: true,
                               onConfirm: () => {
                                 // Real deletion logic would go here
-                                setModalConfig(prev => ({ ...prev, isOpen: false }));
+                                 setModalConfig((prev) => ({ ...prev, isOpen: false }));
                                 setSelectedClient(null);
                               }
                             });
@@ -365,7 +375,7 @@ export default function AdminClients() {
 
       <CustomModal 
         isOpen={modalConfig.isOpen}
-        onClose={() => setModalConfig(prev => ({ ...prev, isOpen: false }))}
+        onClose={() => setModalConfig((prev) => ({ ...prev, isOpen: false }))}
         title={modalConfig.title}
         message={modalConfig.message}
         type={modalConfig.type}
