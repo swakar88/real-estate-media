@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Link from "next/link";
 import { ScrollReveal } from "@/components/ScrollReveal";
 
-export default function Login() {
+function LoginContent() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -89,16 +89,15 @@ export default function Login() {
              router.push("/photographer-portal");
           } else {
              if (isRegistering) {
-               router.push("/book");
+                router.push("/book");
              } else {
-               router.push("/dashboard");
+                router.push("/dashboard");
              }
           }
         } else {
           router.push("/dashboard");
         }
       } else {
-        // Handle Django DRF SimpleJWT error messages
         setError(data.detail || "Authentication failed. Please check your credentials.");
       }
     } catch (err) {
@@ -276,5 +275,17 @@ export default function Login() {
 
       <Footer />
     </div>
+  );
+}
+
+export default function Login() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background flex items-center justify-center">
+         <span className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></span>
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   );
 }
