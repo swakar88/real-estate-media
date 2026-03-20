@@ -4,8 +4,10 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { useGlobalSettings } from '@/context/GlobalSettingsContext';
 
 export default function Navbar() {
+  const { settings } = useGlobalSettings();
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -65,7 +67,21 @@ export default function Navbar() {
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-20 items-center justify-between px-4 md:px-8">
         <Link href="/" className="flex items-center space-x-2">
-          <span className="font-bold text-xl tracking-wider uppercase">KC Real<span className="text-primary"> Estate Media</span></span>
+          {settings?.site_logo_url ? (
+            <img src={settings.site_logo_url} alt={settings.site_name} className="h-10 w-auto object-contain" />
+          ) : (
+            <span className="font-bold text-xl tracking-wider uppercase">
+              {settings?.site_name ? (
+                settings.site_name.split(' ').map((word, i, arr) => (
+                  <span key={i} className={i === arr.length - 1 ? "text-primary" : ""}>
+                    {word}{i < arr.length - 1 ? " " : ""}
+                  </span>
+                ))
+              ) : (
+                <>KC Real<span className="text-primary"> Estate Media</span></>
+              )}
+            </span>
+          )}
         </Link>
         <nav className="hidden md:flex items-center space-x-8 text-sm font-medium">
           {showPublicLinks && (

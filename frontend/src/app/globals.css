@@ -104,8 +104,8 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-  --shadow-gold: 0 0 25px -2px oklch(var(--primary) / 0.6);
-  --shadow-gold-heavy: 0 0 40px 0 oklch(var(--primary) / 0.45);
+  --shadow-gold: 0 0 20px 0 oklch(var(--primary) / 0.4);
+  --shadow-gold-heavy: 0 0 35px 2px oklch(var(--primary) / 0.55);
   --background-image-gold-gradient: linear-gradient(135deg, oklch(0.88 0.11 86), oklch(0.7 0.11 86));
 }
 

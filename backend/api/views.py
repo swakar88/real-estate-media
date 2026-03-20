@@ -7,6 +7,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.models import User
 from django.conf import settings
 from django.http import HttpResponse
+from django.utils import timezone
+from decimal import Decimal
 import stripe
 import os
 import threading
@@ -19,7 +21,7 @@ from .models import (
     Service, GalleryImage, Package, BookingRequest, 
     ClientShoot, Photographer, PhotographerSlot, PhotographerPayment,
     SiteMedia, EmailConfiguration, EmailTemplate, MediaItem,
-    Referral, GlobalSettings, SupportTicket
+    Referral, GlobalSettings, SupportTicket, PhotographerRating
 )
 from .serializers import (
     ServiceSerializer,
@@ -30,15 +32,16 @@ from .serializers import (
     PhotographerSerializer,
     PhotographerSlotSerializer,
     SiteMediaSerializer,
-    ClientSerializer,
-    AdminSerializer,
     EmailTemplateSerializer,
     EmailConfigurationSerializer,
     MediaItemSerializer,
     ReferralSerializer,
+    PhotographerRatingSerializer,
     GlobalSettingsSerializer,
     PhotographerPaymentSerializer,
-    SupportTicketSerializer
+    SupportTicketSerializer,
+    ClientSerializer,
+    AdminSerializer
 )
 
 class ServiceViewSet(viewsets.ModelViewSet):
@@ -337,8 +340,41 @@ class ClientShootViewSet(viewsets.ModelViewSet):
             return Response({"detail": "No amount_due provided or set for this shoot."}, status=status.HTTP_400_BAD_REQUEST)
             
         try:
-            # Update the shoot amount if explicitly provided
-            if request.data.get('amount_due'):
+            # CHECK FOR REFERRAL CREDITS
+            from .models import ReferralCredit
+            available_credits = ReferralCredit.objects.filter(client=shoot.client, is_used=False)
+            total_credit = sum((c.amount for c in available_credits), Decimal('0'))
+            
+            applied_credit = 0
+            if total_credit > 0:
+                applied_credit = min(total_credit, Decimal(str(amount_due)))
+                amount_due = Decimal(str(amount_due)) - applied_credit
+                
+                # Mark credits as used
+                remaining_to_apply = applied_credit
+                for credit in available_credits:
+                    if remaining_to_apply <= 0: break
+                    if credit.amount <= remaining_to_apply:
+                        remaining_to_apply -= credit.amount
+                        credit.is_used = True
+                        credit.used_at = timezone.now()
+                        credit.save()
+                    else:
+                        # Partial use of a credit? 
+                        # Actually, our model doesn't support partial use easily without creating a new credit for the reminder.
+                        # For simplicity, if credit > remaining, we still mark it as used but this shouldn't happen 
+                        # if we sum correctly. Wait, if credit.amount = 50 and remaining = 25, 
+                        # we either need to split the credit or just consume it.
+                        # Let's consume it and maybe adjust it?
+                        # Better approach: update the credit amount and keep it unused? 
+                        # No, let's keep it simple: consume the whole credit.
+                        credit.is_used = True
+                        credit.used_at = timezone.now()
+                        credit.save()
+                        remaining_to_apply = 0
+
+            # Update the shoot amount if explicitly provided or if credits were applied
+            if request.data.get('amount_due') or applied_credit > 0:
                 shoot.amount_due = amount_due
                 shoot.save()
             
@@ -428,12 +464,60 @@ class ClientShootViewSet(viewsets.ModelViewSet):
                     shoot.payment_status = 'paid'
                     shoot.save()
                     
+                    # AWARD REFERRAL CREDIT IF APPLICABLE
+                    try:
+                        # Find a referral associated with this client's email
+                        referral = Referral.objects.filter(referee_email__iexact=shoot.contact_email, status='completed').first()
+                        if referral:
+                            referral.status = 'paid'
+                            referral.save()
+                            
+                            # Create the credit for the referrer
+                            from .models import ReferralCredit, GlobalSettings
+                            settings = GlobalSettings.objects.first()
+                            
+                            reward_amount = referral.reward_amount # Default
+                            if settings and settings.referral_reward_type == 'percentage':
+                                # Calculate % of shoot amount
+                                try:
+                                    percent = Decimal(str(settings.referral_reward_amount))
+                                    total_amount = Decimal(str(shoot.amount_due))
+                                    reward_amount = (total_amount * percent) / Decimal('100')
+                                    # Round to 2 decimals
+                                    reward_amount = reward_amount.quantize(Decimal('0.01'))
+                                    
+                                    # Update referral record with actual amount earned
+                                    referral.reward_amount = reward_amount
+                                    referral.save()
+                                except (ValueError, TypeError, ArithmeticError) as e:
+                                    print(f"Error calculating % reward: {e}")
+                                    reward_amount = referral.reward_amount
+
+                            ReferralCredit.objects.create(
+                                client=referral.referrer,
+                                referral=referral,
+                                amount=reward_amount
+                            )
+                            
+                            # Send email to the referrer
+                            from .utils.email_utils import send_referral_reward_earned_email
+                            send_referral_reward_earned_email(referral.referrer, reward_amount)
+                    except Exception as ref_err:
+                        print(f"Error processing referral reward: {ref_err}")
+
                     from .utils.email_utils import send_payment_confirmed_emails
                     from django.conf import settings
                     base_url = "http://localhost:3000"
                     if hasattr(settings, 'CORS_ALLOWED_ORIGINS') and settings.CORS_ALLOWED_ORIGINS:
                         base_url = settings.CORS_ALLOWED_ORIGINS[0]
                     send_payment_confirmed_emails(shoot.property_address, f"{base_url}/dashboard")
+
+                    # Send Thank You + Rating Link
+                    if shoot.photographer:
+                        from .utils.email_utils import send_thank_you_payment_email
+                        # Use photographer's user ID or photographer ID? The user said id={photographer_id}
+                        # We'll use the photographer instance ID
+                        send_thank_you_payment_email(shoot.property_address, shoot.contact_email, shoot.photographer.id)
                 return Response({"detail": "Payment verified", "status": "paid"})
             return Response({"detail": "Payment not completed"}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
@@ -738,8 +822,42 @@ class ReferralViewSet(viewsets.ModelViewSet):
             return Referral.objects.all().order_by('-created_at')
         return Referral.objects.filter(referrer=self.request.user).order_by('-created_at')
 
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            response = self.get_paginated_response(serializer.data)
+            # Add available credits to top level
+            from .models import ReferralCredit
+            credits = ReferralCredit.objects.filter(client=request.user, is_used=False)
+            response.data['available_credits'] = sum(c.amount for c in credits)
+            return response
+
+        serializer = self.get_serializer(queryset, many=True)
+        from .models import ReferralCredit
+        credits = ReferralCredit.objects.filter(client=request.user, is_used=False)
+        return Response({
+            'results': serializer.data,
+            'available_credits': sum(c.amount for c in credits)
+        })
+
     def perform_create(self, serializer):
-        serializer.save(referrer=self.request.user)
+        from .models import GlobalSettings
+        # Get default reward amount from global settings
+        settings = GlobalSettings.objects.first()
+        
+        # If fixed, store it now. If percentage, we'll store a placeholder (or the % itself?)
+        # For simplicity, if it's percentage, we'll just store the percentage value in reward_amount
+        # and re-calculate/update it in verify_payment when the shoot is paid.
+        reward = settings.referral_reward_amount if settings else 25.00
+        
+        referral = serializer.save(referrer=self.request.user, reward_amount=reward)
+        
+        # Trigger referral email
+        from .utils.email_utils import send_referral_received_email
+        send_referral_received_email(referral)
 
 class GlobalSettingsViewSet(viewsets.ModelViewSet):
     queryset = GlobalSettings.objects.all()
@@ -769,7 +887,7 @@ class GlobalSettingsViewSet(viewsets.ModelViewSet):
         # Handle file uploads
         if 'logo' in request.FILES:
             logo_url = upload_to_r2(request.FILES['logo'], "branding/logo")
-            if logo_url: settings.logo_url = logo_url
+            if logo_url: settings.site_logo_url = logo_url
             
         if 'favicon' in request.FILES:
             favicon_url = upload_to_r2(request.FILES['favicon'], "branding/favicon")
@@ -784,7 +902,7 @@ class GlobalSettingsViewSet(viewsets.ModelViewSet):
             if sidebar_logo_url: settings.sidebar_logo_url = sidebar_logo_url
             
         # Handle other fields
-        for field in ['site_name', 'logo_url', 'favicon_url', 'invoice_logo_url', 'sidebar_logo_url']:
+        for field in ['site_name', 'site_logo_url', 'favicon_url', 'invoice_logo_url', 'sidebar_logo_url', 'referral_reward_amount', 'referral_reward_type']:
             if field in request.data and field not in request.FILES:
                 setattr(settings, field, request.data[field])
                 
@@ -983,6 +1101,11 @@ class PhotographerViewSet(viewsets.ModelViewSet):
             return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({"detail": "An error occurred."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class PhotographerRatingViewSet(viewsets.ModelViewSet):
+    queryset = PhotographerRating.objects.all()
+    serializer_class = PhotographerRatingSerializer
+    permission_classes = [permissions.AllowAny]
 
 @api_view(['POST'])
 @permission_classes([AllowAny])

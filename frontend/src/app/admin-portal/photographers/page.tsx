@@ -615,8 +615,8 @@ export default function AdminPhotographers() {
                             <input 
                                type="number" 
                                className="bg-transparent font-black italic text-xl w-16 focus:outline-none focus:text-primary transition-colors"
-                               value={selectedPhotographer.share_percentage || 0}
-                               onChange={(e) => updatePhotographer(selectedPhotographer.id, { share_percentage: parseFloat(e.target.value) })}
+                               value={Math.round(selectedPhotographer.share_percentage || 0)}
+                               onChange={(e) => updatePhotographer(selectedPhotographer.id, { share_percentage: parseInt(e.target.value) || 0 })}
                             />
                             <span className="font-black text-xl italic text-primary">%</span>
                          </div>

@@ -20,6 +20,7 @@ import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/Scroll
 export default function ReferralsPage() {
   const [loading, setLoading] = useState(true);
   const [referrals, setReferrals] = useState<any[]>([]);
+  const [availableCredits, setAvailableCredits] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [showForm, setShowForm] = useState(false);
   
@@ -39,6 +40,7 @@ export default function ReferralsPage() {
       if (res.ok) {
         const data = await res.json();
         setReferrals(data.results || data);
+        setAvailableCredits(data.available_credits || 0);
       }
     } catch (err) {
       console.error("Error fetching referrals:", err);
@@ -113,16 +115,28 @@ export default function ReferralsPage() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div className="space-y-1">
           <h1 className="text-4xl font-black tracking-tight">Referral Program</h1>
-          <p className="text-muted-foreground font-medium">Earn rewards by referring colleagues for their property media needs.</p>
+          <p className="text-muted-foreground font-medium">Earn rewards by referring others for their property media needs.</p>
         </div>
         
-        <button 
-          onClick={() => setShowForm(!showForm)}
-          className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-primary text-primary-foreground rounded-2xl font-black text-xs uppercase tracking-widest shadow-gold hover:shadow-gold-heavy hover:scale-[1.02] active:scale-95 transition-all"
-        >
-          {showForm ? <Plus className="h-4 w-4 rotate-45" /> : <UserPlus className="h-4 w-4" />}
-          {showForm ? "Cancel" : "Refer a Colleague"}
-        </button>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="bg-primary/10 border border-primary/20 rounded-2xl px-6 py-3 flex items-center gap-3">
+             <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-primary-foreground shadow-gold">
+                <Gift className="w-5 h-5" />
+             </div>
+             <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Available Credit</p>
+                <p className="text-xl font-black tabular-nums">${availableCredits.toFixed(2)}</p>
+             </div>
+          </div>
+          
+          <button 
+            onClick={() => setShowForm(!showForm)}
+            className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-primary text-primary-foreground rounded-2xl font-black text-xs uppercase tracking-widest shadow-gold hover:shadow-gold-heavy hover:scale-[1.02] active:scale-95 transition-all"
+          >
+            {showForm ? <Plus className="h-4 w-4 rotate-45" /> : <UserPlus className="h-4 w-4" />}
+            {showForm ? "Cancel" : "Refer Someone"}
+          </button>
+        </div>
       </div>
 
       {/* Referral Form */}
@@ -137,7 +151,7 @@ export default function ReferralsPage() {
               <h2 className="text-2xl font-black mb-6">New Referral Details</h2>
               <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground ml-1">Colleague Name</label>
+                  <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground ml-1">Name</label>
                   <input 
                     type="text" 
                     required
@@ -196,7 +210,7 @@ export default function ReferralsPage() {
       {/* Program Info Cards */}
       <StaggerContainer className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {[
-          { title: "Step 1", desc: "Refer a colleague by submitting their contact info.", icon: UserPlus },
+          { title: "Step 1", desc: "Refer someone by submitting their contact info.", icon: UserPlus },
           { title: "Step 2", desc: "They book their first shoot with KC Media.", icon: CheckCircle2 },
           { title: "Step 3", desc: "You receive a reward credit on your next booking!", icon: Gift },
         ].map((step, i) => (

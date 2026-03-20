@@ -21,12 +21,14 @@ import {
   Settings
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useGlobalSettings } from "@/context/GlobalSettingsContext";
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { settings } = useGlobalSettings();
   const router = useRouter();
   const pathname = usePathname();
   const [isAuthorized, setIsAuthorized] = useState(false);
@@ -122,7 +124,11 @@ export default function AdminLayout({
       `}>
         <div className="h-full flex flex-col">
           <div className="flex items-center justify-between px-6 py-6 border-b border-border/50">
-            <span className="font-extrabold text-xl tracking-tight text-foreground transition-colors duration-300">Admin<span className="text-primary">Portal</span></span>
+            {settings?.sidebar_logo_url ? (
+              <img src={settings.sidebar_logo_url} alt={settings.site_name} className="h-8 w-auto object-contain" />
+            ) : (
+              <span className="font-extrabold text-xl tracking-tight text-foreground transition-colors duration-300">Admin<span className="text-primary">Portal</span></span>
+            )}
             <button className="md:hidden text-muted-foreground hover:text-foreground" onClick={() => setSidebarOpen(false)}>
               <X className="h-5 w-5" />
             </button>

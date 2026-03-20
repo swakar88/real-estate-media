@@ -8,10 +8,12 @@ import CustomModal from "@/components/CustomModal";
 export default function SiteSettings() {
   const [settings, setSettings] = useState({
     site_name: "KC Real Estate Media",
-    logo_url: "",
+    site_logo_url: "",
     favicon_url: "",
     invoice_logo_url: "",
     sidebar_logo_url: "",
+    referral_reward_amount: 25,
+    referral_reward_type: "fixed",
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -155,8 +157,8 @@ export default function SiteSettings() {
 
                     <div className="flex flex-col items-center gap-6 text-center">
                         <div className="h-32 w-full rounded-[2rem] bg-black/40 border-2 border-dashed border-primary/30 flex items-center justify-center overflow-hidden relative group">
-                            {settings.logo_url ? (
-                                <img src={settings.logo_url} alt="Site Logo" className="w-full h-full object-contain p-4" />
+                            {settings.site_logo_url ? (
+                                <img src={settings.site_logo_url} alt="Site Logo" className="w-full h-full object-contain p-4" />
                             ) : (
                                 <ImageIcon className="w-8 h-8 text-primary/20" />
                             )}
@@ -237,6 +239,51 @@ export default function SiteSettings() {
                         <p className="text-[10px] text-muted-foreground leading-relaxed">Small icon visible in browser tabs (Recommended: 32x32px).</p>
                     </div>
                 </div>
+            </div>
+            
+            {/* Referral Settings Section */}
+            <div className="bg-card/80 backdrop-blur-sm border border-primary/20 rounded-[2.5rem] p-8 shadow-gold space-y-6">
+              <div className="flex items-center gap-3 text-primary">
+                <Sparkles className="w-5 h-5" />
+                <h2 className="text-sm font-black uppercase tracking-widest">Referral Program</h2>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider ml-1 text-muted-foreground">Reward Type</label>
+                  <select 
+                    value={settings.referral_reward_type}
+                    onChange={e => setSettings({...settings, referral_reward_type: e.target.value})}
+                    className="w-full bg-black/40 border border-primary/10 rounded-2xl px-5 py-4 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/50 shadow-inner"
+                  >
+                    <option value="fixed">Fixed Amount ($)</option>
+                    <option value="percentage">Percentage (%)</option>
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider ml-1 text-muted-foreground">
+                    {settings.referral_reward_type === 'fixed' ? 'Reward Amount ($)' : 'Reward Rate (%)'}
+                  </label>
+                  <input 
+                    type="number" 
+                    step="0.01"
+                    value={settings.referral_reward_amount}
+                    onChange={e => setSettings({...settings, referral_reward_amount: parseFloat(e.target.value)})}
+                    className="w-full bg-black/40 border border-primary/10 rounded-2xl px-5 py-4 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/50 shadow-inner"
+                    placeholder="e.g. 25 or 10"
+                  />
+                </div>
+              </div>
+
+              <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10 flex gap-4">
+                <Info className="w-5 h-5 text-primary shrink-0" />
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {settings.referral_reward_type === 'fixed' 
+                    ? "Referrers will receive a flat $ credit for every new client they refer who completes a paid shoot."
+                    : "Referrers will receive a % percentage of the total shoot price as credit for every new client referral."}
+                </p>
+              </div>
             </div>
           </div>
 

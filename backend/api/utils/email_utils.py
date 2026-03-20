@@ -26,7 +26,18 @@ def get_email_connection():
     return None, None
 
 def _get_email_template(title, content_html, button_text=None, button_url=None):
-    # (Remains the same as before)
+    from api.models import GlobalSettings
+    settings = GlobalSettings.objects.first()
+    logo_url = settings.site_logo_url if settings else None
+    
+    logo_html = ""
+    if logo_url:
+        logo_html = f"""
+        <div style="text-align: center; margin-bottom: 30px;">
+            <img src="{logo_url}" alt="Logo" style="max-height: 60px; width: auto;">
+        </div>
+        """
+
     button_html = ""
     if button_text and button_url:
         button_html = f"""
@@ -314,3 +325,92 @@ Payment for {property_address} has been confirmed. You can now access and downlo
         cc=p_cc,
         bcc=p_bcc
     )
+
+def send_referral_received_email(referral):
+    context = {
+        "referrer_name": referral.referrer.get_full_name() or referral.referrer.username,
+        "referee_name": referral.referee_name,
+        "site_url": "http://localhost:3000" # Fallback
+    }
+    
+    # Try to get base URL from settings
+    if hasattr(settings, 'CORS_ALLOWED_ORIGINS') and settings.CORS_ALLOWED_ORIGINS:
+        context["site_url"] = settings.CORS_ALLOWED_ORIGINS[0]
+
+    subject, content_html, r_cc, r_bcc = get_template_content(
+        "referral-received",
+        "You've been referred to KC Real Estate Media!",
+        """Hi {referee_name},
+
+{referrer_name} has referred you to KC Real Estate Media for your property photography and media needs.
+
+We provide premium real estate media services to help your listings stand out. Click the button below to explore our services and book your first shoot!""",
+        context
+    )
+    
+    html_content = _get_email_template(
+        "You've Been Referred", 
+        content_html, 
+        "Create Account & Get Started", 
+        f"{context['site_url']}/login?register=true&email={referral.referee_email}"
+    )
+    return _send_mocked_email(subject, html_content, to_email=referral.referee_email, cc=r_cc, bcc=r_bcc)
+
+def send_referral_reward_earned_email(user, amount):
+    context = {
+        "name": user.get_full_name() or user.username,
+        "amount": f"{amount:.2f}",
+        "dashboard_url": "http://localhost:3000/dashboard"
+    }
+    
+    if hasattr(settings, 'CORS_ALLOWED_ORIGINS') and settings.CORS_ALLOWED_ORIGINS:
+        context["dashboard_url"] = f"{settings.CORS_ALLOWED_ORIGINS[0]}/dashboard"
+
+    subject, content_html, re_cc, re_bcc = get_template_content(
+        "referral-reward-earned",
+        "You've earned a referral reward!",
+        """Hi {name},
+
+Great news! One of your referrals has completed their first shoot. As a thank you, we've added a ${amount} credit to your account.
+
+This credit will be automatically applied to your next invoice. Thank you for being a part of KC Real Estate Media!""",
+        context
+    )
+    
+    html_content = _get_email_template("Referral Reward Earned", content_html, "View Dashboard", context["dashboard_url"])
+    return _send_mocked_email(subject, html_content, to_email=user.email, cc=re_cc, bcc=re_bcc)
+
+def send_thank_you_payment_email(shoot_address, to_email, photographer_id):
+    """
+    Sends a thank you email after payment, including a link to rate the photographer.
+    """
+    site_url = "http://localhost:3000"
+    if hasattr(settings, 'CORS_ALLOWED_ORIGINS') and settings.CORS_ALLOWED_ORIGINS:
+        site_url = settings.CORS_ALLOWED_ORIGINS[0]
+
+    rating_link = f"{site_url}/rate-photographer?id={photographer_id}"
+    
+    context = {
+        "property_address": shoot_address,
+        "rating_link": rating_link
+    }
+
+    subject, content_html, t_cc, t_bcc = get_template_content(
+        "payment-thank-you",
+        "Thank You for Your Payment!",
+        """Hi there,
+        
+Thank you for your payment for the shoot at {property_address}. We hope you're thrilled with the results!
+
+We're always looking to improve our service. Would you mind taking a moment to rate your photographer? Your feedback helps us maintain the highest quality standards.""",
+        context
+    )
+
+    html_content = _get_email_template(
+        "Thank You & Rate Us", 
+        content_html, 
+        "Rate Your Photographer", 
+        rating_link
+    )
+    
+    return _send_mocked_email(subject, html_content, to_email=to_email, cc=t_cc, bcc=t_bcc)

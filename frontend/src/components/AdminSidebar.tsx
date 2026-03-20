@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FolderGit2, Users, Calendar, LayoutDashboard, Camera } from "lucide-react";
+import { useGlobalSettings } from "@/context/GlobalSettingsContext";
 
 export default function AdminSidebar() {
+  const { settings } = useGlobalSettings();
   const pathname = usePathname();
   
   const navItems = [
@@ -16,7 +18,11 @@ export default function AdminSidebar() {
   return (
     <aside className="w-64 flex-shrink-0 hidden md:block border-r border-border/40 bg-card/30 min-h-[calc(100vh-[72px])] pt-8 px-4">
       <div className="mb-8 px-4">
-        <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Admin Portal</h2>
+        {settings?.sidebar_logo_url ? (
+          <img src={settings.sidebar_logo_url} alt={settings.site_name} className="h-6 w-auto object-contain mb-2" />
+        ) : (
+          <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{settings?.site_name || "Admin Portal"}</h2>
+        )}
       </div>
       
       <nav className="space-y-1">

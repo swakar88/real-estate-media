@@ -1,5 +1,24 @@
 from django.contrib import admin
-from .models import Service, GalleryImage, Package, BookingRequest, ClientShoot, Photographer, PhotographerSlot
+from .models import (
+    Service, GalleryImage, Package, BookingRequest, ClientShoot, 
+    Photographer, PhotographerSlot, Referral, ReferralCredit, GlobalSettings
+)
+
+@admin.register(Referral)
+class ReferralAdmin(admin.ModelAdmin):
+    list_display = ('referee_email', 'referrer', 'status', 'reward_amount', 'created_at')
+    list_filter = ('status',)
+    search_fields = ('referee_email', 'referee_name', 'referrer__email')
+
+@admin.register(ReferralCredit)
+class ReferralCreditAdmin(admin.ModelAdmin):
+    list_display = ('client', 'amount', 'is_used', 'created_at')
+    list_filter = ('is_used',)
+    search_fields = ('client__email', 'client__username')
+
+@admin.register(GlobalSettings)
+class GlobalSettingsAdmin(admin.ModelAdmin):
+    list_display = ('site_name', 'referral_reward_amount')
 
 @admin.register(Service)
 class ServiceAdmin(admin.ModelAdmin):

@@ -329,6 +329,29 @@ class MediaItem(models.Model):
         return f"{self.shoot.property_address} - {self.get_media_type_display()} ({self.id})"
 
 
+class GlobalSettings(models.Model):
+    site_name = models.CharField(max_length=100, default="KC Real Estate Media")
+    site_logo_url = models.URLField(max_length=1000, blank=True, null=True)
+    favicon_url = models.URLField(max_length=1000, blank=True, null=True)
+    invoice_logo_url = models.URLField(max_length=1000, blank=True, null=True)
+    sidebar_logo_url = models.URLField(max_length=1000, blank=True, null=True)
+    admin_email_for_alerts = models.EmailField(default="admin@example.com")
+    REWARD_TYPE_CHOICES = [
+        ('fixed', 'Fixed Amount ($)'),
+        ('percentage', 'Percentage (%)'),
+    ]
+    referral_reward_amount = models.DecimalField(max_digits=10, decimal_places=2, default=25.00, help_text="Default reward amount or percentage")
+    referral_reward_type = models.CharField(max_length=20, choices=REWARD_TYPE_CHOICES, default='fixed')
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Global Settings"
+        verbose_name_plural = "Global Settings"
+
+    def __str__(self):
+        return self.site_name
+
+
 class Referral(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
@@ -340,6 +363,7 @@ class Referral(models.Model):
     referee_email = models.EmailField()
     referee_phone = models.CharField(max_length=20, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    reward_amount = models.DecimalField(max_digits=10, decimal_places=2, default=25.00, help_text="Amount to be awarded upon completion")
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -347,21 +371,17 @@ class Referral(models.Model):
         return f"Referral: {self.referrer.username} -> {self.referee_email}"
 
 
-class GlobalSettings(models.Model):
-    site_name = models.CharField(max_length=100, default="KC Real Estate Media")
-    site_logo_url = models.URLField(max_length=1000, blank=True, null=True)
-    favicon_url = models.URLField(max_length=1000, blank=True, null=True)
-    invoice_logo_url = models.URLField(max_length=1000, blank=True, null=True)
-    sidebar_logo_url = models.URLField(max_length=1000, blank=True, null=True)
-    admin_email_for_alerts = models.EmailField(default="admin@example.com")
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        verbose_name = "Global Settings"
-        verbose_name_plural = "Global Settings"
+class ReferralCredit(models.Model):
+    client = models.ForeignKey(User, on_delete=models.CASCADE, related_name='referral_credits')
+    referral = models.OneToOneField(Referral, on_delete=models.CASCADE, related_name='credit_issued')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    is_used = models.BooleanField(default=False)
+    used_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return self.site_name
+        status = "Used" if self.is_used else "Available"
+        return f"Credit: ${self.amount} for {self.client.username} ({status})"
 
 class SupportTicket(models.Model):
     TOPIC_CHOICES = [
@@ -387,3 +407,16 @@ class SupportTicket(models.Model):
 
     def __str__(self):
         return f"Support: {self.subject} ({self.email})"
+
+class PhotographerRating(models.Model):
+    """
+    Stores customer feedback and ratings for photographers.
+    """
+    photographer = models.ForeignKey(Photographer, on_delete=models.CASCADE, related_name='ratings')
+    shoot = models.OneToOneField(ClientShoot, on_delete=models.SET_NULL, null=True, blank=True, related_name='rating')
+    rating = models.IntegerField(choices=[(i, i) for i in range(1, 6)], help_text="1 to 5 stars")
+    feedback = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Rating for {self.photographer.user.get_full_name()}: {self.rating} stars"

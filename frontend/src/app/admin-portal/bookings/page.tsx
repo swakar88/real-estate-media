@@ -129,10 +129,7 @@ export default function AdminBookings() {
             
             <div className="flex bg-muted p-1 rounded-lg">
               <button 
-                onClick={() => {
-                  setFilter('active');
-                  fetchBookings();
-                }}
+                onClick={() => setFilter('active')}
                 className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-all ${
                   filter === 'active' ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'
                 }`}
@@ -140,10 +137,7 @@ export default function AdminBookings() {
                 Active
               </button>
               <button 
-                onClick={() => {
-                  setFilter('historical');
-                  fetchBookings();
-                }}
+                onClick={() => setFilter('historical')}
                 className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-all ${
                   filter === 'historical' ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'
                 }`}
@@ -151,6 +145,14 @@ export default function AdminBookings() {
                 Historical
               </button>
             </div>
+            
+            <button 
+              onClick={fetchBookings}
+              className="p-2 hover:bg-muted rounded-xl transition-colors text-muted-foreground border border-border/50"
+              title="Refresh Bookings"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-primary' : ''}`} />
+            </button>
           </div>
         </div>
       </ScrollReveal>

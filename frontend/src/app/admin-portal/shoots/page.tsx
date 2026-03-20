@@ -24,6 +24,18 @@ export default function AdminShoots() {
   });
   const [adding, setAdding] = useState(false);
 
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingShootId, setEditingShootId] = useState<number | null>(null);
+  const [editFormData, setEditFormData] = useState({
+    property_address: "",
+    shoot_date: "",
+    contact_name: "",
+    contact_phone: "",
+    contact_email: "",
+    status: ""
+  });
+  const [updating, setUpdating] = useState(false);
+
   useEffect(() => {
     fetchShoots();
   }, []);
@@ -75,6 +87,35 @@ export default function AdminShoots() {
       console.error(err);
     } finally {
       setAdding(false);
+    }
+  };
+
+  const handleUpdateSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingShootId) return;
+    setUpdating(true);
+    try {
+      const token = localStorage.getItem("access_token");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/shoots/${editingShootId}/`, {
+        method: "PATCH",
+        headers: { 
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(editFormData)
+      });
+      if (res.ok) {
+        const updatedShoot = await res.json();
+        setShoots(shoots.map(s => s.id === editingShootId ? updatedShoot : s));
+        setShowEditModal(false);
+        setEditingShootId(null);
+      } else {
+        alert("Failed to update shoot. Status codes and constraints might prevent some changes.");
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setUpdating(false);
     }
   };
 
@@ -132,8 +173,16 @@ export default function AdminShoots() {
   };
 
   const handleEdit = (shoot: any) => {
-    // For now, just alert or we could implement an edit modal
-    alert("Edit functionality coming soon. Currently, please delete and recreate or contact support for manual DB changes.");
+    setEditingShootId(shoot.id);
+    setEditFormData({
+      property_address: shoot.property_address,
+      shoot_date: shoot.shoot_date,
+      contact_name: shoot.contact_name || "",
+      contact_phone: shoot.contact_phone || "",
+      contact_email: shoot.contact_email || "",
+      status: shoot.status
+    });
+    setShowEditModal(true);
   };
 
   const filteredShoots = shoots
@@ -431,6 +480,113 @@ export default function AdminShoots() {
                   className="flex-[2] py-3 bg-primary text-primary-foreground font-bold rounded-xl hover:bg-primary/90 disabled:opacity-50 transition-all shadow-lg active:scale-[0.98]"
                 >
                   {adding ? "Initializing..." : "Create Record"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Shoot Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-card w-full max-w-md rounded-[2.5rem] shadow-gold-heavy border border-primary/20 p-10 animate-in zoom-in-95 duration-200">
+            <h2 className="text-2xl font-bold mb-1">Edit Client Shoot</h2>
+            <p className="text-muted-foreground text-sm mb-6">Update delivery details and status.</p>
+            
+            <form onSubmit={handleUpdateSubmit} className="space-y-5">
+              <div className="space-y-2">
+                <label className="block text-xs font-bold uppercase tracking-wider">Property Address</label>
+                <div className="relative">
+                   <MapPin className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+                   <textarea 
+                     required rows={2}
+                     className="w-full rounded-xl border border-border bg-background pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 shadow-sm"
+                     placeholder="123 Main St, Leawood KS"
+                     value={editFormData.property_address} 
+                     onChange={e => setEditFormData({...editFormData, property_address: e.target.value})}
+                   />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <label className="block text-xs font-bold uppercase tracking-wider">Shoot Date</label>
+                    <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <input 
+                        type="date" required
+                        className="w-full rounded-xl border border-border bg-background pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 shadow-sm"
+                        value={editFormData.shoot_date} 
+                        onChange={e => setEditFormData({...editFormData, shoot_date: e.target.value})}
+                    />
+                    </div>
+                </div>
+                <div className="space-y-2">
+                    <label className="block text-xs font-bold uppercase tracking-wider">Status</label>
+                    <select 
+                        className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 shadow-sm"
+                        value={editFormData.status} 
+                        onChange={e => setEditFormData({...editFormData, status: e.target.value})}
+                    >
+                        <option value="open">Open</option>
+                        <option value="delivered">Delivered</option>
+                        <option value="archived">Archived</option>
+                    </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider">Contact Name</label>
+                  <input 
+                    type="text"
+                    className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 shadow-sm"
+                    placeholder="John Doe"
+                    value={editFormData.contact_name} 
+                    onChange={e => setEditFormData({...editFormData, contact_name: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider">Contact Phone</label>
+                  <input 
+                    type="text"
+                    className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 shadow-sm"
+                    placeholder="555-0123"
+                    value={editFormData.contact_phone} 
+                    onChange={e => setEditFormData({...editFormData, contact_phone: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-xs font-bold uppercase tracking-wider">Contact Email</label>
+                <div className="relative">
+                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                   <input 
+                     type="email"
+                     className="w-full rounded-xl border border-border bg-background pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 shadow-sm"
+                     placeholder="client@example.com"
+                     value={editFormData.contact_email} 
+                     onChange={e => setEditFormData({...editFormData, contact_email: e.target.value})}
+                   />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-6">
+                <button 
+                  type="button" 
+                  onClick={() => setShowEditModal(false)} 
+                  className="flex-1 py-3 text-sm font-bold text-muted-foreground hover:bg-muted rounded-xl transition-all"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={updating || !editFormData.property_address}
+                  className="flex-[2] py-3 bg-primary text-primary-foreground font-bold rounded-xl hover:bg-primary/90 disabled:opacity-50 transition-all shadow-lg active:scale-[0.98]"
+                >
+                  {updating ? "Saving..." : "Save Changes"}
                 </button>
               </div>
             </form>

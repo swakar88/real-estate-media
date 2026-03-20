@@ -18,12 +18,14 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useGlobalSettings } from "@/context/GlobalSettingsContext";
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { settings } = useGlobalSettings();
   const router = useRouter();
   const pathname = usePathname();
   const [isAuthorized, setIsAuthorized] = useState(false);
@@ -114,10 +116,19 @@ export default function DashboardLayout({
         <div className="h-full flex flex-col pt-8">
           <div className="px-8 mb-10">
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center font-bold text-primary-foreground shadow-lg shadow-primary/30">KC</div>
-              <span className="font-black text-xl tracking-tight">Client Hub</span>
+              {settings?.sidebar_logo_url ? (
+                <img src={settings.sidebar_logo_url} alt={settings.site_name} className="h-8 w-auto object-contain" />
+              ) : (
+                <>
+                  <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center font-bold text-primary-foreground shadow-lg shadow-primary/30">
+                    {settings?.site_name?.[0] || "K"}
+                    {settings?.site_name?.split(' ')[1]?.[0] || "C"}
+                  </div>
+                  <span className="font-black text-xl tracking-tight">Client Hub</span>
+                </>
+              )}
             </div>
-            <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-muted-foreground/60">Property Media Systems</p>
+            <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-muted-foreground/60">{settings?.site_name || "KC Real Estate Media"}</p>
           </div>
 
           <div className="flex-1 px-4 space-y-1.5 overflow-y-auto custom-scrollbar">

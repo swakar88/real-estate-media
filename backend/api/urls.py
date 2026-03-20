@@ -20,6 +20,7 @@ router.register(r'referrals', views.ReferralViewSet, basename='referrals')
 router.register(r'settings', views.GlobalSettingsViewSet, basename='settings')
 router.register(r'photographer-payments', views.PhotographerPaymentViewSet, basename='photographer-payments')
 router.register(r'support-tickets', views.SupportTicketViewSet, basename='support-tickets')
+router.register(r'photographer-ratings', views.PhotographerRatingViewSet, basename='photographer-ratings')
 
 urlpatterns = [
     path('availability/', views.get_availability, name='get_availability'),

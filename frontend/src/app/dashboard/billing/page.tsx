@@ -14,7 +14,10 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+import { useGlobalSettings } from "@/context/GlobalSettingsContext";
+
 export default function BillingHistoryPage() {
+  const { settings } = useGlobalSettings();
   const [loading, setLoading] = useState(true);
   const [shoots, setShoots] = useState<any[]>([]);
 
@@ -58,9 +61,16 @@ export default function BillingHistoryPage() {
     <div className="space-y-10">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div>
-          <h1 className="text-3xl font-black tracking-tight mb-2">Billing History</h1>
-          <p className="text-muted-foreground font-medium">View and manage your invoices and payment records.</p>
+        <div className="flex items-start gap-6">
+          {settings?.invoice_logo_url && (
+            <div className="bg-white p-3 rounded-2xl border border-border/40 shadow-sm hidden md:block">
+              <img src={settings.invoice_logo_url} alt="Invoice Logo" className="h-12 w-auto object-contain" />
+            </div>
+          )}
+          <div>
+            <h1 className="text-3xl font-black tracking-tight mb-2">Billing History</h1>
+            <p className="text-muted-foreground font-medium">View and manage your invoices and payment records.</p>
+          </div>
         </div>
         
         <div className="flex items-center gap-3">

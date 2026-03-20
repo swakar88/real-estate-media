@@ -65,8 +65,7 @@ export default function BookingForm({ packages }: { packages: any[] }) {
     packageId: "",
     propertyDetails: "",
     shootDate: "",
-    timeSlot: "",
-    referralEmail: ""
+    timeSlot: ""
   });
 
   const handlePackageSelect = (pkgId: string) => {
@@ -101,7 +100,6 @@ export default function BookingForm({ packages }: { packages: any[] }) {
           property_details: formData.propertyDetails,
           shoot_date: formData.shootDate || null,
           time_slot: formData.timeSlot || null,
-          referral_source: formData.referralEmail || null,
           status: "pending"
         })
       });
@@ -254,7 +252,7 @@ export default function BookingForm({ packages }: { packages: any[] }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
            <label htmlFor="email" className="text-sm font-medium">Email Address</label>
            <input 
@@ -277,17 +275,6 @@ export default function BookingForm({ packages }: { packages: any[] }) {
              onChange={handleChange}
              className="w-full bg-background border border-border/60 rounded-md px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" 
              placeholder="(555) 123-4567" 
-           />
-        </div>
-        <div className="space-y-2">
-           <label htmlFor="referralEmail" className="text-sm font-medium">Referral Email (Optional)</label>
-           <input 
-             type="email" 
-             id="referralEmail" 
-             value={formData.referralEmail}
-             onChange={handleChange}
-             className="w-full bg-background border border-border/60 rounded-md px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" 
-             placeholder="Who referred you?" 
            />
         </div>
       </div>
