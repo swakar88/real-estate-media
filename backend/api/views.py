@@ -18,10 +18,11 @@ import io
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 from .models import (
-    Service, GalleryImage, Package, BookingRequest, 
+    Service, GalleryImage, Package, BookingRequest,
     ClientShoot, Photographer, PhotographerSlot, PhotographerPayment,
     SiteMedia, EmailConfiguration, EmailTemplate, MediaItem,
-    Referral, GlobalSettings, SupportTicket, PhotographerRating
+    Referral, ReferralCredit, GlobalSettings, SupportTicket, PhotographerRating,
+    UserProfile
 )
 from .serializers import (
     ServiceSerializer,
@@ -41,7 +42,8 @@ from .serializers import (
     PhotographerPaymentSerializer,
     SupportTicketSerializer,
     ClientSerializer,
-    AdminSerializer
+    AdminSerializer,
+    UserProfileSerializer,
 )
 
 class ServiceViewSet(viewsets.ModelViewSet):
@@ -188,7 +190,8 @@ class BookingRequestViewSet(viewsets.ModelViewSet):
                         notes=f"Auto-generated from Booking #{instance.id}\nPackage: {instance.package_interest}\nContact: {instance.phone}",
                         contact_name=f"{instance.first_name} {instance.last_name}",
                         contact_phone=instance.phone,
-                        contact_email=instance.email
+                        contact_email=instance.email,
+                        referral_code_used=instance.referral_code_used or None,
                     )
 
                 # SEND MOCKED EMAILS
@@ -202,6 +205,38 @@ class BookingRequestViewSet(viewsets.ModelViewSet):
         instance = self.get_object()
         new_status = serializer.validated_data.get('status', instance.status)
         
+        # Reschedule: shoot_date or time_slot changed while already confirmed
+        new_date = serializer.validated_data.get('shoot_date', instance.shoot_date)
+        new_slot = serializer.validated_data.get('time_slot', instance.time_slot)
+        date_or_slot_changed = (
+            instance.status == 'confirmed' and
+            (new_date != instance.shoot_date or new_slot != instance.time_slot)
+        )
+
+        # Cancellation
+        if instance.status != 'cancelled' and new_status == 'cancelled':
+            super().perform_update(serializer)
+            try:
+                from .utils.email_utils import send_booking_calendar_invite
+                phot_email = instance.assigned_photographer.user.email if instance.assigned_photographer else None
+                send_booking_calendar_invite(instance, instance.email, phot_email, method='CANCEL', sequence=1)
+            except Exception as e:
+                print(f"Cancel calendar invite failed: {e}")
+            return
+
+        # Reschedule — send an updated invite
+        if date_or_slot_changed:
+            super().perform_update(serializer)
+            # Reload to get updated fields
+            instance.refresh_from_db()
+            try:
+                from .utils.email_utils import send_booking_calendar_invite
+                phot_email = instance.assigned_photographer.user.email if instance.assigned_photographer else None
+                send_booking_calendar_invite(instance, instance.email, phot_email, method='REQUEST', sequence=1)
+            except Exception as e:
+                print(f"Reschedule calendar invite failed: {e}")
+            return
+
         # If transitioning to completed (manual completion)
         if instance.status != 'completed' and new_status == 'completed':
             # Check if it was paid
@@ -248,7 +283,7 @@ class BookingRequestViewSet(viewsets.ModelViewSet):
             # Create the ClientShoot
             ClientShoot.objects.create(
                 client=client_user,
-                property_address=instance.property_details[:300], # Trucate safely
+                property_address=instance.property_details[:300],
                 shoot_date=instance.shoot_date or timezone.now().date(),
                 photographer=instance.assigned_photographer,
                 status='scheduled',
@@ -256,7 +291,8 @@ class BookingRequestViewSet(viewsets.ModelViewSet):
                 notes=f"Auto-generated from Booking #{instance.id}\nPackage: {instance.package_interest}\nContact: {instance.phone}\nPhotographer: {instance.assigned_photographer}",
                 contact_name=f"{instance.first_name} {instance.last_name}",
                 contact_phone=instance.phone,
-                contact_email=instance.email
+                contact_email=instance.email,
+                referral_code_used=instance.referral_code_used or None,
             )
 
             # SEND MOCKED EMAILS
@@ -463,47 +499,57 @@ class ClientShootViewSet(viewsets.ModelViewSet):
                     shoot = ClientShoot.objects.get(id=shoot_id)
                     shoot.payment_status = 'paid'
                     shoot.save()
-                    
-                    # AWARD REFERRAL CREDIT IF APPLICABLE
-                    try:
-                        # Find a referral associated with this client's email
-                        referral = Referral.objects.filter(referee_email__iexact=shoot.contact_email, status='completed').first()
-                        if referral:
-                            referral.status = 'paid'
-                            referral.save()
-                            
-                            # Create the credit for the referrer
-                            from .models import ReferralCredit, GlobalSettings
-                            settings = GlobalSettings.objects.first()
-                            
-                            reward_amount = referral.reward_amount # Default
-                            if settings and settings.referral_reward_type == 'percentage':
-                                # Calculate % of shoot amount
-                                try:
-                                    percent = Decimal(str(settings.referral_reward_amount))
-                                    total_amount = Decimal(str(shoot.amount_due))
-                                    reward_amount = (total_amount * percent) / Decimal('100')
-                                    # Round to 2 decimals
-                                    reward_amount = reward_amount.quantize(Decimal('0.01'))
-                                    
-                                    # Update referral record with actual amount earned
-                                    referral.reward_amount = reward_amount
-                                    referral.save()
-                                except (ValueError, TypeError, ArithmeticError) as e:
-                                    print(f"Error calculating % reward: {e}")
-                                    reward_amount = referral.reward_amount
 
-                            ReferralCredit.objects.create(
-                                client=referral.referrer,
-                                referral=referral,
-                                amount=reward_amount
-                            )
-                            
-                            # Send email to the referrer
+                    # AWARD REFERRAL CREDIT IF APPLICABLE
+                    # New code-based system: ClientShoot.save() already created the credit;
+                    # just fire the notification email here.
+                    if shoot.referral_code_used:
+                        try:
                             from .utils.email_utils import send_referral_reward_earned_email
-                            send_referral_reward_earned_email(referral.referrer, reward_amount)
-                    except Exception as ref_err:
-                        print(f"Error processing referral reward: {ref_err}")
+                            referrer_profile = UserProfile.objects.get(referral_code=shoot.referral_code_used)
+                            referrer = referrer_profile.user
+                            referee_email = shoot.contact_email or ''
+                            referral = Referral.objects.filter(
+                                referrer=referrer, referee_email__iexact=referee_email
+                            ).first()
+                            if referral:
+                                credit = ReferralCredit.objects.filter(
+                                    client=referrer, referral=referral
+                                ).first()
+                                if credit:
+                                    send_referral_reward_earned_email(referrer, credit.amount)
+                        except Exception as ref_err:
+                            print(f"Error sending referral reward email: {ref_err}")
+                    else:
+                        # Legacy path: manual referral link (no referral_code_used)
+                        try:
+                            referral = Referral.objects.filter(referee_email__iexact=shoot.contact_email, status='completed').first()
+                            if referral:
+                                referral.status = 'paid'
+                                referral.save()
+
+                                settings = GlobalSettings.objects.first()
+                                reward_amount = referral.reward_amount
+                                if settings and settings.referral_reward_type == 'percentage':
+                                    try:
+                                        percent = Decimal(str(settings.referral_reward_amount))
+                                        total_amount = Decimal(str(shoot.amount_due))
+                                        reward_amount = (total_amount * percent) / Decimal('100')
+                                        reward_amount = reward_amount.quantize(Decimal('0.01'))
+                                        referral.reward_amount = reward_amount
+                                        referral.save()
+                                    except (ValueError, TypeError, ArithmeticError) as e:
+                                        print(f"Error calculating % reward: {e}")
+                                        reward_amount = referral.reward_amount
+
+                                ReferralCredit.objects.get_or_create(
+                                    referral=referral,
+                                    defaults={'client': referral.referrer, 'amount': reward_amount}
+                                )
+                                from .utils.email_utils import send_referral_reward_earned_email
+                                send_referral_reward_earned_email(referral.referrer, reward_amount)
+                        except Exception as ref_err:
+                            print(f"Error processing referral reward: {ref_err}")
 
                     from .utils.email_utils import send_payment_confirmed_emails
                     from django.conf import settings
@@ -1001,13 +1047,14 @@ class PhotographerViewSet(viewsets.ModelViewSet):
         first_name = data.get('first_name', '')
         last_name = data.get('last_name', '')
         
-        # We can leave username blank since our EmailBackend allows email login, 
-        # or generate a fallback username. We'll generate a fallback for DB unique constraints.
-        base_username = data.get('username') or first_name.lower() + str(User.objects.count() + 1)
-        
+        # Use email as username (guaranteed unique; consistent with register_user)
+        if User.objects.filter(email=email).exists() or User.objects.filter(username=email).exists():
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({"detail": "A user with this email already exists."})
+
         # Create user but inactive with unusable password
         user = User.objects.create_user(
-            username=base_username,
+            username=email,
             email=email,
             first_name=first_name,
             last_name=last_name,
@@ -1015,25 +1062,30 @@ class PhotographerViewSet(viewsets.ModelViewSet):
         )
         user.set_unusable_password()
         user.save()
-        
-        # Create photographer profile
-        photographer = serializer.save(user=user)
-        
-        # Generate token
-        signer = TimestampSigner()
-        token = signer.sign_object({'user_id': user.id})
-        
-        # Determine frontend URL
-        # For local dev, NextJS is usually on 3000
-        frontend_url = 'http://localhost:3000' if settings.DEBUG else 'https://kcmedia-frontend.vercel.app'
-        invite_link = f"{frontend_url}/photographer-signup?token={token}"
-        
-        # Send Email
-        send_photographer_invite_email(
-            email=email,
-            name=first_name,
-            invite_link=invite_link
-        )
+
+        try:
+            # Create photographer profile
+            photographer = serializer.save(user=user)
+
+            # Generate token
+            signer = TimestampSigner()
+            token = signer.sign_object({'user_id': user.id})
+
+            # Determine frontend URL
+            frontend_url = 'http://localhost:3000' if settings.DEBUG else settings.CORS_ALLOWED_ORIGINS[0] if getattr(settings, 'CORS_ALLOWED_ORIGINS', None) else 'http://localhost:3000'
+            invite_link = f"{frontend_url}/photographer-signup?token={token}"
+
+            # Send Email (non-blocking — failure doesn't roll back the invite)
+            send_photographer_invite_email(
+                email=email,
+                name=first_name,
+                invite_link=invite_link
+            )
+        except Exception as e:
+            # Roll back the orphaned user record on any failure
+            user.delete()
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({"detail": f"Failed to create photographer account: {str(e)}"})
         
     def perform_destroy(self, instance):
         hard_delete = self.request.query_params.get('hard') == 'true'
@@ -1138,7 +1190,10 @@ def register_user(request):
         from django.utils import timezone
         user.last_login = timezone.now()
         user.save(update_fields=['last_login'])
-        
+
+        # Auto-create referral profile
+        UserProfile.objects.get_or_create(user=user)
+
         refresh = RefreshToken.for_user(user)
         return Response({
             'refresh': str(refresh),
@@ -1266,6 +1321,9 @@ class CurrentUserView(views.APIView):
         except Exception:
             pass
             
+        # Referral profile
+        profile, _ = UserProfile.objects.get_or_create(user=user)
+
         serializer = {
             'id': user.id,
             'username': user.username,
@@ -1275,7 +1333,9 @@ class CurrentUserView(views.APIView):
             'is_staff': user.is_staff,
             'is_photographer': is_photo,
             'photographer_id': photo_id,
-            'profile_image_url': photo_url
+            'profile_image_url': photo_url,
+            'referral_code': profile.referral_code,
+            'available_credits': str(profile.available_credits()),
         }
         return Response(serializer)
 
@@ -1378,11 +1438,32 @@ def stripe_webhook(request):
                     
                 # shoot.save() will handleographer.total_earned increment because payment_status becomes 'paid'
                 shoot.save()
-                
-                from .utils.email_utils import send_payment_confirmed_emails
+
+                # Send referral reward email for code-based referrals
+                if shoot.referral_code_used:
+                    try:
+                        from .utils.email_utils import send_referral_reward_earned_email
+                        referrer_profile = UserProfile.objects.get(referral_code=shoot.referral_code_used)
+                        referrer = referrer_profile.user
+                        referee_email = shoot.contact_email or ''
+                        ref = Referral.objects.filter(
+                            referrer=referrer, referee_email__iexact=referee_email
+                        ).first()
+                        if ref:
+                            credit = ReferralCredit.objects.filter(
+                                client=referrer, referral=ref
+                            ).first()
+                            if credit:
+                                send_referral_reward_earned_email(referrer, credit.amount)
+                    except Exception as ref_err:
+                        print(f"Error sending referral reward email (webhook): {ref_err}")
+
+                from .utils.email_utils import send_payment_confirmed_emails, send_thank_you_payment_email
                 from django.conf import settings
                 base_url = settings.CORS_ALLOWED_ORIGINS[0] if hasattr(settings, 'CORS_ALLOWED_ORIGINS') and settings.CORS_ALLOWED_ORIGINS else "http://localhost:3000"
                 send_payment_confirmed_emails(shoot.property_address, f"{base_url}/dashboard")
+                if shoot.photographer:
+                    send_thank_you_payment_email(shoot.property_address, shoot.contact_email, shoot.photographer.id)
             except ClientShoot.DoesNotExist:
                 pass
 
@@ -1488,22 +1569,23 @@ class AdminViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return User.objects.filter(is_staff=True).order_by('-date_joined')
 
-    def perform_create(self, serializer):
+    def create(self, request, *args, **kwargs):
         from django.contrib.auth.models import User
         from django.core.signing import TimestampSigner
         from .utils.email_utils import send_admin_invite_email
         from django.conf import settings
-        
-        data = self.request.data
-        email = data.get('email')
-        first_name = data.get('first_name', '')
-        last_name = data.get('last_name', '')
-        
-        if User.objects.filter(email=email).exists():
-            from rest_framework.exceptions import ValidationError
-            raise ValidationError({"email": "A user with this email already exists."})
+        from rest_framework.exceptions import ValidationError
 
-        # Create user but inactive with unusable password
+        email = request.data.get('email', '').strip()
+        first_name = request.data.get('first_name', '')
+        last_name = request.data.get('last_name', '')
+
+        if not email:
+            raise ValidationError({"detail": "Email is required."})
+
+        if User.objects.filter(email=email).exists() or User.objects.filter(username=email).exists():
+            raise ValidationError({"detail": "A user with this email already exists."})
+
         user = User.objects.create_user(
             username=email,
             email=email,
@@ -1514,27 +1596,29 @@ class AdminViewSet(viewsets.ModelViewSet):
         )
         user.set_unusable_password()
         user.save()
-        
-        # Generate token
-        signer = TimestampSigner()
-        token = signer.sign_object({'user_id': user.id})
-        
-        # Determine frontend URL
-        frontend_url = 'http://localhost:3000' if settings.DEBUG else 'https://kcmedia-frontend.vercel.app'
-        invite_link = f"{frontend_url}/admin-signup?token={token}"
-        
-        # Send Email
-        send_admin_invite_email(
-            email=email,
-            name=first_name,
-            invite_link=invite_link
-        )
+
+        try:
+            signer = TimestampSigner()
+            token = signer.sign_object({'user_id': user.id})
+            frontend_url = 'http://localhost:3000' if settings.DEBUG else 'https://kcmedia-frontend.vercel.app'
+            invite_link = f"{frontend_url}/admin-signup?token={token}"
+            send_admin_invite_email(email=email, name=first_name, invite_link=invite_link)
+        except Exception as e:
+            print(f"Error sending admin invite email: {e}")
+
+        return Response(AdminSerializer(user).data, status=status.HTTP_201_CREATED)
 
     def perform_destroy(self, instance):
+        from rest_framework.exceptions import ValidationError
+
         # Don't allow deleting yourself
         if instance == self.request.user:
-            from rest_framework.exceptions import ValidationError
             raise ValidationError("You cannot delete your own admin account.")
+
+        # Don't allow deleting the last active admin
+        active_admin_count = User.objects.filter(is_staff=True, is_active=True).count()
+        if active_admin_count <= 1:
+            raise ValidationError("Cannot delete the last admin account. Create another admin first.")
 
         hard_delete = self.request.query_params.get('hard') == 'true'
         

@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { 
-  Users, 
-  UserPlus, 
-  Send, 
-  CheckCircle2, 
-  Clock, 
-  CreditCard,
-  Search,
+import {
+  Users,
+  UserPlus,
+  Send,
+  CheckCircle2,
+  Clock,
+  Copy,
+  Link2,
   ArrowUpRight,
   Info,
   Gift,
@@ -21,9 +21,10 @@ export default function ReferralsPage() {
   const [loading, setLoading] = useState(true);
   const [referrals, setReferrals] = useState<any[]>([]);
   const [availableCredits, setAvailableCredits] = useState(0);
+  const [referralCode, setReferralCode] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     referee_name: "",
     referee_email: "",
@@ -34,13 +35,23 @@ export default function ReferralsPage() {
   const fetchReferrals = async () => {
     const token = localStorage.getItem("access_token");
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/referrals/`, {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
+      const [refRes, meRes] = await Promise.all([
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/referrals/`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        }),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/me/`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        }),
+      ]);
+      if (refRes.ok) {
+        const data = await refRes.json();
         setReferrals(data.results || data);
-        setAvailableCredits(data.available_credits || 0);
+        setAvailableCredits(parseFloat(data.available_credits || "0"));
+      }
+      if (meRes.ok) {
+        const me = await meRes.json();
+        setReferralCode(me.referral_code || "");
+        if (!me.referral_code) setAvailableCredits(parseFloat(me.available_credits || "0"));
       }
     } catch (err) {
       console.error("Error fetching referrals:", err);
@@ -53,6 +64,14 @@ export default function ReferralsPage() {
   useEffect(() => {
     fetchReferrals();
   }, []);
+
+  const referralLink = typeof window !== "undefined" && referralCode
+    ? `${window.location.origin}/book?ref=${referralCode}`
+    : "";
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text).then(() => toast.success(`${label} copied!`));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,6 +158,44 @@ export default function ReferralsPage() {
         </div>
       </div>
 
+      {/* Your Referral Code */}
+      {referralCode && (
+        <ScrollReveal>
+          <div className="bg-card rounded-[2.5rem] border border-primary/20 p-8 md:p-10 shadow-gold relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
+              <Link2 className="w-64 h-64 text-primary" />
+            </div>
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center gap-8">
+              <div className="flex-1 space-y-4">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary mb-1">Your Unique Referral Code</p>
+                  <h2 className="text-3xl font-black tracking-widest font-mono">{referralCode}</h2>
+                </div>
+                <p className="text-sm text-muted-foreground max-w-md">
+                  Share your code or link. When a friend books and their first shoot is paid, you automatically earn a credit.
+                </p>
+              </div>
+              <div className="flex flex-col gap-3 shrink-0">
+                <button
+                  onClick={() => copyToClipboard(referralCode, "Referral code")}
+                  className="flex items-center gap-3 px-6 py-3 bg-primary/10 border border-primary/20 rounded-2xl text-sm font-bold hover:bg-primary/20 transition-colors"
+                >
+                  <Copy className="w-4 h-4 text-primary" /> Copy Code
+                </button>
+                {referralLink && (
+                  <button
+                    onClick={() => copyToClipboard(referralLink, "Referral link")}
+                    className="flex items-center gap-3 px-6 py-3 bg-primary text-primary-foreground rounded-2xl text-sm font-bold hover:opacity-90 transition-opacity shadow-gold"
+                  >
+                    <Link2 className="w-4 h-4" /> Copy Booking Link
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </ScrollReveal>
+      )}
+
       {/* Referral Form */}
       {showForm && (
         <ScrollReveal>
@@ -210,9 +267,9 @@ export default function ReferralsPage() {
       {/* Program Info Cards */}
       <StaggerContainer className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {[
-          { title: "Step 1", desc: "Refer someone by submitting their contact info.", icon: UserPlus },
-          { title: "Step 2", desc: "They book their first shoot with KC Media.", icon: CheckCircle2 },
-          { title: "Step 3", desc: "You receive a reward credit on your next booking!", icon: Gift },
+          { title: "Step 1", desc: "Share your unique referral code or booking link with a friend.", icon: Link2 },
+          { title: "Step 2", desc: "They enter your code when booking and complete a paid shoot.", icon: CheckCircle2 },
+          { title: "Step 3", desc: "You automatically earn a credit applied to your next booking!", icon: Gift },
         ].map((step, i) => (
           <StaggerItem key={i}>
             <div className="bg-card p-8 rounded-[2rem] border border-border/40 shadow-sm hover:shadow-xl transition-all duration-500 group">
@@ -302,9 +359,7 @@ export default function ReferralsPage() {
         <div className="space-y-2 text-center md:text-left">
           <h3 className="text-lg font-black tracking-tight">How Rewards Work</h3>
           <p className="text-sm text-muted-foreground leading-relaxed max-w-2xl font-medium">
-            Once your referral completes their first paid shoot, your referral status will update to <span className="text-primary font-bold">"Lead Booked"</span>. 
-            Our administration will then issue a credit to your account, which will be automatically applied to your next booking or sent as a discount code. 
-            Once processed, the status will move to <span className="text-green-500 font-bold">"Reward Paid"</span>.
+            Share your personal referral code with anyone needing real estate media. When they use your code at booking and their first shoot is <span className="text-primary font-bold">paid</span>, a credit is automatically added to your account. Your credit will be applied as a discount when your next invoice is generated. Credits can stack — refer multiple people and earn on every one.
           </p>
         </div>
       </div>

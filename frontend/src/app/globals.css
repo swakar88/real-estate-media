@@ -119,3 +119,9 @@
     /* Force dark theme by default based on design reqs */
   }
 }
+
+/* Tell browser to render native date picker controls in dark mode */
+.dark input[type="date"],
+.dark input[type="datetime-local"] {
+  color-scheme: dark;
+}

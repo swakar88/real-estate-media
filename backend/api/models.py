@@ -3,6 +3,41 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from decimal import Decimal
 import datetime
+import random
+import string
+
+class UserProfile(models.Model):
+    """
+    Extends Django's User with a referral code.
+    Created automatically when a user registers.
+    """
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    referral_code = models.CharField(max_length=10, unique=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        if not self.referral_code:
+            self.referral_code = self._generate_unique_code()
+        super().save(*args, **kwargs)
+
+    @staticmethod
+    def _generate_unique_code():
+        chars = string.ascii_uppercase + string.digits
+        while True:
+            code = 'KC' + ''.join(random.choices(chars, k=6))
+            if not UserProfile.objects.filter(referral_code=code).exists():
+                return code
+
+    def available_credits(self):
+        """Sum of all unused referral credits for this user."""
+        from django.db.models import Sum
+        total = ReferralCredit.objects.filter(
+            client=self.user, is_used=False
+        ).aggregate(total=Sum('amount'))['total']
+        return total or Decimal('0.00')
+
+    def __str__(self):
+        return f"Profile: {self.user.email} (ref: {self.referral_code})"
+
 
 class Service(models.Model):
     CATEGORY_CHOICES = [
@@ -147,6 +182,8 @@ class BookingRequest(models.Model):
     time_slot = models.CharField(max_length=10, choices=PhotographerSlot.TIME_SLOTS, null=True, blank=True)
     assigned_photographer = models.ForeignKey(Photographer, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_bookings')
     
+    sqft = models.IntegerField(null=True, blank=True, help_text="Square footage of the property")
+    referral_code_used = models.CharField(max_length=10, blank=True, null=True, help_text="Referral code entered by the client at booking")
     referral_source = models.CharField(max_length=255, blank=True, null=True, help_text="How they heard about us or referral email")
     
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
@@ -190,6 +227,8 @@ class ClientShoot(models.Model):
     sqft = models.IntegerField(null=True, blank=True)
     property_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, help_text="Listing price of the property")
     
+    referral_code_used = models.CharField(max_length=10, blank=True, null=True, help_text="Referral code that was applied to this shoot")
+
     # Invoicing / Stripe Fields
     amount_due = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, help_text="Total amount for the shoot")
     payment_status = models.CharField(max_length=20, choices=PAYMENT_CHOICES, default='unpaid')
@@ -236,6 +275,39 @@ class ClientShoot(models.Model):
             if self.photographer:
                 self.photographer.total_earned += self.photographer_fee
                 self.photographer.save()
+
+            # Issue referral credit to the referrer when this shoot is paid
+            if self.referral_code_used:
+                try:
+                    referrer_profile = UserProfile.objects.get(referral_code=self.referral_code_used)
+                    referrer = referrer_profile.user
+                    settings_obj = GlobalSettings.objects.first()
+                    reward_amount = settings_obj.referral_reward_amount if settings_obj else Decimal('25.00')
+
+                    referee_email = self.contact_email or (self.client.email if self.client_id else '')
+                    referral, created = Referral.objects.get_or_create(
+                        referrer=referrer,
+                        referee_email=referee_email,
+                        defaults={
+                            'referee_name': self.contact_name or '',
+                            'status': 'completed',
+                            'reward_amount': reward_amount,
+                        }
+                    )
+                    if not created and referral.status != 'paid':
+                        referral.status = 'completed'
+                        referral.save()
+
+                    ReferralCredit.objects.get_or_create(
+                        referral=referral,
+                        defaults={
+                            'client': referrer,
+                            'amount': reward_amount,
+                            'is_used': False,
+                        }
+                    )
+                except UserProfile.DoesNotExist:
+                    pass  # Invalid referral code — silently ignore
 
         super().save(*args, **kwargs)
 

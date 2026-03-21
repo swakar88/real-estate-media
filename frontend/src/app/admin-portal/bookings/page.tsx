@@ -233,6 +233,16 @@ export default function AdminBookings() {
                                <span className="font-bold">Photographer: {booking.photographer_name || "Unassigned"}</span>
                             </div>
                           )}
+                         {booking.sqft && (
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/40 px-2.5 py-1 rounded-full border border-border/40">
+                               <span className="font-bold">{booking.sqft.toLocaleString()} sq ft</span>
+                            </div>
+                          )}
+                         {booking.referral_code_used && (
+                            <div className="flex items-center gap-1.5 text-xs text-primary bg-primary/5 px-2.5 py-1 rounded-full border border-primary/10">
+                               <span className="font-bold">Ref: {booking.referral_code_used}</span>
+                            </div>
+                          )}
                       </div>
                     </div>
                   </div>

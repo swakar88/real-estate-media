@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { CheckCircle2 } from "lucide-react";
 import { StaggerContainer, StaggerItem, ScrollReveal } from "@/components/ScrollReveal";
@@ -12,8 +13,15 @@ export default function BookingForm({ packages }: { packages: any[] }) {
   const [availableSlots, setAvailableSlots] = useState<Record<string, string[]>>({});
   const [fetchingSlots, setFetchingSlots] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const searchParams = useSearchParams();
 
   useEffect(() => {
+    // Pre-fill referral code from ?ref= URL param
+    const refCode = searchParams.get("ref");
+    if (refCode) {
+      setFormData(prev => ({ ...prev, referralCode: refCode.toUpperCase() }));
+    }
+
     // Check authentication and prefill data
     const token = localStorage.getItem("access_token");
     if (token) {
@@ -46,6 +54,7 @@ export default function BookingForm({ packages }: { packages: any[] }) {
         console.error("Failed to fetch slots", err);
         setFetchingSlots(false);
       });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const formatTime = (time: string) => {
@@ -64,6 +73,8 @@ export default function BookingForm({ packages }: { packages: any[] }) {
     phone: "",
     packageId: "",
     propertyDetails: "",
+    sqft: "",
+    referralCode: "",
     shootDate: "",
     timeSlot: ""
   });
@@ -98,6 +109,8 @@ export default function BookingForm({ packages }: { packages: any[] }) {
           phone: formData.phone,
           package_interest: formData.packageId === "custom" || !formData.packageId ? null : parseInt(formData.packageId, 10),
           property_details: formData.propertyDetails,
+          sqft: formData.sqft ? parseInt(formData.sqft, 10) : null,
+          referral_code_used: formData.referralCode.trim().toUpperCase() || null,
           shoot_date: formData.shootDate || null,
           time_slot: formData.timeSlot || null,
           status: "pending"
@@ -298,14 +311,29 @@ export default function BookingForm({ packages }: { packages: any[] }) {
 
       <div className="space-y-2">
          <label htmlFor="propertyDetails" className="text-sm font-medium">Property Address & Details</label>
-         <textarea 
-           id="propertyDetails" 
+         <textarea
+           id="propertyDetails"
            required
            value={formData.propertyDetails}
            onChange={handleChange}
-           rows={4} 
-           className="w-full bg-background border border-border/60 rounded-md px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none" 
-           placeholder="123 Main St... Briefly describe the property size and preferred shoot date." 
+           rows={4}
+           className="w-full bg-background border border-border/60 rounded-md px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+           placeholder="123 Main St... Briefly describe the property and any special requests."
+         />
+      </div>
+
+      <div className="space-y-2">
+         <label htmlFor="sqft" className="text-sm font-medium">
+           Property Size (sq ft) <span className="text-muted-foreground font-normal">— optional</span>
+         </label>
+         <input
+           type="number"
+           id="sqft"
+           min="0"
+           value={formData.sqft}
+           onChange={handleChange}
+           className="w-full bg-background border border-border/60 rounded-md px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+           placeholder="e.g. 2400"
          />
       </div>
 
@@ -347,9 +375,25 @@ export default function BookingForm({ packages }: { packages: any[] }) {
         </div>
       </div>
 
+      <div className="space-y-2">
+         <label htmlFor="referralCode" className="text-sm font-medium">
+           Referral Code <span className="text-muted-foreground font-normal">— optional</span>
+         </label>
+         <input
+           type="text"
+           id="referralCode"
+           value={formData.referralCode}
+           onChange={(e) => setFormData(prev => ({ ...prev, referralCode: e.target.value.toUpperCase() }))}
+           className="w-full bg-background border border-border/60 rounded-md px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 font-mono tracking-widest uppercase"
+           placeholder="e.g. KCAB1234"
+           maxLength={10}
+         />
+         <p className="text-xs text-muted-foreground">Enter a friend&apos;s referral code to apply their credit toward your booking.</p>
+      </div>
+
       <div className="pt-6">
-         <button 
-           type="submit" 
+         <button
+           type="submit"
            disabled={loading}
            className="w-full md:w-auto px-12 py-5 bg-primary text-primary-foreground font-black text-xs uppercase tracking-widest rounded-2xl shadow-gold hover:shadow-gold-heavy hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
          >

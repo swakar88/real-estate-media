@@ -1,10 +1,11 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import (
-    Service, GalleryImage, Package, BookingRequest, 
-    ClientShoot, Photographer, PhotographerSlot, 
+    Service, GalleryImage, Package, BookingRequest,
+    ClientShoot, Photographer, PhotographerSlot,
     SiteMedia, EmailConfiguration, EmailTemplate, MediaItem,
-    Referral, ReferralCredit, GlobalSettings, PhotographerPayment, SupportTicket, PhotographerRating
+    Referral, ReferralCredit, GlobalSettings, PhotographerPayment, SupportTicket, PhotographerRating,
+    UserProfile
 )
 
 class PhotographerPaymentSerializer(serializers.ModelSerializer):
@@ -111,16 +112,27 @@ class ClientShootSerializer(serializers.ModelSerializer):
 
 class PhotographerSerializer(serializers.ModelSerializer):
     full_name = serializers.CharField(source='user.get_full_name', read_only=True)
+    # user_name is an alias for full_name, kept for frontend compatibility
+    user_name = serializers.CharField(source='user.get_full_name', read_only=True)
+    first_name = serializers.CharField(source='user.first_name', read_only=True)
+    last_name = serializers.CharField(source='user.last_name', read_only=True)
     email = serializers.EmailField(source='user.email', read_only=True)
-    
+    booking_count = serializers.IntegerField(read_only=True, default=0)
+
     class Meta:
         model = Photographer
-        fields = ['id', 'user', 'full_name', 'email', 'phone', 'bio', 'profile_image_url', 'share_percentage', 'total_earned', 'is_active', 'stripe_account_id']
+        fields = [
+            'id', 'user', 'full_name', 'user_name', 'first_name', 'last_name',
+            'email', 'phone', 'bio', 'profile_image_url', 'share_percentage',
+            'total_earned', 'is_active', 'is_archived', 'stripe_account_id', 'booking_count',
+        ]
+        read_only_fields = ['user', 'total_earned', 'is_archived']
 
 class PhotographerSlotSerializer(serializers.ModelSerializer):
     class Meta:
         model = PhotographerSlot
         fields = '__all__'
+        read_only_fields = ['photographer']
 
 class SiteMediaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -143,12 +155,33 @@ class PhotographerRatingSerializer(serializers.ModelSerializer):
         model = PhotographerRating
         fields = '__all__'
 
+class UserProfileSerializer(serializers.ModelSerializer):
+    referral_code = serializers.CharField(read_only=True)
+    available_credits = serializers.SerializerMethodField()
+
+    class Meta:
+        model = UserProfile
+        fields = ['referral_code', 'available_credits']
+
+    def get_available_credits(self, obj):
+        return str(obj.available_credits())
+
+
 class ClientSerializer(serializers.ModelSerializer):
+    full_name = serializers.SerializerMethodField()
+    booking_count = serializers.IntegerField(read_only=True, default=0)
+    date_joined = serializers.DateTimeField(read_only=True)
+    last_login = serializers.DateTimeField(read_only=True)
+
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'full_name', 'booking_count', 'date_joined', 'last_login']
+
+    def get_full_name(self, obj):
+        return obj.get_full_name() or obj.username
 
 class AdminSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'is_active', 'date_joined', 'last_login']
+        read_only_fields = ['username', 'date_joined', 'last_login']

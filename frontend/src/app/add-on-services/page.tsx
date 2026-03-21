@@ -37,8 +37,8 @@ export default function AddOnServices() {
         {
             id: 'dusk',
             key: 'services_dusk',
-            title: 'Twilight',
-            description: '"Transform standard daytime exterior photos into stunning, high-end twilight imagery. Perfect for catching the eye of luxury buyers."',
+            title: 'Twilight Conversion',
+            description: 'Transform standard daytime exterior photos into stunning, high-end twilight imagery. Guaranteed to capture attention instantly on premium listings.',
             category: 'Architectural',
             icon: 'Twilight',
             price: '10.00',
@@ -47,8 +47,8 @@ export default function AddOnServices() {
         {
             id: 'staging',
             key: 'services_staging',
-            title: 'Virtual de-clutter/staging',
-            description: '"Digitally remove unwanted furniture or add premium staging to empty rooms. Create a showroom-quality look for every room."',
+            title: 'Virtual De-clutter',
+            description: 'Digitally remove unwanted furniture, vehicles, or personal items. We present a pristine, showroom-quality space that invites potential buyers in.',
             category: 'Interior Optimization',
             icon: 'Interior',
             price: '10.00',
@@ -57,8 +57,8 @@ export default function AddOnServices() {
         {
             id: 'grass',
             key: 'services_grass',
-            title: 'Lush Grass',
-            description: '"Enhance patchy or brown lawns to a vibrant, lush green. Ensure the property looks its absolute best regardless of the season."',
+            title: 'Lush Grass Edit',
+            description: 'Enhance patchy or dormant lawns to a vibrant, lush green. Perfect for maximizing first impressions and property value throughout the year.',
             category: 'Curb Appeal',
             icon: 'Lawn',
             price: '10.00',
@@ -121,8 +121,8 @@ export default function AddOnServices() {
                                                     {service.title.split(' & ')[0]} 
                                                     {service.title.includes(' & ') && <span className="text-primary italic"> & {service.title.split(' & ')[1]}</span>}
                                                 </h2>
-                                                <p className="text-lg text-muted-foreground leading-relaxed font-light italic">
-                                                    "{service.description}"
+                                                <p className="text-lg text-muted-foreground leading-relaxed font-light">
+                                                    {service.description}
                                                 </p>
                                             </div>
 

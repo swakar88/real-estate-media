@@ -579,13 +579,16 @@ export default function PhotographerPortal() {
                   <form onSubmit={addSlot} className="space-y-6">
                     <div className="space-y-2">
                        <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Select Date</label>
-                       <input 
-                         type="date" 
-                         required 
-                         className="w-full bg-muted/30 border border-border rounded-2xl px-6 py-4 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-sans" 
-                         value={date} 
-                         onChange={e => setDate(e.target.value)} 
-                       />
+                       <div className="relative">
+                         <input
+                           type="date"
+                           required
+                           className="w-full bg-background text-foreground border border-border rounded-2xl px-6 py-4 pr-12 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-sans [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+                           value={date}
+                           onChange={e => setDate(e.target.value)}
+                         />
+                         <Calendar className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                       </div>
                     </div>
                     <div className="space-y-2">
                        <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Time Window</label>
@@ -819,10 +822,6 @@ export default function PhotographerPortal() {
       <style jsx global>{`
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .dark input[type="date"]::-webkit-calendar-picker-indicator {
-          filter: invert(1);
-          opacity: 0.5;
-        }
         .upload-type-select {
           background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='gray' stroke-width='3'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
           background-repeat: no-repeat;

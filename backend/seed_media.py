@@ -4,7 +4,7 @@ import django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django.setup()
 
-from api.models import SiteMedia
+from api.models import SiteMedia, GalleryImage
 
 media_items = [
     {
@@ -73,7 +73,7 @@ media_items = [
 ]
 
 for item in media_items:
-    SiteMedia.objects.update_or_create(
+    SiteMedia.objects.get_or_create(
         key=item['key'],
         defaults={
             'title': item['title'],
@@ -83,4 +83,27 @@ for item in media_items:
         }
     )
 
-print("Successfully seeded SiteMedia tables!")
+# Gallery images — only created on first deploy; never overwritten
+gallery_items = [
+    {"title": "Modern Living Room",   "category": "interior",  "featured": True,  "image_url": "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80"},
+    {"title": "Luxury Exterior",      "category": "exterior",  "featured": True,  "image_url": "https://images.unsplash.com/photo-1600607687931-ceeb66d11362?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80"},
+    {"title": "Minimalist Kitchen",   "category": "interior",  "featured": True,  "image_url": "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80"},
+    {"title": "Twilight Pool",        "category": "twilight",  "featured": True,  "image_url": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80"},
+    {"title": "Cozy Bedroom",         "category": "interior",  "featured": True,  "image_url": "https://images.unsplash.com/photo-1600607686527-6fb886090705?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80"},
+    {"title": "Aerial Estate",        "category": "aerial",    "featured": True,  "image_url": "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80"},
+    {"title": "Elegant Bathroom",     "category": "interior",  "featured": True,  "image_url": "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80"},
+    {"title": "Home Office Setup",    "category": "interior",  "featured": True,  "image_url": "https://images.unsplash.com/photo-1600607687931-ceeb66d11362?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80"},
+    {"title": "Spacious Patio",       "category": "exterior",  "featured": True,  "image_url": "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80"},
+]
+
+for item in gallery_items:
+    GalleryImage.objects.get_or_create(
+        title=item['title'],
+        category=item['category'],
+        defaults={
+            'image_url': item['image_url'],
+            'featured': item['featured'],
+        }
+    )
+
+print("Successfully seeded SiteMedia and GalleryImage tables!")

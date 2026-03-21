@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/ScrollReveal";
@@ -39,7 +40,9 @@ export default async function BookOnline() {
         </section>
         <section className="py-20 bg-background">
           <div className="container mx-auto px-4 md:px-8 max-w-5xl">
-            <BookingForm packages={packages} />
+            <Suspense fallback={<div className="py-20 flex justify-center"><span className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" /></div>}>
+          <BookingForm packages={packages} />
+        </Suspense>
           </div>
         </section>
 

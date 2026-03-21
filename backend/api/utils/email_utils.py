@@ -68,6 +68,155 @@ def _get_email_template(title, content_html, button_text=None, button_url=None):
     </html>
     """
 
+def send_email_with_attachment(subject, recipient_email, html_content, attachment_bytes, attachment_filename, attachment_mime=('text', 'calendar'), from_email=None, from_name=None, cc=None, bcc=None):
+    """
+    Sends an HTML email with a single binary attachment via SMTP.
+    Falls back to send_email_dynamic (no attachment) if SMTP is unavailable.
+    """
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+    from email.mime.base import MIMEBase
+    from email import encoders
+
+    connection, config = get_email_connection()
+    if not connection:
+        # No SMTP — send without attachment via fallback
+        return send_email_dynamic(subject, recipient_email, html_content, from_email, from_name, cc, bcc)
+
+    cc_list = [cc] if cc and isinstance(cc, str) else (cc or [])
+    bcc_list = [bcc] if bcc and isinstance(bcc, str) else (bcc or [])
+    if config:
+        if config.default_cc and config.default_cc not in cc_list:
+            cc_list.append(config.default_cc)
+        if config.default_bcc and config.default_bcc not in bcc_list:
+            bcc_list.append(config.default_bcc)
+
+    try:
+        email_from = f"{from_name or config.email_from_name} <{from_email or config.email_from_address}>"
+        msg = EmailMessage(
+            subject,
+            html_content,
+            email_from,
+            [recipient_email],
+            cc=cc_list,
+            bcc=bcc_list,
+            connection=connection,
+        )
+        msg.content_subtype = 'html'
+
+        # Attach the file
+        part = MIMEBase(*attachment_mime)
+        part.set_payload(attachment_bytes)
+        encoders.encode_base64(part)
+        part.add_header('Content-Disposition', 'attachment', filename=attachment_filename)
+        msg.attach(part)
+
+        msg.send()
+        print(f"Email '{subject}' with attachment sent to {recipient_email}.")
+        return True
+    except Exception as e:
+        print(f"Failed to send email with attachment: {e}")
+        return False
+
+
+def send_booking_calendar_invite(booking, client_email, photographer_email=None, method='REQUEST', sequence=0):
+    """
+    Sends iCal calendar invite(s) to the client (and optionally photographer).
+    booking: BookingRequest instance
+    method:  'REQUEST' (create/update) | 'CANCEL'
+    sequence: increment on each update/cancel so email clients recognise the change
+    """
+    from .ical_utils import generate_ical
+
+    if not booking.shoot_date or not booking.time_slot:
+        return  # Nothing to invite to
+
+    site_settings = None
+    try:
+        from api.models import GlobalSettings
+        site_settings = GlobalSettings.objects.first()
+    except Exception:
+        pass
+
+    organizer_email = 'noreply@kcrealestate.com'
+    organizer_name = site_settings.site_name if site_settings else 'KC Real Estate Media'
+
+    summary = f"Property Shoot — {booking.property_details[:60]}"
+    location = booking.property_details[:200]
+    package_name = str(booking.package_interest) if booking.package_interest else 'N/A'
+    description = (
+        f"KC Real Estate Media Shoot\n"
+        f"Package: {package_name}\n"
+        f"Date: {booking.shoot_date}\n"
+        f"Time: {booking.time_slot} CT\n"
+        f"Address: {booking.property_details}"
+    )
+
+    # Use a stable UID tied to the booking so updates/cancels target the same event
+    uid = f"booking-{booking.id}@kcrealestate.com"
+
+    action_label = "Cancellation" if method == 'CANCEL' else "Confirmation"
+    subject = f"Shoot {action_label} — {booking.property_details[:50]}"
+
+    # Client invite
+    ical_bytes = generate_ical(
+        uid=uid,
+        summary=summary,
+        location=location,
+        description=description,
+        shoot_date=booking.shoot_date,
+        time_slot=booking.time_slot,
+        method=method,
+        sequence=sequence,
+        organizer_email=organizer_email,
+        organizer_name=organizer_name,
+        attendee_email=client_email,
+    )
+    client_body = (
+        f"Your shoot at {booking.property_details[:60]} has been {action_label.lower()}d.\n\n"
+        f"Date: {booking.shoot_date} at {booking.time_slot} CT.\n\n"
+        f"The calendar invite is attached. Please add it to your calendar."
+    )
+    send_email_with_attachment(
+        subject=subject,
+        recipient_email=client_email,
+        html_content=_get_email_template(f"Shoot {action_label}", client_body),
+        attachment_bytes=ical_bytes,
+        attachment_filename='invite.ics',
+        attachment_mime=('text', 'calendar'),
+    )
+
+    # Photographer invite
+    if photographer_email:
+        phot_ical_bytes = generate_ical(
+            uid=uid,
+            summary=summary,
+            location=location,
+            description=description,
+            shoot_date=booking.shoot_date,
+            time_slot=booking.time_slot,
+            method=method,
+            sequence=sequence,
+            organizer_email=organizer_email,
+            organizer_name=organizer_name,
+            attendee_email=photographer_email,
+        )
+        phot_body = (
+            f"A shoot has been {'cancelled' if method == 'CANCEL' else 'assigned to you'}.\n\n"
+            f"Property: {booking.property_details[:60]}\n"
+            f"Date: {booking.shoot_date} at {booking.time_slot} CT.\n\n"
+            f"The calendar invite is attached."
+        )
+        send_email_with_attachment(
+            subject=subject,
+            recipient_email=photographer_email,
+            html_content=_get_email_template(f"Shoot {action_label}", phot_body),
+            attachment_bytes=phot_ical_bytes,
+            attachment_filename='invite.ics',
+            attachment_mime=('text', 'calendar'),
+        )
+
+
 def send_email_dynamic(subject, recipient_email, html_content, from_email=None, from_name=None, cc=None, bcc=None):
     """
     Sends an email using either the configured SMTP backend or Resend as a fallback.
@@ -258,6 +407,18 @@ Please log in to your portal to view more details and upload media once the shoo
             html_content=_get_email_template("New Shoot Assigned", photog_content),
             to_email=photographer_email
         )
+
+    # Calendar invites — attach .ics to both parties
+    try:
+        send_booking_calendar_invite(
+            booking=booking,
+            client_email=customer_email,
+            photographer_email=photographer_email,
+            method='REQUEST',
+            sequence=0,
+        )
+    except Exception as e:
+        print(f"Calendar invite failed: {e}")
 
 def send_content_uploaded_emails(shoot_address, to_email=None):
     admin_content = f"Media has been uploaded for the property at {shoot_address}. It is now ready for client delivery."

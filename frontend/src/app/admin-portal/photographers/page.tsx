@@ -734,9 +734,9 @@ export default function AdminPhotographers() {
                                <label className="text-[10px] font-black uppercase text-muted-foreground/60 ml-1">Payment Date</label>
                                <div className="relative">
                                   <CalendarIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
-                                  <input 
+                                  <input
                                      type="date" required
-                                     className="w-full bg-background/50 border border-primary/10 rounded-2xl pl-11 pr-4 py-3.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all shadow-inner"
+                                     className="w-full bg-background/50 border border-primary/10 rounded-2xl pl-11 pr-4 py-3.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all shadow-inner [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
                                      value={paymentData.payment_date}
                                      onChange={(e) => setPaymentData({ ...paymentData, payment_date: e.target.value })}
                                   />
@@ -839,18 +839,21 @@ export default function AdminPhotographers() {
                          <form onSubmit={addSlot} className="space-y-4">
                             <div>
                                <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Date</label>
-                               <input 
-                                 type="date" required 
-                                 className="w-full bg-black/40 border border-primary/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 font-bold" 
-                                 value={date} 
-                                 onChange={e => setDate(e.target.value)} 
-                               />
+                               <div className="relative">
+                                 <input
+                                   type="date" required
+                                   className="w-full bg-background border border-primary/10 rounded-xl px-4 py-3 pr-10 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 font-bold [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+                                   value={date}
+                                   onChange={e => setDate(e.target.value)}
+                                 />
+                                 <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                               </div>
                             </div>
                             <div className="grid grid-cols-2 gap-3">
                                <div>
                                   <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Range From</label>
                                   <select 
-                                    className="w-full bg-black/40 border border-primary/10 rounded-xl px-3 py-3 text-xs font-black uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer" 
+                                    className="w-full bg-background text-foreground border border-primary/10 rounded-xl px-3 py-3 text-xs font-black uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer" 
                                     value={timeFrom} 
                                     onChange={e => setTimeFrom(e.target.value)}
                                   >
@@ -864,7 +867,7 @@ export default function AdminPhotographers() {
                                <div>
                                   <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Range To</label>
                                   <select 
-                                    className="w-full bg-black/40 border border-primary/10 rounded-xl px-3 py-3 text-xs font-black uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer" 
+                                    className="w-full bg-background text-foreground border border-primary/10 rounded-xl px-3 py-3 text-xs font-black uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer" 
                                     value={timeTo} 
                                     onChange={e => setTimeTo(e.target.value)}
                                   >
@@ -1093,12 +1096,15 @@ export default function AdminPhotographers() {
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-black uppercase text-muted-foreground">Date</label>
-                                    <input 
-                                        type="date" required
-                                        className="w-full bg-background border border-primary/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                        value={paymentData.payment_date}
-                                        onChange={e => setPaymentData({...paymentData, payment_date: e.target.value})}
-                                    />
+                                    <div className="relative">
+                                      <input
+                                          type="date" required
+                                          className="w-full bg-background border border-primary/10 rounded-xl px-4 py-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+                                          value={paymentData.payment_date}
+                                          onChange={e => setPaymentData({...paymentData, payment_date: e.target.value})}
+                                      />
+                                      <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                                    </div>
                                 </div>
                             </div>
                             <div className="space-y-1">

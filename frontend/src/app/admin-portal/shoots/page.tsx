@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Camera, Plus, Trash2, Edit, Search, Filter, ExternalLink, CreditCard, CheckCircle2, AlertCircle, Clock, DollarSign, Calendar, MapPin, Mail } from "lucide-react";
+import { Camera, Plus, Edit, Search, Filter, ExternalLink, CreditCard, CheckCircle2, AlertCircle, Clock, DollarSign, Calendar, MapPin, Mail } from "lucide-react";
 import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/ScrollReveal";
 
 export default function AdminShoots() {
@@ -154,24 +154,6 @@ export default function AdminShoots() {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this shoot record? This cannot be undone.")) return;
-    try {
-      const token = localStorage.getItem("access_token");
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/shoots/${id}/`, {
-        method: "DELETE",
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      if (res.ok) {
-        setShoots(shoots.filter(s => s.id !== id));
-      } else {
-        alert("Failed to delete shoot");
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
   const handleEdit = (shoot: any) => {
     setEditingShootId(shoot.id);
     setEditFormData({
@@ -269,8 +251,12 @@ export default function AdminShoots() {
                        <tr key={shoot.id} className="hover:bg-muted/20 transition-colors group">
                           <td className="px-6 py-4">
                              <div className="font-bold text-base truncate max-w-[280px]" title={shoot.property_address}>{shoot.property_address}</div>
-                             <div className="text-xs text-primary font-medium mt-1 uppercase tracking-wider">
-                                {new Date(shoot.shoot_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                             <div className="flex items-center flex-wrap gap-2 mt-1">
+                                <div className="text-xs text-primary font-medium uppercase tracking-wider">
+                                   {new Date(shoot.shoot_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                                </div>
+                                {shoot.sqft && <span className="text-[10px] text-muted-foreground bg-muted/40 px-1.5 py-0.5 rounded font-medium">{shoot.sqft.toLocaleString()} sq ft</span>}
+                                {shoot.referral_code_used && <span className="text-[10px] text-primary bg-primary/5 px-1.5 py-0.5 rounded font-bold">ref: {shoot.referral_code_used}</span>}
                              </div>
                           </td>
                           <td className="px-6 py-4">
@@ -327,12 +313,6 @@ export default function AdminShoots() {
                                    className="p-2 text-muted-foreground hover:text-primary transition-colors opacity-40 group-hover:opacity-100"
                                 >
                                    <Edit className="w-4 h-4" />
-                                </button>
-                                <button 
-                                   onClick={() => handleDelete(shoot.id)}
-                                   className="p-2 text-muted-foreground hover:text-destructive transition-colors opacity-40 group-hover:opacity-100"
-                                >
-                                   <Trash2 className="w-4 h-4" />
                                 </button>
                              </div>
                           </td>

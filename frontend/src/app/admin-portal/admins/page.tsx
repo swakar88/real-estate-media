@@ -118,6 +118,11 @@ export default function AdminsPage() {
   };
 
   const handleDelete = async (adminId: number) => {
+    const activeAdmins = admins.filter(a => a.is_active !== false);
+    if (activeAdmins.length <= 1) {
+      alert("Cannot delete the last admin account. Create another admin first.");
+      return;
+    }
     if (!confirm("Are you sure you want to PERMANENTLY delete this admin account? This cannot be undone.")) return;
 
     setActionLoading(adminId.toString());
@@ -127,9 +132,12 @@ export default function AdminsPage() {
         method: "DELETE",
         headers: { "Authorization": `Bearer ${token}` }
       });
-      
+
       if (res.ok) {
         fetchAdmins();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.detail || data[0] || "Failed to delete admin account.");
       }
     } catch (err) {
       console.error("Failed to delete admin", err);
