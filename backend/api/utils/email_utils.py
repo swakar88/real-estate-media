@@ -5,6 +5,24 @@ from django.core.mail import get_connection, EmailMessage
 from api.models import EmailConfiguration, EmailTemplate
 import re
 
+def _log_email(recipient, subject, cc=None, bcc=None, template_slug=None, trigger_event=None, status='sent', error_message=None):
+    """Persist an email audit record. Silently swallows any DB errors."""
+    try:
+        from api.models import EmailLog
+        EmailLog.objects.create(
+            recipient=recipient,
+            subject=subject,
+            cc=', '.join(cc) if isinstance(cc, list) else (cc or ''),
+            bcc=', '.join(bcc) if isinstance(bcc, list) else (bcc or ''),
+            template_slug=template_slug or '',
+            trigger_event=trigger_event or '',
+            status=status,
+            error_message=error_message or '',
+        )
+    except Exception as e:
+        print(f"EmailLog write failed (non-critical): {e}")
+
+
 def get_email_connection():
     """
     Returns a configured SMTP connection if an active EmailConfiguration exists.
@@ -113,9 +131,11 @@ def send_email_with_attachment(subject, recipient_email, html_content, attachmen
 
         msg.send()
         print(f"Email '{subject}' with attachment sent to {recipient_email}.")
+        _log_email(recipient_email, subject, cc=cc_list, bcc=bcc_list, status='sent')
         return True
     except Exception as e:
         print(f"Failed to send email with attachment: {e}")
+        _log_email(recipient_email, subject, cc=cc_list, bcc=bcc_list, status='failed', error_message=str(e))
         return False
 
 
@@ -251,9 +271,11 @@ def send_email_dynamic(subject, recipient_email, html_content, from_email=None, 
             email.content_subtype = "html"
             email.send()
             print(f"Email '{subject}' sent successfully to {recipient_email} via SMTP.")
+            _log_email(recipient_email, subject, cc=cc_list, bcc=bcc_list, status='sent')
             return True
         except Exception as e:
             print(f"Failed to send email via SMTP: {e}. Falling back to Resend...")
+            _log_email(recipient_email, subject, cc=cc_list, bcc=bcc_list, status='failed', error_message=str(e))
 
     # Fallback to Resend
     resend.api_key = os.environ.get('RESEND_API_KEY')
@@ -272,9 +294,11 @@ def send_email_dynamic(subject, recipient_email, html_content, from_email=None, 
             "html": html_content
         })
         print(f"Email '{subject}' sent successfully to {recipient_email} via Resend. Resend ID: {response.get('id')}")
+        _log_email(recipient_email, subject, cc=cc_list, bcc=bcc_list, status='sent')
         return True
     except Exception as e:
         print(f"Failed to send email via Resend: {e}")
+        _log_email(recipient_email, subject, cc=cc_list, bcc=bcc_list, status='failed', error_message=str(e))
         return False
 
 def _render_template(body, context):

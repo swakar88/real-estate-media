@@ -5,7 +5,7 @@ from .models import (
     ClientShoot, Photographer, PhotographerSlot,
     SiteMedia, EmailConfiguration, EmailTemplate, MediaItem,
     Referral, ReferralCredit, GlobalSettings, PhotographerPayment, SupportTicket, PhotographerRating,
-    UserProfile
+    UserProfile, EmailLog
 )
 
 class PhotographerPaymentSerializer(serializers.ModelSerializer):
@@ -154,6 +154,12 @@ class PhotographerRatingSerializer(serializers.ModelSerializer):
     class Meta:
         model = PhotographerRating
         fields = '__all__'
+
+class EmailLogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EmailLog
+        fields = '__all__'
+        read_only_fields = ['sent_at']
 
 class UserProfileSerializer(serializers.ModelSerializer):
     referral_code = serializers.CharField(read_only=True)
