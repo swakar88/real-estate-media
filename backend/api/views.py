@@ -900,10 +900,13 @@ class ReferralViewSet(viewsets.ModelViewSet):
         reward = settings.referral_reward_amount if settings else 25.00
         
         referral = serializer.save(referrer=self.request.user, reward_amount=reward)
-        
-        # Trigger referral email
-        from .utils.email_utils import send_referral_received_email
-        send_referral_received_email(referral)
+
+        # Trigger referral email — wrapped so a failed email never blocks the referral being saved
+        try:
+            from .utils.email_utils import send_referral_received_email
+            send_referral_received_email(referral)
+        except Exception as e:
+            print(f"Referral invite email failed (referral saved OK): {e}")
 
 class GlobalSettingsViewSet(viewsets.ModelViewSet):
     queryset = GlobalSettings.objects.all()

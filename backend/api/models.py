@@ -277,7 +277,12 @@ class ClientShoot(models.Model):
                 self.photographer.save()
 
             # Issue referral credit to the referrer when this shoot is paid
-            if self.referral_code_used:
+            # Single-use enforcement: a customer can only benefit a referrer once
+            if self.referral_code_used and not ClientShoot.objects.filter(
+                client=self.client,
+                referral_code_used__isnull=False,
+                payment_status='paid'
+            ).exclude(pk=self.pk).exists():
                 try:
                     referrer_profile = UserProfile.objects.get(referral_code=self.referral_code_used)
                     referrer = referrer_profile.user
