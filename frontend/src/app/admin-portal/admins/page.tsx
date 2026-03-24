@@ -147,20 +147,23 @@ export default function AdminsPage() {
   };
 
   const handleImageUpload = async (adminId: number, file: File) => {
-    const formData = new FormData();
-    formData.append('profile_image', file);
-    
     setActionLoading(`img-${adminId}`);
     try {
       const token = localStorage.getItem("access_token");
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/admins/${adminId}/`, {
+      const urlRes = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/gallery/get-upload-url/?filename=profile_admin_${adminId}_${file.name}&contentType=${encodeURIComponent(file.type)}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (!urlRes.ok) throw new Error("Failed to get upload URL");
+      const { upload_url, public_url } = await urlRes.json();
+      const uploadRes = await fetch(upload_url, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
+      if (!uploadRes.ok) throw new Error("Upload failed");
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/me/`, {
         method: "PATCH",
-        headers: { "Authorization": `Bearer ${token}` },
-        body: formData
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ profile_image_url: public_url }),
       });
-      if (res.ok) {
-        fetchAdmins();
-      }
+      setAdmins(prev => prev.map(a => a.id === adminId ? { ...a, profile_image_url: public_url } : a));
     } catch (err) {
       console.error("Failed to upload image", err);
     } finally {
@@ -202,8 +205,8 @@ export default function AdminsPage() {
                 <div className="flex items-center gap-4 mb-4">
                   <div className="relative group/avatar">
                     <div className="h-16 w-16 rounded-[1.25rem] bg-primary/10 border border-primary/20 text-primary flex items-center justify-center font-black text-2xl shadow-gold overflow-hidden">
-                      {admin.profile_image ? (
-                        <img src={admin.profile_image} alt={admin.full_name} className="w-full h-full object-cover" />
+                      {admin.profile_image_url ? (
+                        <img src={admin.profile_image_url} alt={admin.full_name} className="w-full h-full object-cover" />
                       ) : (
                         admin.full_name?.[0] || admin.username?.[0] || "A"
                       )}

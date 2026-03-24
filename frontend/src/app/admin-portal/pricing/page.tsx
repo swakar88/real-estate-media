@@ -29,6 +29,9 @@ export default function PricingManagementPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'packages' | 'add-ons'>('packages');
+    const [showAddModal, setShowAddModal] = useState(false);
+    const [addForm, setAddForm] = useState({ name: '', price: '', description: '', features: '', is_popular: false, order: 0 });
+    const [addSubmitting, setAddSubmitting] = useState(false);
 
     useEffect(() => {
         fetchData();
@@ -112,6 +115,35 @@ export default function PricingManagementPage() {
         }
     };
 
+    const handleAddPackage = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setAddSubmitting(true);
+        try {
+            const token = localStorage.getItem('access_token');
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/packages/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({
+                    name: addForm.name,
+                    price: addForm.price,
+                    description: addForm.description,
+                    features: addForm.features.split('\n').filter(l => l.trim() !== ''),
+                    is_popular: addForm.is_popular,
+                    order: addForm.order
+                })
+            });
+            if (res.ok) {
+                setShowAddModal(false);
+                setAddForm({ name: '', price: '', description: '', features: '', is_popular: false, order: 0 });
+                fetchData();
+            }
+        } catch (err) {
+            console.error("Error adding package:", err);
+        } finally {
+            setAddSubmitting(false);
+        }
+    };
+
     const updatePackageField = (id: number, field: string, value: any) => {
         setPackages(prev => prev.map(p => p.id === id ? { ...p, [field]: value } : p));
     };
@@ -158,13 +190,24 @@ export default function PricingManagementPage() {
                     </button>
                 </div>
 
-                <button 
-                    type="button"
-                    onClick={fetchData}
-                    className="px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-white transition-all flex items-center gap-2"
-                >
-                    <Plus className="w-3 h-3 rotate-45" /> Refresh Data
-                </button>
+                <div className="flex items-center gap-3">
+                    {activeTab === 'packages' && (
+                        <button
+                            type="button"
+                            onClick={() => setShowAddModal(true)}
+                            className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 text-xs font-black uppercase tracking-widest rounded-xl hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 active:scale-95"
+                        >
+                            <Plus className="w-3 h-3" /> New Package
+                        </button>
+                    )}
+                    <button
+                        type="button"
+                        onClick={fetchData}
+                        className="px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-white transition-all flex items-center gap-2"
+                    >
+                        <Plus className="w-3 h-3 rotate-45" /> Refresh Data
+                    </button>
+                </div>
             </div>
 
             {activeTab === 'packages' ? (
@@ -278,6 +321,53 @@ export default function PricingManagementPage() {
                     )}
                 </StaggerContainer>
             )}
+        {/* Add New Package Modal */}
+        {showAddModal && (
+            <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+                <div className="bg-card w-full max-w-lg rounded-[2.5rem] shadow-gold-heavy border border-primary/20 p-10 animate-in zoom-in-95 duration-200">
+                    <div className="flex items-center justify-between mb-6">
+                        <h2 className="text-2xl font-black">New Package</h2>
+                        <button onClick={() => setShowAddModal(false)} className="p-2 hover:bg-muted rounded-xl transition-all"><AlertCircle className="w-5 h-5 opacity-50" /></button>
+                    </div>
+                    <form onSubmit={handleAddPackage} className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Package Name</label>
+                                <input required type="text" placeholder="Starter" value={addForm.name} onChange={e => setAddForm({...addForm, name: e.target.value})} className="w-full rounded-xl border border-primary/10 bg-black/40 px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all" />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Price ($)</label>
+                                <input required type="number" placeholder="299" value={addForm.price} onChange={e => setAddForm({...addForm, price: e.target.value})} className="w-full rounded-xl border border-primary/10 bg-black/40 px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all" />
+                            </div>
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Description</label>
+                            <input type="text" placeholder="Perfect for small properties" value={addForm.description} onChange={e => setAddForm({...addForm, description: e.target.value})} className="w-full rounded-xl border border-primary/10 bg-black/40 px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all" />
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Features (one per line)</label>
+                            <textarea rows={5} placeholder="20 Photos&#10;MLS-ready delivery&#10;..." value={addForm.features} onChange={e => setAddForm({...addForm, features: e.target.value})} className="w-full rounded-xl border border-primary/10 bg-black/40 px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all resize-none" />
+                        </div>
+                        <div className="flex items-center gap-6">
+                            <div className="space-y-1.5 flex-1">
+                                <label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Display Order</label>
+                                <input type="number" min={0} value={addForm.order} onChange={e => setAddForm({...addForm, order: Number(e.target.value)})} className="w-full rounded-xl border border-primary/10 bg-black/40 px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all" />
+                            </div>
+                            <label className="flex items-center gap-2 cursor-pointer mt-5">
+                                <input type="checkbox" checked={addForm.is_popular} onChange={e => setAddForm({...addForm, is_popular: e.target.checked})} className="w-4 h-4 accent-primary" />
+                                <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">Mark as Popular</span>
+                            </label>
+                        </div>
+                        <div className="flex justify-end gap-3 pt-2">
+                            <button type="button" onClick={() => setShowAddModal(false)} className="px-6 py-3 text-sm font-bold bg-muted text-muted-foreground rounded-xl hover:bg-muted/80 transition-all active:scale-95">Cancel</button>
+                            <button type="submit" disabled={addSubmitting} className="px-6 py-3 text-sm font-bold bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 active:scale-95 disabled:opacity-50 flex items-center gap-2">
+                                {addSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Create Package
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        )}
         </div>
     );
 }

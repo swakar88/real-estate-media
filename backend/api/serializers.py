@@ -181,7 +181,19 @@ class ClientSerializer(serializers.ModelSerializer):
         return obj.get_full_name() or obj.username
 
 class AdminSerializer(serializers.ModelSerializer):
+    full_name = serializers.SerializerMethodField()
+    profile_image_url = serializers.SerializerMethodField()
+
+    def get_full_name(self, obj):
+        return f"{obj.first_name} {obj.last_name}".strip() or obj.username
+
+    def get_profile_image_url(self, obj):
+        try:
+            return obj.userprofile.profile_image_url or ""
+        except Exception:
+            return ""
+
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'is_active', 'date_joined', 'last_login']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'full_name', 'profile_image_url', 'is_active', 'date_joined', 'last_login']
         read_only_fields = ['username', 'date_joined', 'last_login']

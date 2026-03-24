@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { Save, Link as LinkIcon, Image as ImageIcon, Video, Loader2, AlertCircle, Upload, CheckCircle2, X } from "lucide-react";
+import { Save, Link as LinkIcon, Image as ImageIcon, Video, Loader2, AlertCircle, Upload, CheckCircle2, X, Plus } from "lucide-react";
 import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/ScrollReveal";
 
 interface SiteMedia {
@@ -20,6 +20,9 @@ export default function SiteMediaAdminPage() {
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [uploadingKey, setUploadingKey] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | null }>({ message: '', type: null });
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addForm, setAddForm] = useState({ key: '', title: '', description: '', media_type: 'image' as 'image' | 'video', url: '' });
+  const [addSubmitting, setAddSubmitting] = useState(false);
 
   useEffect(() => {
     fetchMedia();
@@ -144,6 +147,33 @@ export default function SiteMediaAdminPage() {
     }
   };
 
+  const handleAddMedia = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAddSubmitting(true);
+    try {
+      const token = localStorage.getItem('access_token');
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/site-media/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(addForm)
+      });
+      if (res.ok) {
+        setShowAddModal(false);
+        setAddForm({ key: '', title: '', description: '', media_type: 'image', url: '' });
+        fetchMedia();
+        setNotification({ message: 'New media item added!', type: 'success' });
+        setTimeout(() => setNotification({ message: '', type: null }), 3000);
+      } else {
+        const err = await res.json();
+        setNotification({ message: err.detail || JSON.stringify(err), type: 'error' });
+      }
+    } catch (err) {
+      setNotification({ message: 'Failed to add media item.', type: 'error' });
+    } finally {
+      setAddSubmitting(false);
+    }
+  };
+
   if (loading) {
     return <div className="p-8 flex items-center justify-center min-h-[50vh]"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
   }
@@ -151,11 +181,19 @@ export default function SiteMediaAdminPage() {
   return (
     <div className="space-y-8 max-w-6xl mx-auto">
       <ScrollReveal>
-        <div className="mb-8">
+        <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
             <h1 className="text-3xl font-extrabold mb-2 tracking-tight italic">Site <span className="text-primary italic">Media Manager</span></h1>
             <p className="text-muted-foreground max-w-2xl">
               Control the primary visual elements of your website. Update hero backgrounds, feature videos, and branding assets directly from your computer.
             </p>
+          </div>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 text-sm font-bold rounded-xl hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 active:scale-95 shrink-0"
+          >
+            <Plus className="w-4 h-4" /> Add New Media
+          </button>
         </div>
       </ScrollReveal>
 
@@ -325,6 +363,51 @@ export default function SiteMediaAdminPage() {
           </div>
         )}
       </StaggerContainer>
+
+      {/* Add New Media Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-card w-full max-w-lg rounded-[2.5rem] shadow-gold-heavy border border-primary/20 p-10 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-black">Add New Media</h2>
+              <button onClick={() => setShowAddModal(false)} className="p-2 hover:bg-muted rounded-xl transition-all"><X className="w-5 h-5" /></button>
+            </div>
+            <form onSubmit={handleAddMedia} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Registry Key</label>
+                  <input required type="text" placeholder="hero_background" value={addForm.key} onChange={e => setAddForm({...addForm, key: e.target.value})} className="w-full rounded-xl border border-primary/10 bg-black/40 px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all font-mono" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Media Type</label>
+                  <select value={addForm.media_type} onChange={e => setAddForm({...addForm, media_type: e.target.value as 'image' | 'video'})} className="w-full rounded-xl border border-primary/10 bg-black/40 px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all font-bold appearance-none">
+                    <option value="image">Image</option>
+                    <option value="video">Video</option>
+                  </select>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Title</label>
+                <input required type="text" placeholder="Hero Background" value={addForm.title} onChange={e => setAddForm({...addForm, title: e.target.value})} className="w-full rounded-xl border border-primary/10 bg-black/40 px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Description</label>
+                <input type="text" placeholder="Used on the homepage hero section" value={addForm.description} onChange={e => setAddForm({...addForm, description: e.target.value})} className="w-full rounded-xl border border-primary/10 bg-black/40 px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">URL (optional)</label>
+                <input type="url" placeholder="https://..." value={addForm.url} onChange={e => setAddForm({...addForm, url: e.target.value})} className="w-full rounded-xl border border-primary/10 bg-black/40 px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all font-mono" />
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button type="button" onClick={() => setShowAddModal(false)} className="px-6 py-3 text-sm font-bold bg-muted text-muted-foreground rounded-xl hover:bg-muted/80 transition-all active:scale-95">Cancel</button>
+                <button type="submit" disabled={addSubmitting} className="px-6 py-3 text-sm font-bold bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 active:scale-95 disabled:opacity-50 flex items-center gap-2">
+                  {addSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Add Media
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
