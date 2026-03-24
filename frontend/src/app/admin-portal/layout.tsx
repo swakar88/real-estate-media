@@ -3,22 +3,16 @@
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { 
-  LayoutDashboard, 
-  Image as ImageIcon, 
-  CalendarCheck, 
-  Camera, 
+import {
+  LayoutDashboard,
+  CalendarCheck,
+  Camera,
   LogOut,
   Menu,
   X,
   Users,
-  MonitorPlay,
   UserCircle,
-  Mail,
-  FileText,
-  Sun,
-  Moon,
-  Settings
+  Settings2
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useGlobalSettings } from "@/context/GlobalSettingsContext";
@@ -95,13 +89,8 @@ export default function AdminLayout({
     { name: "Photographers", href: "/admin-portal/photographers", icon: Users },
     { name: "Clients", href: "/admin-portal/clients", icon: UserCircle },
     { name: "Referrals", href: "/admin-portal/referrals", icon: Users },
-    { name: "Portfolio", href: "/admin-portal/gallery", icon: ImageIcon },
-    { name: "Site Media", href: "/admin-portal/site-media", icon: MonitorPlay },
     { name: "Admins", href: "/admin-portal/admins", icon: Users },
-    { name: "Pricing & Packages", href: "/admin-portal/pricing", icon: FileText },
-    { name: "Email Config", href: "/admin-portal/email-config", icon: Mail },
-    { name: "Email Templates", href: "/admin-portal/email-templates", icon: FileText },
-    { name: "Site Settings", href: "/admin-portal/site-settings", icon: Settings },
+    { name: "Admin Hub", href: "/admin-portal/admin-hub", icon: Settings2 },
   ];
 
   return (
@@ -137,7 +126,7 @@ export default function AdminLayout({
           <div className="flex-1 py-6 px-4 space-y-2 overflow-y-auto">
             {navLinks.map((link) => {
               const Icon = link.icon;
-              const isActive = pathname === link.href;
+              const isActive = pathname === link.href || (link.href !== "/admin-portal" && pathname.startsWith(link.href));
               return (
                 <Link
                   key={link.name}
