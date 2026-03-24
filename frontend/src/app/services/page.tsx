@@ -51,8 +51,8 @@ export default async function Services() {
               <StaggerItem>
                 <div className="rounded-[2.5rem] border border-primary/20 bg-card overflow-hidden h-full shadow-gold hover:shadow-gold-heavy transition-all group">
                   <div className="h-64 bg-black relative overflow-hidden">
-                    {media.services_dusk_before ? (
-                      <ImageComparison 
+                    {media.services_dusk_before && media.services_dusk ? (
+                      <ImageComparison
                         beforeImage={media.services_dusk_before}
                         afterImage={media.services_dusk}
                       />
@@ -83,8 +83,8 @@ export default async function Services() {
               <StaggerItem>
                 <div className="rounded-[2.5rem] border border-primary/20 bg-card overflow-hidden h-full shadow-gold hover:shadow-gold-heavy transition-all group">
                   <div className="h-64 bg-black relative overflow-hidden">
-                    {media.services_staging_before ? (
-                      <ImageComparison 
+                    {media.services_staging_before && media.services_staging ? (
+                      <ImageComparison
                         beforeImage={media.services_staging_before}
                         afterImage={media.services_staging}
                       />
@@ -115,8 +115,8 @@ export default async function Services() {
               <StaggerItem>
                 <div className="rounded-[2.5rem] border border-primary/20 bg-card overflow-hidden h-full shadow-gold hover:shadow-gold-heavy transition-all group">
                   <div className="h-64 bg-black relative overflow-hidden">
-                    {media.services_grass_before ? (
-                      <ImageComparison 
+                    {media.services_grass_before && media.services_grass ? (
+                      <ImageComparison
                         beforeImage={media.services_grass_before}
                         afterImage={media.services_grass}
                       />

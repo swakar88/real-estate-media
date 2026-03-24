@@ -215,7 +215,7 @@ export default function EmailTemplatesPage() {
                   </div>
                 </div>
 
-                <div className="bg-primary/[0.03] rounded-2xl p-6 border border-primary/10 flex gap-4 group transition-all hover:bg-primary/[0.06] hover:border-primary/20">
+                <div className="bg-primary/[0.03] rounded-2xl p-6 border border-primary/10 flex gap-4 group transition-all hover:bg-primary/10 hover:border-primary/30">
                   <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
                     <Info className="w-5 h-5 text-primary" />
                   </div>

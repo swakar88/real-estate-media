@@ -7,13 +7,14 @@ import { StaggerContainer, StaggerItem } from "@/components/ScrollReveal";
 export default function GalleryGrid({ initialImages }: { initialImages: any[] }) {
   const [activeTab, setActiveTab] = useState("All");
 
-  // Extract unique categories from the images array to dynamically build the filter buttons
-  const categories = ["All", ...Array.from(new Set(initialImages.map((img) => img.category)))];
+  // Extract unique categories — normalise to lowercase for consistent comparison
+  const rawCategories = Array.from(new Set(initialImages.map((img) => (img.category || "").toLowerCase())));
+  const categories = ["All", ...rawCategories];
 
-  // Filter images based on selected tab
-  const filteredImages = activeTab === "All" 
-    ? initialImages 
-    : initialImages.filter((img) => img.category === activeTab);
+  // Filter images — case-insensitive match against stored category value
+  const filteredImages = activeTab === "All"
+    ? initialImages
+    : initialImages.filter((img) => (img.category || "").toLowerCase() === activeTab.toLowerCase());
 
   return (
     <>
@@ -28,7 +29,7 @@ export default function GalleryGrid({ initialImages }: { initialImages: any[] })
                 : "border border-border/50 hover:bg-accent hover:text-accent-foreground"
             }`}
           >
-            {category}
+            {category === "All" ? "All" : category.charAt(0).toUpperCase() + category.slice(1)}
           </button>
         ))}
       </div>

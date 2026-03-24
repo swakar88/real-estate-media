@@ -1,4 +1,32 @@
+"use client";
+
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+
+function FooterLink({ href, children }: { href: string; children: React.ReactNode }) {
+  const pathname = usePathname();
+  const isCurrent = pathname === href;
+
+  if (isCurrent) {
+    return (
+      <span
+        className="text-primary cursor-default"
+        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => e.key === 'Enter' && window.scrollTo({ top: 0, behavior: 'smooth' })}
+      >
+        {children}
+      </span>
+    );
+  }
+
+  return (
+    <Link href={href} className="hover:text-primary transition-colors">
+      {children}
+    </Link>
+  );
+}
 
 export default function Footer() {
   return (
@@ -14,17 +42,17 @@ export default function Footer() {
           <div className="space-y-4">
             <h4 className="font-semibold">Services</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link href="/services" className="hover:text-primary transition-colors">Real Estate Photo & Video</Link></li>
-              <li><Link href="/services" className="hover:text-primary transition-colors">Business Marketing</Link></li>
-              <li><Link href="/services" className="hover:text-primary transition-colors">Drone Photography</Link></li>
+              <li><FooterLink href="/services">Real Estate Photo & Video</FooterLink></li>
+              <li><FooterLink href="/services">Business Marketing</FooterLink></li>
+              <li><FooterLink href="/services">Drone Photography</FooterLink></li>
             </ul>
           </div>
           <div className="space-y-4">
             <h4 className="font-semibold">Company</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link href="/about" className="hover:text-primary transition-colors">About Us</Link></li>
-              <li><Link href="/gallery" className="hover:text-primary transition-colors">Portfolio Gallery</Link></li>
-              <li><Link href="/book" className="hover:text-primary transition-colors">Book Online</Link></li>
+              <li><FooterLink href="/about">About Us</FooterLink></li>
+              <li><FooterLink href="/gallery">Portfolio Gallery</FooterLink></li>
+              <li><FooterLink href="/book">Book Online</FooterLink></li>
             </ul>
           </div>
           <div className="space-y-4">

@@ -6,11 +6,14 @@ import Footer from "@/components/Footer";
 import Image from "next/image";
 import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/ScrollReveal";
 import { Users } from "lucide-react";
+import { useContext } from "react";
+import { GlobalSettingsContext } from "@/context/GlobalSettingsContext";
 
 export default function About() {
   const [team, setTeam] = useState<any[]>([]);
   const [media, setMedia] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+  const { settings } = useContext(GlobalSettingsContext);
 
   useEffect(() => {
     const fetchTeam = async () => {
@@ -44,14 +47,19 @@ export default function About() {
           <div className="container mx-auto px-4 md:px-8 grid md:grid-cols-2 gap-16 items-center">
              <ScrollReveal direction="left" className="space-y-6">
                <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-2">About KC Real Estate Media</h1>
-               <p className="text-lg text-muted-foreground leading-relaxed">
+               <p className="text-muted-foreground leading-relaxed">
                  KC Real Estate Media is a digital marketing agency specializing in virtual media solutions for real estate professionals and small business owners in Kansas City.
                </p>
                <p className="text-muted-foreground leading-relaxed">
                  A partnership consisting of a current real estate professional, marketing consultant, and general contractor, KC Real Estate Media aims to enhance the real estate marketing structure by introducing 360 virtual reality and videography concepts.
                </p>
                <div className="flex items-center gap-4 pt-4">
-                 <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center text-xs">Logo</div>
+                 <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center overflow-hidden border border-border/30">
+                   {settings?.logo_url
+                     ? <Image src={settings.logo_url} alt="Logo" width={64} height={64} className="object-contain w-full h-full" />
+                     : <span className="text-xs text-muted-foreground font-semibold">KC</span>
+                   }
+                 </div>
                  <div>
                    <h4 className="font-semibold text-primary">Google Trusted Photographer</h4>
                    <p className="text-sm text-muted-foreground">Certified Virtual Walk-throughs</p>
@@ -59,7 +67,7 @@ export default function About() {
                </div>
              </ScrollReveal>
              <ScrollReveal direction="right" delay={0.2} className="relative">
-                <div className="aspect-square bg-muted rounded-2xl border border-border/50 rotate-3 transition-transform hover:rotate-0 duration-500 overflow-hidden shadow-2xl relative">
+                <div className="aspect-square bg-muted rounded-2xl border border-border/50 transition-transform hover:scale-[1.02] duration-500 overflow-hidden shadow-2xl relative">
                    <Image src={media.about_agency_photo || "/team/agency.png"} alt="KC Real Estate Media Team" fill className="object-cover" />
                 </div>
              </ScrollReveal>
@@ -95,7 +103,9 @@ export default function About() {
                           <Users className="w-20 h-20 text-muted-foreground/30 opacity-50 group-hover:scale-110 transition-transform duration-500" />
                         )}
                       </div>
-                      <h3 className="font-bold text-lg">{member.user_name || member.first_name || `Team Member #${member.id}`}</h3>
+                      <h3 className="font-bold text-lg capitalize">
+                        {[member.first_name, member.last_name].filter(Boolean).join(" ") || `Team Member #${member.id}`}
+                      </h3>
                       <p className="text-sm text-primary">{member.role || 'Photographer'}</p>
                     </StaggerItem>
                   );

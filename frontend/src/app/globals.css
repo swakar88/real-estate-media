@@ -120,6 +120,12 @@
   }
 }
 
+/* Ensure clickable table rows always have a visible hover state */
+tr.cursor-pointer:hover,
+tr[onClick]:hover {
+  background-color: hsl(var(--muted) / 0.3);
+}
+
 /* Tell browser to render native date picker controls in dark mode */
 .dark input[type="date"],
 .dark input[type="datetime-local"] {
