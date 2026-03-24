@@ -1,18 +1,19 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FolderGit2, Users, Calendar, LayoutDashboard, Camera } from "lucide-react";
+import { Users, Calendar, LayoutDashboard, Camera, Settings2, UserCog } from "lucide-react";
 import { useGlobalSettings } from "@/context/GlobalSettingsContext";
 
 export default function AdminSidebar() {
   const { settings } = useGlobalSettings();
   const pathname = usePathname();
-  
+
   const navItems = [
     { name: "Overview", href: "/admin-portal", icon: LayoutDashboard },
     { name: "Bookings", href: "/admin-portal/bookings", icon: Calendar },
     { name: "Shoots & Deliveries", href: "/admin-portal/shoots", icon: Camera },
     { name: "Photographers", href: "/admin-portal/photographers", icon: Users },
-    { name: "Gallery Assets", href: "/admin-portal/gallery", icon: FolderGit2 },
+    { name: "Clients", href: "/admin-portal/clients", icon: UserCog },
+    { name: "Admin Hub", href: "/admin-portal/admin-hub", icon: Settings2 },
   ];
 
   return (
@@ -27,7 +28,7 @@ export default function AdminSidebar() {
       
       <nav className="space-y-1">
         {navItems.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive = pathname === item.href || (item.href !== "/admin-portal" && pathname.startsWith(item.href));
           const Icon = item.icon;
           
           return (

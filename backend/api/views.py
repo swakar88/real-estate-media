@@ -22,7 +22,7 @@ from .models import (
     ClientShoot, Photographer, PhotographerSlot, PhotographerPayment,
     SiteMedia, EmailConfiguration, EmailTemplate, MediaItem,
     Referral, ReferralCredit, GlobalSettings, SupportTicket, PhotographerRating,
-    UserProfile
+    UserProfile, EmailLog
 )
 from .serializers import (
     ServiceSerializer,
@@ -44,6 +44,7 @@ from .serializers import (
     ClientSerializer,
     AdminSerializer,
     UserProfileSerializer,
+    EmailLogSerializer,
 )
 
 class ServiceViewSet(viewsets.ModelViewSet):
@@ -1493,6 +1494,22 @@ def stripe_webhook(request):
                 pass
 
     return HttpResponse(status=200)
+
+class EmailLogViewSet(viewsets.ReadOnlyModelViewSet):
+    """Admin-only read access to the email audit log."""
+    queryset = EmailLog.objects.all().order_by('-sent_at')
+    serializer_class = EmailLogSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        if not self.request.user.is_staff:
+            return EmailLog.objects.none()
+        qs = super().get_queryset()
+        status = self.request.query_params.get('status')
+        if status:
+            qs = qs.filter(status=status)
+        return qs
+
 
 class SiteMediaViewSet(viewsets.ModelViewSet):
     """

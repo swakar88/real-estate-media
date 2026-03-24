@@ -31,6 +31,7 @@ export default function AdminPhotographers() {
   // Payment History State
   const [payments, setPayments] = useState<any[]>([]);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showPayoutForm, setShowPayoutForm] = useState(false);
   const [recordingPayment, setRecordingPayment] = useState(false);
   const [paymentData, setPaymentData] = useState({ amount: "", payment_date: new Date().toISOString().split('T')[0], reference_number: "", notes: "" });
   const [pendingShoots, setPendingShoots] = useState<any[]>([]);
@@ -204,9 +205,9 @@ export default function AdminPhotographers() {
   };
 
   const removePhotographer = async (id: number, hard: boolean = false) => {
-    const title = hard ? "Permanent Delete" : "Deactivate Profile";
-    const msg = hard 
-      ? "This will completely remove the photographer and their user account. This action cannot be undone. Proceed?" 
+    const title = hard ? "Delete Photographer" : "Deactivate Profile";
+    const msg = hard
+      ? "⚠️ This will permanently delete the photographer and all associated data. This cannot be undone. Are you sure you want to proceed?"
       : "Are you sure you want to deactivate this photographer?";
     
     setModalConfig({
@@ -357,15 +358,19 @@ export default function AdminPhotographers() {
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files?.[0] || !selectedPhotographer) return;
     const file = e.target.files[0];
-    const formData = new FormData();
-    formData.append("profile_image", file);
-
     try {
       const token = localStorage.getItem("access_token");
+      const urlRes = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/gallery/get-upload-url/?filename=profile_photographer_${selectedPhotographer.id}_${file.name}&contentType=${encodeURIComponent(file.type)}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (!urlRes.ok) return;
+      const { upload_url, public_url } = await urlRes.json();
+      await fetch(upload_url, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/photographers/${selectedPhotographer.id}/`, {
         method: "PATCH",
-        headers: { "Authorization": `Bearer ${token}` },
-        body: formData
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ profile_image_url: public_url }),
       });
       if (res.ok) {
         const updated = await res.json();
@@ -537,8 +542,8 @@ export default function AdminPhotographers() {
                       <div className="relative group/img">
                          <div className={`h-20 w-20 rounded-[1.5rem] flex items-center justify-center font-black text-3xl shadow-inner border border-primary/10 overflow-hidden
                             ${selectedPhotographer.is_active ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
-                           {selectedPhotographer.profile_image ? (
-                              <img src={selectedPhotographer.profile_image} alt="" className="w-full h-full object-cover" />
+                           {selectedPhotographer.profile_image_url ? (
+                              <img src={selectedPhotographer.profile_image_url} alt="" className="w-full h-full object-cover" />
                            ) : (
                               selectedPhotographer.user_name?.[0] || selectedPhotographer.first_name?.[0] || "P"
                            )}
@@ -590,7 +595,7 @@ export default function AdminPhotographers() {
                             onClick={() => removePhotographer(selectedPhotographer.id, true)}
                             className="h-12 px-5 text-[10px] font-black uppercase tracking-widest bg-destructive text-destructive-foreground hover:opacity-90 rounded-xl transition-all border border-destructive/30 flex items-center gap-2 active:scale-95 shadow-lg group"
                         >
-                            <Trash2 className="w-4 h-4 transition-transform group-hover:scale-110" /> Permanent Delete
+                            <Trash2 className="w-4 h-4 transition-transform group-hover:scale-110" /> Delete
                         </button>
                       )}
                    </div>
@@ -644,140 +649,7 @@ export default function AdminPhotographers() {
                    </div>
                 </div>
 
-                {/* Photographer Payment History Section */}
-                <div className="bg-card/80 backdrop-blur-sm border border-primary/20 rounded-[2.5rem] shadow-gold overflow-hidden flex flex-col lg:flex-row min-h-[400px]">
-                   {/* Left: Transaction History */}
-                   <div className="flex-1 p-8 space-y-8">
-                      <div className="flex items-center justify-between">
-                         <div>
-                            <h3 className="text-xl font-black italic tracking-tight">Payment History</h3>
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 italic">Historical records of all manual & automated payouts</p>
-                         </div>
-                         <div className={`px-4 py-2 rounded-2xl flex items-center gap-2 border ${
-                            selectedPhotographer.stripe_account_id 
-                               ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' 
-                               : 'bg-amber-500/10 border-amber-500/20 text-amber-500'
-                         }`}>
-                            <div className={`w-2 h-2 rounded-full animate-pulse ${selectedPhotographer.stripe_account_id ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                            <span className="text-[10px] font-black uppercase tracking-widest">{selectedPhotographer.stripe_account_id ? 'Stripe Connected' : 'Manual Payouts Only'}</span>
-                         </div>
-                      </div>
-                      
-                      <div className="overflow-x-auto">
-                        {payments.length === 0 ? (
-                           <div className="py-32 text-center bg-muted/5 rounded-[2.5rem] border border-dashed border-border/40 text-sm italic opacity-40">
-                              No payout records found for this photographer.
-                           </div>
-                        ) : (
-                           <table className="w-full text-left text-xs border-collapse">
-                              <thead>
-                                 <tr className="border-b border-primary/10">
-                                    <th className="px-4 py-4 font-black uppercase tracking-widest text-[10px] text-muted-foreground/60 text-left">Date</th>
-                                    <th className="px-4 py-4 font-black uppercase tracking-widest text-[10px] text-muted-foreground/60 text-left">Amount</th>
-                                    <th className="px-4 py-4 font-black uppercase tracking-widest text-[10px] text-muted-foreground/60 text-left">Ref / Method</th>
-                                    <th className="px-4 py-4"></th>
-                                 </tr>
-                              </thead>
-                              <tbody className="divide-y divide-primary/5">
-                                 {payments.map((p: any) => (
-                                    <tr key={p.id} className="hover:bg-primary/5 transition-colors group/row">
-                                        <td className="px-4 py-4 font-bold whitespace-nowrap">
-                                           {(() => {
-                                              const [y, m, d] = p.payment_date.split('-');
-                                              return new Date(parseInt(y), parseInt(m) - 1, parseInt(d)).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-                                           })()}
-                                        </td>
-                                       <td className="px-4 py-4 text-emerald-500 font-black italic text-sm">
-                                          ${parseFloat(p.amount).toFixed(2)}
-                                       </td>
-                                    <td className="px-4 py-4">
-                                       <div className="font-bold text-foreground/80">{p.reference_number || 'N/A'}</div>
-                                       {p.notes && <div className="text-[10px] text-muted-foreground line-clamp-1 italic" title={p.notes}>{p.notes}</div>}
-                                    </td>
-                                    <td className="px-4 py-4 text-right">
-                                       <button 
-                                          onClick={() => deletePayment(p.id)} 
-                                          className="p-2 text-destructive opacity-0 group-hover/row:opacity-100 hover:bg-destructive/10 rounded-xl transition-all"
-                                       >
-                                          <Trash2 className="w-4 h-4" />
-                                       </button>
-                                    </td>
-                                 </tr>
-                              ))}
-                           </tbody>
-                        </table>
-                     )}
-                   </div>
-                </div>
- 
-                   {/* Right: Inline Recording Form */}
-                   <div className="w-full lg:w-96 border-t lg:border-t-0 lg:border-l border-primary/10 p-8 bg-primary/5 space-y-6">
-                      <div>
-                         <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary mb-4">Record Manual Payout</h3>
-                         <p className="text-[10px] text-muted-foreground/60 mb-6 leading-relaxed">Use this for Zelle, Checks, or Cash payments. Automated Stripe splits are logged here automatically.</p>
-                         <form onSubmit={recordPayment} className="space-y-4">
-                            <div className="space-y-2">
-                               <label className="text-[10px] font-black uppercase text-muted-foreground/60 ml-1">Amount ($)</label>
-                               <div className="relative">
-                                  <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
-                                  <input 
-                                     type="number" step="0.01" required
-                                     className="w-full bg-background/50 border border-primary/10 rounded-2xl pl-11 pr-4 py-3.5 text-sm font-black focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all shadow-inner"
-                                     value={paymentData.amount}
-                                     onChange={(e) => setPaymentData({ ...paymentData, amount: e.target.value })}
-                                     placeholder="0.00"
-                                  />
-                               </div>
-                            </div>
-                            
-                            <div className="space-y-2">
-                               <label className="text-[10px] font-black uppercase text-muted-foreground/60 ml-1">Payment Date</label>
-                               <div className="relative">
-                                  <CalendarIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
-                                  <input
-                                     type="date" required
-                                     className="w-full bg-background/50 border border-primary/10 rounded-2xl pl-11 pr-4 py-3.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all shadow-inner [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
-                                     value={paymentData.payment_date}
-                                     onChange={(e) => setPaymentData({ ...paymentData, payment_date: e.target.value })}
-                                  />
-                               </div>
-                            </div>
- 
-                            <div className="space-y-2">
-                               <label className="text-[10px] font-black uppercase text-muted-foreground/60 ml-1">Reference # / Method</label>
-                               <input 
-                                  type="text"
-                                  className="w-full bg-background/50 border border-primary/10 rounded-2xl px-5 py-3.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all shadow-inner"
-                                  value={paymentData.reference_number}
-                                  onChange={(e) => setPaymentData({ ...paymentData, reference_number: e.target.value })}
-                                  placeholder="Zelle, Check #, etc."
-                               />
-                            </div>
- 
-                            <div className="space-y-2">
-                               <label className="text-[10px] font-black uppercase text-muted-foreground/60 ml-1">Admin Notes</label>
-                               <textarea
-                                  className="w-full bg-background/50 border border-primary/10 rounded-2xl px-5 py-3.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all shadow-inner resize-none"
-                                  rows={3}
-                                  value={paymentData.notes}
-                                  onChange={(e) => setPaymentData({ ...paymentData, notes: e.target.value })}
-                                  placeholder="Internal payout notes..."
-                               />
-                            </div>
- 
-                            <button 
-                               type="submit"
-                               disabled={recordingPayment || !paymentData.amount}
-                               className="w-full flex items-center justify-center gap-3 py-4 bg-primary text-primary-foreground rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-gold hover:shadow-gold-heavy hover:scale-[1.02] transition-all active:scale-95 disabled:opacity-50"
-                            >
-                               {recordingPayment ? "Recording..." : <><CheckCircle2 className="h-4 w-4" /> Record Payout</>}
-                            </button>
-                         </form>
-                      </div>
-                   </div>
-                </div>
-
-                {/* Calendar View */}
+                {/* Calendar View - moved above payment history */}
                 <div className="bg-card/80 backdrop-blur-sm border border-primary/20 rounded-[2.5rem] shadow-gold overflow-hidden flex flex-col md:flex-row min-h-[500px]">
                    <div className="flex-1 p-6">
                       <div className="flex items-center justify-between mb-8">
@@ -931,6 +803,102 @@ export default function AdminPhotographers() {
                       </div>
                    </div>
                 </div>
+                {/* Payment History Section - below calendar */}
+                <div className="bg-card/80 backdrop-blur-sm border border-primary/20 rounded-[2.5rem] shadow-gold overflow-hidden">
+                  <div className="p-8 border-b border-primary/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                      <h3 className="text-xl font-black italic tracking-tight">Payment History</h3>
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 italic">Historical records of all manual & automated payouts</p>
+                    </div>
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <div className={`px-4 py-2 rounded-2xl flex items-center gap-2 border ${
+                        selectedPhotographer.stripe_account_id
+                          ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500'
+                          : 'bg-amber-500/10 border-amber-500/20 text-amber-500'
+                      }`}>
+                        <div className={`w-2 h-2 rounded-full animate-pulse ${selectedPhotographer.stripe_account_id ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                        <span className="text-[10px] font-black uppercase tracking-widest">{selectedPhotographer.stripe_account_id ? 'Stripe Connected' : 'Manual Payouts Only'}</span>
+                      </div>
+                      <button
+                        onClick={() => setShowPayoutForm(v => !v)}
+                        className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-primary/90 transition-all active:scale-95 shadow-gold"
+                      >
+                        <DollarSign className="w-4 h-4" /> Record Payout
+                      </button>
+                    </div>
+                  </div>
+
+                  {showPayoutForm && (
+                    <div className="p-8 border-b border-primary/10 bg-primary/5">
+                      <p className="text-[10px] text-muted-foreground/60 mb-5 leading-relaxed">Use this for Zelle, Checks, or Cash payments. Automated Stripe splits are logged here automatically.</p>
+                      <form onSubmit={(e) => { recordPayment(e); setShowPayoutForm(false); }} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase text-muted-foreground/60 ml-1">Amount ($)</label>
+                          <div className="relative">
+                            <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
+                            <input type="number" step="0.01" required className="w-full bg-background/50 border border-primary/10 rounded-2xl pl-11 pr-4 py-3.5 text-sm font-black focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all" value={paymentData.amount} onChange={(e) => setPaymentData({ ...paymentData, amount: e.target.value })} placeholder="0.00" />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase text-muted-foreground/60 ml-1">Payment Date</label>
+                          <div className="relative">
+                            <CalendarIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
+                            <input type="date" required className="w-full bg-background/50 border border-primary/10 rounded-2xl pl-11 pr-4 py-3.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer" value={paymentData.payment_date} onChange={(e) => setPaymentData({ ...paymentData, payment_date: e.target.value })} />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase text-muted-foreground/60 ml-1">Ref # / Method</label>
+                          <input type="text" className="w-full bg-background/50 border border-primary/10 rounded-2xl px-5 py-3.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all" value={paymentData.reference_number} onChange={(e) => setPaymentData({ ...paymentData, reference_number: e.target.value })} placeholder="Zelle, Check #, etc." />
+                        </div>
+                        <button type="submit" disabled={recordingPayment || !paymentData.amount} className="flex items-center justify-center gap-2 py-3.5 bg-primary text-primary-foreground rounded-2xl font-black text-xs uppercase tracking-widest shadow-gold hover:scale-[1.02] transition-all active:scale-95 disabled:opacity-50">
+                          {recordingPayment ? "Recording..." : <><CheckCircle2 className="h-4 w-4" /> Confirm</>}
+                        </button>
+                      </form>
+                    </div>
+                  )}
+
+                  <div className="p-8 overflow-x-auto">
+                    {payments.length === 0 ? (
+                      <div className="py-20 text-center bg-muted/5 rounded-[2.5rem] border border-dashed border-border/40 text-sm italic opacity-40">No payout records found for this photographer.</div>
+                    ) : (
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="border-b border-primary/10">
+                            <th className="px-4 py-4 font-black uppercase tracking-widest text-[10px] text-muted-foreground/60">Date</th>
+                            <th className="px-4 py-4 font-black uppercase tracking-widest text-[10px] text-muted-foreground/60">Photographer Share</th>
+                            <th className="px-4 py-4 font-black uppercase tracking-widest text-[10px] text-muted-foreground/60">Our Cut</th>
+                            <th className="px-4 py-4 font-black uppercase tracking-widest text-[10px] text-muted-foreground/60">Ref / Method</th>
+                            <th className="px-4 py-4"></th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-primary/5">
+                          {payments.map((p: any) => {
+                            const photoPct = parseFloat(selectedPhotographer.share_percentage || 0) / 100;
+                            const photoAmt = parseFloat(p.amount);
+                            const ourCut = photoPct > 0 ? (photoAmt / photoPct) * (1 - photoPct) : 0;
+                            return (
+                              <tr key={p.id} className="hover:bg-primary/5 transition-colors group/row">
+                                <td className="px-4 py-4 font-bold whitespace-nowrap">
+                                  {(() => { const [y, m, d] = p.payment_date.split('-'); return new Date(parseInt(y), parseInt(m)-1, parseInt(d)).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }); })()}
+                                </td>
+                                <td className="px-4 py-4 text-emerald-500 font-black italic text-sm">${photoAmt.toFixed(2)}</td>
+                                <td className="px-4 py-4 text-primary font-black italic text-sm">${ourCut.toFixed(2)}</td>
+                                <td className="px-4 py-4">
+                                  <div className="font-bold text-foreground/80">{p.reference_number || 'N/A'}</div>
+                                  {p.notes && <div className="text-[10px] text-muted-foreground line-clamp-1 italic" title={p.notes}>{p.notes}</div>}
+                                </td>
+                                <td className="px-4 py-4 text-right">
+                                  <button onClick={() => deletePayment(p.id)} className="p-2 text-destructive opacity-0 group-hover/row:opacity-100 hover:bg-destructive/10 rounded-xl transition-all"><Trash2 className="w-4 h-4" /></button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                </div>
+
               </div>
             ) : (
               <div className="bg-muted/10 border-2 border-dashed border-border/50 rounded-3xl h-[600px] flex flex-col items-center justify-center text-center p-8">

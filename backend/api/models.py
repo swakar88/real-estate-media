@@ -486,6 +486,29 @@ class SupportTicket(models.Model):
     def __str__(self):
         return f"Support: {self.subject} ({self.email})"
 
+class EmailLog(models.Model):
+    """
+    Audit log of every outgoing email sent by the system.
+    """
+    STATUS_CHOICES = [('sent', 'Sent'), ('failed', 'Failed')]
+
+    recipient = models.EmailField()
+    cc = models.TextField(blank=True, null=True)
+    bcc = models.TextField(blank=True, null=True)
+    subject = models.CharField(max_length=500)
+    template_slug = models.CharField(max_length=100, blank=True, null=True)
+    trigger_event = models.CharField(max_length=100, blank=True, null=True)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='sent')
+    error_message = models.TextField(blank=True, null=True)
+    sent_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-sent_at']
+
+    def __str__(self):
+        return f"Email to {self.recipient}: {self.subject} [{self.status}]"
+
+
 class PhotographerRating(models.Model):
     """
     Stores customer feedback and ratings for photographers.
