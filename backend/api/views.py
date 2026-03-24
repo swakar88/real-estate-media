@@ -356,8 +356,18 @@ class ClientShootViewSet(viewsets.ModelViewSet):
     def perform_update(self, serializer):
         instance = self.get_object()
         old_status = instance.status
+        old_date = instance.shoot_date
         updated_instance = serializer.save()
-        
+
+        # Reschedule: shoot_date changed on an active shoot
+        new_date = updated_instance.shoot_date
+        if old_date and new_date and old_date != new_date:
+            try:
+                from .utils.email_utils import send_clientshoot_calendar_invite
+                send_clientshoot_calendar_invite(updated_instance, method='REQUEST', sequence=1)
+            except Exception as e:
+                print(f"Reschedule calendar invite failed: {e}")
+
         if old_status != 'delivered' and updated_instance.status == 'delivered':
             from .utils.email_utils import send_content_uploaded_emails
             # Get client email safely

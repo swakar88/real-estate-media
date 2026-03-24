@@ -420,6 +420,84 @@ Please log in to your portal to view more details and upload media once the shoo
     except Exception as e:
         print(f"Calendar invite failed: {e}")
 
+def send_clientshoot_calendar_invite(shoot, method='REQUEST', sequence=0):
+    """
+    Sends iCal calendar invite(s) for a ClientShoot reschedule or cancellation.
+    shoot: ClientShoot instance
+    """
+    from .ical_utils import generate_ical
+
+    client_email = shoot.contact_email or (shoot.client.email if shoot.client else None)
+    if not client_email:
+        return
+
+    site_settings = None
+    try:
+        from api.models import GlobalSettings
+        site_settings = GlobalSettings.objects.first()
+    except Exception:
+        pass
+
+    organizer_email = 'noreply@kcrealestate.com'
+    organizer_name = site_settings.site_name if site_settings else 'KC Real Estate Media'
+
+    time_slot = getattr(shoot, 'time_slot', '09:00') or '09:00'
+    summary = f"Property Shoot — {shoot.property_address[:60]}"
+    location = shoot.property_address[:200]
+    description = (
+        f"KC Real Estate Media Shoot\n"
+        f"Date: {shoot.shoot_date}\n"
+        f"Address: {shoot.property_address}"
+    )
+    uid = f"shoot-{shoot.id}@kcrealestate.com"
+    action_label = "Cancellation" if method == 'CANCEL' else "Update"
+    subject = f"Shoot {action_label} — {shoot.property_address[:50]}"
+
+    ical_bytes = generate_ical(
+        uid=uid, summary=summary, location=location, description=description,
+        shoot_date=shoot.shoot_date, time_slot=time_slot,
+        method=method, sequence=sequence,
+        organizer_email=organizer_email, organizer_name=organizer_name,
+        attendee_email=client_email,
+    )
+    client_body = (
+        f"Your shoot at {shoot.property_address[:60]} has been {'updated' if method == 'REQUEST' else 'cancelled'}.\n\n"
+        f"Date: {shoot.shoot_date} at {time_slot} CT.\n\n"
+        f"Please update your calendar accordingly."
+    )
+    send_email_with_attachment(
+        subject=subject, recipient_email=client_email,
+        html_content=_get_email_template(f"Shoot {action_label}", client_body),
+        attachment_bytes=ical_bytes, attachment_filename='invite.ics',
+        attachment_mime=('text', 'calendar'),
+    )
+
+    # Photographer invite
+    try:
+        if shoot.photographer and shoot.photographer.user:
+            phot_email = shoot.photographer.user.email
+            phot_ical_bytes = generate_ical(
+                uid=uid, summary=summary, location=location, description=description,
+                shoot_date=shoot.shoot_date, time_slot=time_slot,
+                method=method, sequence=sequence,
+                organizer_email=organizer_email, organizer_name=organizer_name,
+                attendee_email=phot_email,
+            )
+            phot_body = (
+                f"A shoot you're assigned to has been {'updated' if method == 'REQUEST' else 'cancelled'}.\n\n"
+                f"Property: {shoot.property_address[:60]}\n"
+                f"Date: {shoot.shoot_date} at {time_slot} CT."
+            )
+            send_email_with_attachment(
+                subject=subject, recipient_email=phot_email,
+                html_content=_get_email_template(f"Shoot {action_label}", phot_body),
+                attachment_bytes=phot_ical_bytes, attachment_filename='invite.ics',
+                attachment_mime=('text', 'calendar'),
+            )
+    except Exception as e:
+        print(f"Photographer calendar invite failed: {e}")
+
+
 def send_content_uploaded_emails(shoot_address, to_email=None):
     admin_content = f"Media has been uploaded for the property at {shoot_address}. It is now ready for client delivery."
     _send_mocked_email(
