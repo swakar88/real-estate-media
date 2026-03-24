@@ -1323,9 +1323,13 @@ class CurrentUserView(views.APIView):
                 photo_url = user.photographer_profile.profile_image_url
         except Exception:
             pass
-            
-        # Referral profile
+
+        # Referral profile (covers clients and admins too)
         profile, _ = UserProfile.objects.get_or_create(user=user)
+
+        # For non-photographers, profile image lives on UserProfile
+        if not is_photo and profile.profile_image_url:
+            photo_url = profile.profile_image_url
 
         serializer = {
             'id': user.id,
@@ -1367,10 +1371,18 @@ class CurrentUserView(views.APIView):
              user.username = new_email # Keep synced
         user.save()
 
-        # Update Photographer Profile
-        if hasattr(user, 'photographer_profile'):
-            if 'profile_image_url' in data:
+        # Update profile image — photographer stores on photographer_profile, everyone else on UserProfile
+        if 'profile_image_url' in data:
+            if hasattr(user, 'photographer_profile'):
                 user.photographer_profile.profile_image_url = data['profile_image_url']
+                user.photographer_profile.save()
+            else:
+                profile, _ = UserProfile.objects.get_or_create(user=user)
+                profile.profile_image_url = data['profile_image_url']
+                profile.save()
+
+        # Update other Photographer Profile fields
+        if hasattr(user, 'photographer_profile'):
             if 'bio' in data:
                 user.photographer_profile.bio = data['bio']
             if 'phone' in data:

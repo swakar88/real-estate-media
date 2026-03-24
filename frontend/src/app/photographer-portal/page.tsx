@@ -45,6 +45,7 @@ export default function PhotographerPortal() {
   });
   const [timeSlot, setTimeSlot] = useState("09:00");
   const [uploadStatus, setUploadStatus] = useState<{message: string, type: 'success' | 'error' | 'none'}>({message: '', type: 'none'});
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -158,6 +159,35 @@ export default function PhotographerPortal() {
       setSlots(slots.filter(s => s.id !== id));
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingImage(true);
+    try {
+      const token = localStorage.getItem("access_token");
+      const urlRes = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/gallery/get-upload-url/?filename=profile_${user.id}_${file.name}&contentType=${encodeURIComponent(file.type)}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (!urlRes.ok) throw new Error("Failed to get upload URL");
+      const { upload_url, public_url } = await urlRes.json();
+      const uploadRes = await fetch(upload_url, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
+      if (!uploadRes.ok) throw new Error("Upload failed");
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/me/`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ profile_image_url: public_url }),
+      });
+      setUser((u: any) => ({ ...u, profile_image_url: public_url }));
+      setUploadStatus({ message: "Profile photo updated!", type: 'success' });
+      setTimeout(() => setUploadStatus({ message: '', type: 'none' }), 3000);
+    } catch (err) {
+      setUploadStatus({ message: "Failed to upload photo.", type: 'error' });
+    } finally {
+      setUploadingImage(false);
     }
   };
 
@@ -663,22 +693,13 @@ export default function PhotographerPortal() {
                  {/* Profile sidebar */}
                  <div className="bg-card border border-primary/20 p-10 rounded-[3rem] text-center shadow-gold">
                     <div className="relative inline-block">
-                       <div className="w-32 h-32 rounded-[2rem] overflow-hidden border-4 border-border mb-6 group relative cursor-pointer">
+                       <label className="w-32 h-32 rounded-[2rem] overflow-hidden border-4 border-border mb-6 group relative cursor-pointer block">
                           <img src={profileImgSrc} alt="" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                           <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                             <Plus className="w-6 h-6 text-white" />
+                             {uploadingImage ? <Camera className="w-6 h-6 text-white animate-pulse" /> : <Plus className="w-6 h-6 text-white" />}
                           </div>
-                       </div>
-                       <div className="w-full space-y-2 mb-6">
-                           <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Profile Image URL</label>
-                           <input 
-                              type="url"
-                              className="w-full bg-background/50 border border-border rounded-2xl px-4 py-3 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                              value={user?.profile_image_url || ''}
-                              onChange={e => setUser({ ...user, profile_image_url: e.target.value })}
-                              placeholder="https://images.unsplash.com/..."
-                           />
-                       </div>
+                          <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploadingImage} />
+                       </label>
                        <h3 className="text-xl font-black mb-1">{user?.first_name} {user?.last_name}</h3>
                        <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-6">Verified Photographer</p>
                        <div className="w-full pt-6 border-t border-border grid grid-cols-2 gap-4">

@@ -13,6 +13,7 @@ class UserProfile(models.Model):
     """
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     referral_code = models.CharField(max_length=10, unique=True, blank=True)
+    profile_image_url = models.URLField(max_length=1000, blank=True, null=True)
 
     def save(self, *args, **kwargs):
         if not self.referral_code:

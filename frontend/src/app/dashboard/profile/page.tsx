@@ -18,6 +18,7 @@ export default function ProfilePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [user, setUser] = useState<any>(null);
   
   const [formData, setFormData] = useState({
@@ -132,6 +133,34 @@ export default function ProfilePage() {
     );
   }
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingImage(true);
+    try {
+      const token = localStorage.getItem("access_token");
+      const urlRes = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/gallery/get-upload-url/?filename=profile_${user.id}_${file.name}&contentType=${encodeURIComponent(file.type)}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (!urlRes.ok) throw new Error("Failed to get upload URL");
+      const { upload_url, public_url } = await urlRes.json();
+      const uploadRes = await fetch(upload_url, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
+      if (!uploadRes.ok) throw new Error("Upload to R2 failed");
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/me/`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ profile_image_url: public_url }),
+      });
+      setUser((u: any) => ({ ...u, profile_image_url: public_url }));
+      toast.success("Profile photo updated");
+    } catch (err) {
+      toast.error("Failed to upload photo");
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-12 pb-20">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -150,12 +179,15 @@ export default function ProfilePage() {
         <div className="space-y-6">
            <div className="bg-card rounded-[2.5rem] border border-border/40 p-8 shadow-sm text-center">
               <div className="relative inline-block mb-6">
-                <div className="h-32 w-32 rounded-[2rem] bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-primary-foreground font-black text-4xl shadow-2xl shadow-primary/20">
-                  {user?.first_name?.[0] || user?.username?.[0] || "U"}
+                <div className="h-32 w-32 rounded-[2rem] bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-primary-foreground font-black text-4xl shadow-2xl shadow-primary/20 overflow-hidden">
+                  {user?.profile_image_url
+                    ? <img src={user.profile_image_url} alt="Profile" className="w-full h-full object-cover" />
+                    : (user?.first_name?.[0] || user?.username?.[0] || "U")}
                 </div>
-                <button className="absolute -bottom-2 -right-2 p-3 bg-card border border-border/40 rounded-2xl shadow-xl text-muted-foreground hover:text-primary transition-all">
-                   <Camera className="h-5 w-5" />
-                </button>
+                <label className="absolute -bottom-2 -right-2 p-3 bg-card border border-border/40 rounded-2xl shadow-xl text-muted-foreground hover:text-primary transition-all cursor-pointer">
+                  {uploadingImage ? <Loader2 className="h-5 w-5 animate-spin" /> : <Camera className="h-5 w-5" />}
+                  <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploadingImage} />
+                </label>
               </div>
               <h2 className="text-xl font-black mb-1">{user?.first_name} {user?.last_name}</h2>
               <p className="text-sm font-bold text-muted-foreground/60 mb-6 uppercase tracking-widest">{user?.username}</p>
