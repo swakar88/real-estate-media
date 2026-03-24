@@ -62,10 +62,10 @@ export default function AdminClients() {
     }
   };
 
-  const filteredClients = clients.filter(c => 
-    c.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.username.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredClients = clients.filter(c =>
+    c.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    c.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    c.username?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const totalPages = Math.ceil(filteredClients.length / itemsPerPage);
