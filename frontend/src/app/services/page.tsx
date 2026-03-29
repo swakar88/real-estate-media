@@ -116,23 +116,27 @@ export default async function Services() {
                 <div className="rounded-[2.5rem] border border-primary/20 bg-card overflow-hidden h-full shadow-gold hover:shadow-gold-heavy transition-all group">
                   <div className="h-64 bg-black relative overflow-hidden">
                     {media.services_grass_before ? (
-                      <ImageComparison 
+                      <ImageComparison
                         beforeImage={media.services_grass_before}
                         afterImage={media.services_grass}
                       />
                     ) : (
-                      <Image 
-                        src={media.services_grass || "https://images.unsplash.com/photo-1595874249110-394f9e15967b?q=80&w=1471&auto=format&fit=crop"} 
-                        alt="Premium Curb Appeal Enhancement" 
-                        fill 
-                        className="object-cover transition-transform duration-1000 group-hover:scale-110" 
-                      />
+                      <>
+                        <Image
+                          src={media.services_grass || "https://images.unsplash.com/photo-1595874249110-394f9e15967b?q=80&w=1471&auto=format&fit=crop"}
+                          alt="Premium Curb Appeal Enhancement"
+                          fill
+                          className="object-cover transition-transform duration-1000 group-hover:scale-110"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none"></div>
+                      </>
                     )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none"></div>
-                    <div className="absolute bottom-6 left-6 pointer-events-none">
+                    {!media.services_grass_before && (
+                      <div className="absolute bottom-6 left-6 pointer-events-none">
                         <span className="text-primary font-black text-[10px] uppercase tracking-[0.3em] block mb-1">Curb Appeal</span>
                         <h3 className="text-2xl font-black text-white italic">Lush Grass <span className="text-primary italic">Edit</span></h3>
-                    </div>
+                      </div>
+                    )}
                   </div>
                   <div className="p-8">
                     <p className="text-sm text-muted-foreground mb-6 leading-relaxed">Enhance patchy or dormant lawns to a vibrant, lush green. Perfect for maximizing first impressions and property value throughout the year.</p>

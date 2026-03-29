@@ -25,6 +25,7 @@ import {
   Smartphone
 } from "lucide-react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 
 interface MediaItem {
   id: string | number;
@@ -179,10 +180,10 @@ export default function PropertyPage() {
       <nav className={`fixed ${shoot.payment_status === 'paid' ? 'top-[42px]' : 'top-0'} left-0 right-0 z-50 bg-black/40 backdrop-blur-xl border-b border-white/5 px-6 py-4`}>
          <div className="max-w-[1800px] mx-auto flex items-center justify-between">
             <div className="flex items-center gap-8">
-               <h1 className="text-xl font-black tracking-tighter hover:text-primary transition-colors cursor-pointer flex items-center gap-2">
+               <Link href="/" className="text-xl font-black tracking-tighter hover:text-primary transition-colors flex items-center gap-2">
                   <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-sm">KC</div>
                   <span className="hidden sm:inline">KC<span className="text-primary">.</span>REAL ESTATE MEDIA</span>
-               </h1>
+               </Link>
             </div>
             
             <div className="hidden lg:flex items-center gap-12 absolute left-1/2 -translate-x-1/2">
