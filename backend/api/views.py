@@ -1208,6 +1208,33 @@ def register_user(request):
         # Auto-create referral profile
         UserProfile.objects.get_or_create(user=user)
 
+        # Send welcome email
+        try:
+            from .utils.email_utils import send_email_dynamic
+            from django.conf import settings as django_settings
+            site_name = GlobalSettings.objects.values_list('site_name', flat=True).first() or 'KC Real Estate Media'
+            portal_url = getattr(django_settings, 'FRONTEND_URL', 'http://localhost:3000') + '/dashboard'
+            welcome_html = f"""
+            <div style="font-family:sans-serif;max-width:600px;margin:auto;padding:32px;">
+              <h2 style="font-size:24px;font-weight:900;">Welcome to {site_name}!</h2>
+              <p>Hi {first_name or 'there'},</p>
+              <p>Your account has been created. You can now book shoots, track your media deliveries, and manage invoices from your client portal.</p>
+              <p style="margin:32px 0;">
+                <a href="{portal_url}" style="background:#c9a84c;color:#000;padding:14px 32px;border-radius:12px;font-weight:900;text-decoration:none;font-size:14px;letter-spacing:0.05em;text-transform:uppercase;">
+                  Go to My Portal
+                </a>
+              </p>
+              <p style="color:#888;font-size:12px;">Questions? Reply to this email and we'll be happy to help.</p>
+            </div>
+            """
+            send_email_dynamic(
+                subject=f"Welcome to {site_name}!",
+                recipient_email=email,
+                html_content=welcome_html,
+            )
+        except Exception as e:
+            print(f"Welcome email failed: {e}")
+
         refresh = RefreshToken.for_user(user)
         return Response({
             'refresh': str(refresh),

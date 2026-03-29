@@ -144,11 +144,11 @@ export default function BookingForm({ packages }: { packages: any[] }) {
         
         <div className="bg-card border border-border/50 rounded-xl p-6 shadow-sm border-dashed mb-6">
           <p className="text-sm text-muted-foreground mb-4">
-            Login to your account to cancel or reschedule :)
+            {isAuthenticated ? "View your booking status and download media from your dashboard." : "Log in to your account to track this booking, cancel, or reschedule."}
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
              <Link href={isAuthenticated ? "/dashboard" : "/login"} className="px-8 py-3 bg-primary text-primary-foreground font-black text-xs uppercase tracking-widest rounded-2xl shadow-gold hover:shadow-gold-heavy hover:scale-[1.02] active:scale-95 transition-all">
-               Manage Booking
+               {isAuthenticated ? "Go to Dashboard" : "Login to Your Account"}
              </Link>
              <button onClick={() => setSuccess(false)} className="px-8 py-3 border border-primary/20 bg-card hover:bg-muted text-foreground font-black text-xs uppercase tracking-widest rounded-2xl transition-all">
                Book Another
