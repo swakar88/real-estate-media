@@ -210,7 +210,7 @@ export default function BookingsPage() {
                     <div className="flex items-center gap-3 text-muted-foreground">
                       <div className="flex items-center gap-1.5 font-bold text-[10px] uppercase tracking-wider">
                          <Calendar className="h-3.5 w-3.5" />
-                         {new Date(shoot.shoot_date).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
+                         {new Date(shoot.shoot_date.includes('T') ? shoot.shoot_date : shoot.shoot_date + 'T00:00:00').toLocaleDateString('en-US', { timeZone: typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'America/Chicago', month: 'long', day: 'numeric', year: 'numeric' })}
                       </div>
                     </div>
                   </div>

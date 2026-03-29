@@ -58,8 +58,14 @@ export default function ProfilePage() {
     fetchProfile();
   }, []);
 
+  const validateEmail = (val: string) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(val);
+
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateEmail(formData.email)) {
+      toast.error("Please enter a valid email address (e.g. name@domain.com).");
+      return;
+    }
     setSaving(true);
     const token = localStorage.getItem("access_token");
     try {

@@ -16,10 +16,18 @@ import Link from "next/link";
 
 import { useGlobalSettings } from "@/context/GlobalSettingsContext";
 
+// Parse date-only strings (YYYY-MM-DD) as local time to avoid UTC offset shifting the date
+const parseLocalDate = (d: string) => new Date(d.includes('T') ? d : d + 'T00:00:00');
+const userTZ = typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'America/Chicago';
+const formatDate = (d: string, opts: Intl.DateTimeFormatOptions) =>
+  parseLocalDate(d).toLocaleDateString('en-US', { timeZone: userTZ, ...opts });
+
 export default function BillingHistoryPage() {
   const { settings } = useGlobalSettings();
   const [loading, setLoading] = useState(true);
   const [shoots, setShoots] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   useEffect(() => {
     const fetchBillingData = async () => {
@@ -88,17 +96,28 @@ export default function BillingHistoryPage() {
         <div className="p-8 border-b border-border/40 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-muted/20">
            <div className="relative flex-1 max-w-md">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
-              <input 
-                type="text" 
-                placeholder="Search by property address..." 
+              <input
+                type="text"
+                placeholder="Search by property address..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-11 pr-4 py-3 bg-background/50 border border-border/40 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
               />
            </div>
            <div className="flex items-center gap-3">
-              <button className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-background border border-border/40 text-xs font-bold hover:bg-muted transition-all">
-                <Filter className="h-4 w-4" /> Filter
-              </button>
-              <button className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-primary text-primary-foreground text-xs font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all active:scale-95">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-background border border-border/40 text-xs font-bold hover:bg-muted transition-all appearance-none cursor-pointer"
+              >
+                <option value="all">All Status</option>
+                <option value="paid">Paid</option>
+                <option value="unpaid">Unpaid</option>
+              </select>
+              <button
+                onClick={() => window.print()}
+                className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-primary text-primary-foreground text-xs font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all active:scale-95"
+              >
                 <Download className="h-4 w-4" /> Export PDF
               </button>
            </div>
@@ -116,11 +135,17 @@ export default function BillingHistoryPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border/20">
-              {shoots.length > 0 ? (
-                shoots.map((shoot) => (
+              {shoots.filter(s =>
+                (statusFilter === 'all' || s.payment_status === statusFilter) &&
+                (!searchQuery || s.property_address?.toLowerCase().includes(searchQuery.toLowerCase()))
+              ).length > 0 ? (
+                shoots.filter(s =>
+                  (statusFilter === 'all' || s.payment_status === statusFilter) &&
+                  (!searchQuery || s.property_address?.toLowerCase().includes(searchQuery.toLowerCase()))
+                ).map((shoot) => (
                   <tr key={shoot.id} className="group hover:bg-muted/30 transition-colors">
                     <td className="px-10 py-6 whitespace-nowrap">
-                      <div className="text-sm font-bold">{new Date(shoot.shoot_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+                      <div className="text-sm font-bold">{formatDate(shoot.shoot_date, { month: 'short', day: 'numeric', year: 'numeric' })}</div>
                       <div className="text-[10px] font-medium text-muted-foreground/60 uppercase">Inv #INV-{shoot.id}</div>
                     </td>
                     <td className="px-6 py-6">
