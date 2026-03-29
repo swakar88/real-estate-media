@@ -108,15 +108,15 @@ export default function SupportHubPage() {
                    { label: "Billing Documentation", icon: ShieldCheck, color: "text-success" },
                    { label: "System Status", icon: Clock, color: "text-warning" },
                  ].map((item) => (
-                   <button key={item.label} className="w-full flex items-center justify-between p-4 rounded-xl hover:bg-muted/50 transition-all border border-transparent hover:border-border/20 group">
+                   <div key={item.label} className="w-full flex items-center justify-between p-4 rounded-xl border border-transparent group opacity-60 cursor-not-allowed" title="Coming Soon">
                       <div className="flex items-center gap-3">
                          <div className={`p-2 rounded-lg bg-card shadow-sm ${item.color}`}>
                             <item.icon className="h-4 w-4" />
                          </div>
                          <span className="text-sm font-bold">{item.label}</span>
                       </div>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary transition-all" />
-                   </button>
+                      <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50 bg-muted px-2 py-1 rounded-full">Soon</span>
+                   </div>
                  ))}
               </div>
            </div>

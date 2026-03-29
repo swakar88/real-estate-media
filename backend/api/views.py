@@ -1902,82 +1902,33 @@ class SupportTicketViewSet(viewsets.ModelViewSet):
     """
     queryset = SupportTicket.objects.all().order_by('-created_at')
     serializer_class = SupportTicketSerializer
-    permission_classes = [permissions.AllowAny] # Allow guest submissions, handle user assignment in perform_create
+    permission_classes = [permissions.AllowAny]
 
     def perform_create(self, serializer):
+        from .utils.email_utils import send_email_dynamic
         user = self.request.user if self.request.user.is_authenticated else None
         ticket = serializer.save(user=user)
-        
-        # Send email notification to admin
+
         try:
             settings_obj = GlobalSettings.objects.first()
             admin_email = settings_obj.admin_email_for_alerts if settings_obj else "admin@example.com"
-            
-            email_config = EmailConfiguration.objects.filter(is_active=True).first()
-            if email_config:
-                connection = get_connection(
-                    host=email_config.email_host,
-                    port=email_config.email_port,
-                    username=email_config.email_username,
-                    password=email_config.email_password,
-                    use_tls=email_config.use_tls,
-                    use_ssl=email_config.use_ssl
-                )
-                
-                subject = f"New Support Ticket: {ticket.subject}"
-                body = f"New support ticket received from {ticket.name} ({ticket.email}).\n\nTopic: {ticket.get_topic_display()}\nSubject: {ticket.subject}\n\nMessage:\n{ticket.message}\n\nView in admin portal for details."
-                
-                email = EmailMessage(
-                    subject,
-                    body,
-                    f"{email_config.email_from_name} <{email_config.email_from_address}>",
-                    [admin_email],
-                    connection=connection
-                )
-                email.send()
-        except Exception as e:
-            print(f"Error sending support ticket notification: {e}")
 
-
-class SupportTicketViewSet(viewsets.ModelViewSet):
-    """
-    API endpoint for managing support tickets.
-    """
-    queryset = SupportTicket.objects.all().order_by('-created_at')
-    serializer_class = SupportTicketSerializer
-    permission_classes = [permissions.AllowAny] # Allow guest submissions, handle user assignment in perform_create
-
-    def perform_create(self, serializer):
-        user = self.request.user if self.request.user.is_authenticated else None
-        ticket = serializer.save(user=user)
-        
-        # Send email notification to admin
-        try:
-            settings_obj = GlobalSettings.objects.first()
-            admin_email = settings_obj.admin_email_for_alerts if settings_obj else "admin@example.com"
-            
-            email_config = EmailConfiguration.objects.filter(is_active=True).first()
-            if email_config:
-                from django.core.mail import get_connection, EmailMessage
-                connection = get_connection(
-                    host=email_config.email_host,
-                    port=email_config.email_port,
-                    username=email_config.email_username,
-                    password=email_config.email_password,
-                    use_tls=email_config.use_tls,
-                    use_ssl=email_config.use_ssl
-                )
-                
-                subject = f"New Support Ticket: {ticket.subject}"
-                body = f"New support ticket received from {ticket.name} ({ticket.email}).\n\nTopic: {ticket.get_topic_display()}\nSubject: {ticket.subject}\n\nMessage:\n{ticket.message}\n\nView in admin portal for details."
-                
-                email = EmailMessage(
-                    subject,
-                    body,
-                    f"{email_config.email_from_name} <{email_config.email_from_address}>",
-                    [admin_email],
-                    connection=connection
-                )
-                email.send()
+            subject = f"New Support Ticket: {ticket.subject}"
+            html_content = f"""
+            <div style="font-family:sans-serif;max-width:600px;margin:auto;padding:32px;">
+              <h2 style="font-size:20px;font-weight:900;">New Support Ticket</h2>
+              <p><strong>From:</strong> {ticket.name} ({ticket.email})</p>
+              <p><strong>Topic:</strong> {ticket.get_topic_display()}</p>
+              <p><strong>Subject:</strong> {ticket.subject}</p>
+              <hr style="border:none;border-top:1px solid #eee;margin:16px 0;">
+              <p style="white-space:pre-wrap;">{ticket.message}</p>
+              <p style="color:#888;font-size:12px;margin-top:24px;">View in admin portal for details.</p>
+            </div>
+            """
+            send_email_dynamic(
+                subject=subject,
+                recipient_email=admin_email,
+                html_content=html_content,
+            )
         except Exception as e:
             print(f"Error sending support ticket notification: {e}")
