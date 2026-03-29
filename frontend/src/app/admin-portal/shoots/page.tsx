@@ -248,12 +248,12 @@ export default function AdminShoots() {
                  </thead>
                  <tbody className="divide-y divide-border/40">
                     {filteredShoots.map(shoot => (
-                       <tr key={shoot.id} className="hover:bg-muted/20 transition-colors group">
+                       <tr key={shoot.id} className="hover:bg-muted/40 transition-colors group">
                           <td className="px-6 py-4">
                              <div className="font-bold text-base truncate max-w-[280px]" title={shoot.property_address}>{shoot.property_address}</div>
                              <div className="flex items-center flex-wrap gap-2 mt-1">
                                 <div className="text-xs text-primary font-medium uppercase tracking-wider">
-                                   {new Date(shoot.shoot_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                                   {new Date(shoot.shoot_date.includes('T') ? shoot.shoot_date : shoot.shoot_date + 'T00:00:00').toLocaleDateString('en-US', { timeZone: typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'America/Chicago', month: 'short', day: 'numeric', year: 'numeric' })}
                                 </div>
                                 {shoot.sqft && <span className="text-[10px] text-muted-foreground bg-muted/40 px-1.5 py-0.5 rounded font-medium">{shoot.sqft.toLocaleString()} sq ft</span>}
                                 {shoot.referral_code_used && <span className="text-[10px] text-primary bg-primary/5 px-1.5 py-0.5 rounded font-bold">ref: {shoot.referral_code_used}</span>}

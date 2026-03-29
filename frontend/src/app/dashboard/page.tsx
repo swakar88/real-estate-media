@@ -177,7 +177,7 @@ export default function DashboardPage() {
                   <div className="flex-1 min-w-0">
                     <h3 className="font-bold truncate group-hover:text-primary transition-colors">{shoot.property_address}</h3>
                     <div className="flex items-center gap-3 mt-1 min-w-0 overflow-hidden">
-                      <span className="text-[10px] font-bold text-muted-foreground/60 shrink-0">{new Date(shoot.shoot_date).toLocaleDateString()}</span>
+                      <span className="text-[10px] font-bold text-muted-foreground/60 shrink-0">{new Date(shoot.shoot_date.includes('T') ? shoot.shoot_date : shoot.shoot_date + 'T00:00:00').toLocaleDateString('en-US', { timeZone: typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'America/Chicago' })}</span>
                       
                       {(shoot.beds || shoot.baths || shoot.sqft) && (
                         <div className="flex items-center gap-2 px-2 border-l border-border/50 shrink-0">

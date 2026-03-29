@@ -29,6 +29,7 @@ urlpatterns = [
     path('register/', views.register_user, name='register_user'),
     path('register-admin/', views.register_admin, name='register_admin'),
     path('password-reset/', views.request_password_reset, name='password_reset'),
+    path('password-reset/confirm/', views.confirm_password_reset, name='password_reset_confirm'),
     path('stripe/webhook/', views.stripe_webhook, name='stripe-webhook'),
     path('', include(router.urls)),
 ]

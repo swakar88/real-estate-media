@@ -162,7 +162,7 @@ export default function AdminReferralsPage() {
                   const StatusIcon = statusInfo.icon;
 
                   return (
-                    <tr key={ref.id} className="group hover:bg-muted/20 transition-colors">
+                    <tr key={ref.id} className="group hover:bg-muted/40 transition-colors">
                       <td className="px-8 py-6">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-black">

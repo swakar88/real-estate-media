@@ -7,6 +7,8 @@ import { StaggerContainer, StaggerItem } from "@/components/ScrollReveal";
 export default function GalleryGrid({ initialImages }: { initialImages: any[] }) {
   const [activeTab, setActiveTab] = useState("All");
 
+  const capitalize = (s: string) => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+
   // Extract unique categories from the images array to dynamically build the filter buttons
   const categories = ["All", ...Array.from(new Set(initialImages.map((img) => img.category)))];
 
@@ -28,7 +30,7 @@ export default function GalleryGrid({ initialImages }: { initialImages: any[] })
                 : "border border-border/50 hover:bg-accent hover:text-accent-foreground"
             }`}
           >
-            {category}
+            {capitalize(category)}
           </button>
         ))}
       </div>
@@ -51,7 +53,7 @@ export default function GalleryGrid({ initialImages }: { initialImages: any[] })
                 <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 <div className="absolute bottom-4 left-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-y-2 group-hover:translate-y-0 text-left">
                   <span className="text-white font-medium drop-shadow-md block">{item.title}</span>
-                  <span className="text-primary/80 text-xs font-semibold uppercase tracking-wider">{item.category}</span>
+                  <span className="text-primary/80 text-xs font-semibold uppercase tracking-wider">{capitalize(item.category)}</span>
                 </div>
               </StaggerItem>
             );

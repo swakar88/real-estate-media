@@ -53,9 +53,24 @@ function LoginContent() {
     }
   };
 
+  const validateEmail = (val: string) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(val);
+  const validatePassword = (val: string) => val.length >= 8 && /[a-zA-Z]/.test(val) && /\d/.test(val);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    if (isRegistering) {
+      if (!validateEmail(email)) {
+        setError("Please enter a valid email address (e.g. name@domain.com).");
+        return;
+      }
+      if (!validatePassword(password)) {
+        setError("Password must be at least 8 characters and include both letters and numbers.");
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {

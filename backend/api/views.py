@@ -140,14 +140,38 @@ class BookingRequestViewSet(viewsets.ModelViewSet):
         else:
             email = serializer.validated_data.get('email')
             if email:
-                client_user, _ = User.objects.get_or_create(
-                    email=email,
-                    defaults={
-                        'username': email.split('@')[0],
-                        'first_name': serializer.validated_data.get('first_name', ''),
-                        'last_name': serializer.validated_data.get('last_name', ''),
-                    }
-                )
+                # Look up by email first; use full email as username (app convention)
+                existing = User.objects.filter(email__iexact=email).first()
+                if existing:
+                    client_user = existing
+                else:
+                    # Ensure username is unique — use full email, fall back to email+id
+                    base_username = email
+                    username = base_username
+                    suffix = 1
+                    while User.objects.filter(username=username).exists():
+                        username = f"{base_username}_{suffix}"
+                        suffix += 1
+                    client_user = User.objects.create_user(
+                        username=username,
+                        email=email,
+                        first_name=serializer.validated_data.get('first_name', ''),
+                        last_name=serializer.validated_data.get('last_name', ''),
+                    )
+
+        # Warn on duplicate address booking for authenticated users (unless force=true)
+        if self.request.user.is_authenticated and not self.request.data.get('force'):
+            property_details = serializer.validated_data.get('property_details', '')
+            duplicate = ClientShoot.objects.filter(
+                client=self.request.user,
+                property_address__iexact=property_details[:300],
+            ).exclude(status='archived').first()
+            if duplicate:
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError({
+                    'duplicate_warning': True,
+                    'detail': f'You already have an active booking for this address (#{duplicate.id}). Pass force=true to book anyway.'
+                })
 
         # Auto-assign an available photographer if requested
         instance = serializer.save()
@@ -1208,6 +1232,33 @@ def register_user(request):
         # Auto-create referral profile
         UserProfile.objects.get_or_create(user=user)
 
+        # Send welcome email
+        try:
+            from .utils.email_utils import send_email_dynamic
+            from django.conf import settings as django_settings
+            site_name = GlobalSettings.objects.values_list('site_name', flat=True).first() or 'KC Real Estate Media'
+            portal_url = getattr(django_settings, 'FRONTEND_URL', 'http://localhost:3000') + '/dashboard'
+            welcome_html = f"""
+            <div style="font-family:sans-serif;max-width:600px;margin:auto;padding:32px;">
+              <h2 style="font-size:24px;font-weight:900;">Welcome to {site_name}!</h2>
+              <p>Hi {first_name or 'there'},</p>
+              <p>Your account has been created. You can now book shoots, track your media deliveries, and manage invoices from your client portal.</p>
+              <p style="margin:32px 0;">
+                <a href="{portal_url}" style="background:#c9a84c;color:#000;padding:14px 32px;border-radius:12px;font-weight:900;text-decoration:none;font-size:14px;letter-spacing:0.05em;text-transform:uppercase;">
+                  Go to My Portal
+                </a>
+              </p>
+              <p style="color:#888;font-size:12px;">Questions? Reply to this email and we'll be happy to help.</p>
+            </div>
+            """
+            send_email_dynamic(
+                subject=f"Welcome to {site_name}!",
+                recipient_email=email,
+                html_content=welcome_html,
+            )
+        except Exception as e:
+            print(f"Welcome email failed: {e}")
+
         refresh = RefreshToken.for_user(user)
         return Response({
             'refresh': str(refresh),
@@ -1255,23 +1306,84 @@ def register_admin(request):
 @permission_classes([AllowAny])
 def request_password_reset(request):
     """
-    Mocked endpoint for password reset requests.
+    Generate a signed password reset token and email a reset link.
     """
-    email = request.data.get('email')
+    from django.core import signing
+    from .utils.email_utils import send_email_dynamic
+    from django.conf import settings as django_settings
+
+    email = request.data.get('email', '').strip().lower()
     if not email:
         return Response({'detail': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
-        
-    # In a real app, we would verify the user exists and send a real tokenized link.
-    # For now, we mock the behavior.
-    print(f"PASSWORD RESET REQUEST FOR: {email}")
-    
-    # Simulate sending email
-    from .utils.email_utils import send_email_dynamic
-    subject = "Password Reset Request - KC Real Estate Media"
-    body = f"Hello,\n\nWe received a request to reset your password. Please click the link below to set a new password:\n\nReset Password Link: #\n\nIf you didn't request this, please ignore this email."
-    
-    # Mocking successful "send"
+
+    try:
+        user = User.objects.get(email__iexact=email)
+    except User.DoesNotExist:
+        # Return same response to avoid user enumeration
+        return Response({'detail': 'If an account exists with that email, a reset link has been sent.'}, status=status.HTTP_200_OK)
+
+    # Create a signed token valid for 1 hour
+    token = signing.dumps({'user_id': user.pk, 'email': user.email}, salt='password-reset')
+    frontend_url = getattr(django_settings, 'FRONTEND_URL', 'http://localhost:3000')
+    reset_url = f"{frontend_url}/reset-password?token={token}"
+
+    html_content = f"""
+    <div style="font-family:sans-serif;max-width:600px;margin:auto;padding:32px;">
+      <h2 style="font-size:24px;font-weight:900;">Reset Your Password</h2>
+      <p>We received a request to reset the password for your account (<strong>{user.email}</strong>).</p>
+      <p>Click the button below to set a new password. This link expires in <strong>1 hour</strong>.</p>
+      <p style="margin:32px 0;">
+        <a href="{reset_url}" style="background:#c9a84c;color:#000;padding:14px 32px;border-radius:12px;font-weight:900;text-decoration:none;font-size:14px;letter-spacing:0.05em;text-transform:uppercase;">
+          Reset Password
+        </a>
+      </p>
+      <p style="color:#888;font-size:12px;">If you didn't request this, you can safely ignore this email. Your password will not change.</p>
+    </div>
+    """
+    try:
+        send_email_dynamic(
+            subject="Reset Your Password",
+            recipient_email=user.email,
+            html_content=html_content,
+        )
+    except Exception as e:
+        print(f"Password reset email failed: {e}")
+
     return Response({'detail': 'If an account exists with that email, a reset link has been sent.'}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def confirm_password_reset(request):
+    """
+    Verify signed reset token and set new password.
+    """
+    from django.core import signing
+
+    token = request.data.get('token', '')
+    new_password = request.data.get('new_password', '')
+
+    if not token or not new_password:
+        return Response({'detail': 'Token and new password are required.'}, status=status.HTTP_400_BAD_REQUEST)
+    if len(new_password) < 8:
+        return Response({'detail': 'Password must be at least 8 characters.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        # Token valid for 3600 seconds (1 hour)
+        data = signing.loads(token, salt='password-reset', max_age=3600)
+    except signing.SignatureExpired:
+        return Response({'detail': 'Reset link has expired. Please request a new one.'}, status=status.HTTP_400_BAD_REQUEST)
+    except signing.BadSignature:
+        return Response({'detail': 'Invalid reset link.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        user = User.objects.get(pk=data['user_id'], email=data['email'])
+    except User.DoesNotExist:
+        return Response({'detail': 'Invalid reset link.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    user.set_password(new_password)
+    user.save()
+    return Response({'detail': 'Password updated successfully. You can now log in.'}, status=status.HTTP_200_OK)
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -1298,10 +1410,18 @@ def get_availability(request):
         is_booked=False,
         photographer__is_active=True
     ).values('date', 'time_slot').distinct().order_by('date', 'time_slot')
+
+    # For today, filter out time slots that have already passed
+    today = timezone.now().date()
+    current_time = timezone.now().time()
     
     availability = {}
     for slot in slots:
-        date_str = slot['date'].strftime('%Y-%m-%d')
+        slot_date = slot['date']
+        # Skip past time slots for today
+        if slot_date == today and slot['time_slot'] <= current_time:
+            continue
+        date_str = slot_date.strftime('%Y-%m-%d')
         if date_str not in availability:
             availability[date_str] = []
         availability[date_str].append(slot['time_slot'])
@@ -1833,82 +1953,33 @@ class SupportTicketViewSet(viewsets.ModelViewSet):
     """
     queryset = SupportTicket.objects.all().order_by('-created_at')
     serializer_class = SupportTicketSerializer
-    permission_classes = [permissions.AllowAny] # Allow guest submissions, handle user assignment in perform_create
+    permission_classes = [permissions.AllowAny]
 
     def perform_create(self, serializer):
+        from .utils.email_utils import send_email_dynamic
         user = self.request.user if self.request.user.is_authenticated else None
         ticket = serializer.save(user=user)
-        
-        # Send email notification to admin
+
         try:
             settings_obj = GlobalSettings.objects.first()
             admin_email = settings_obj.admin_email_for_alerts if settings_obj else "admin@example.com"
-            
-            email_config = EmailConfiguration.objects.filter(is_active=True).first()
-            if email_config:
-                connection = get_connection(
-                    host=email_config.email_host,
-                    port=email_config.email_port,
-                    username=email_config.email_username,
-                    password=email_config.email_password,
-                    use_tls=email_config.use_tls,
-                    use_ssl=email_config.use_ssl
-                )
-                
-                subject = f"New Support Ticket: {ticket.subject}"
-                body = f"New support ticket received from {ticket.name} ({ticket.email}).\n\nTopic: {ticket.get_topic_display()}\nSubject: {ticket.subject}\n\nMessage:\n{ticket.message}\n\nView in admin portal for details."
-                
-                email = EmailMessage(
-                    subject,
-                    body,
-                    f"{email_config.email_from_name} <{email_config.email_from_address}>",
-                    [admin_email],
-                    connection=connection
-                )
-                email.send()
-        except Exception as e:
-            print(f"Error sending support ticket notification: {e}")
 
-
-class SupportTicketViewSet(viewsets.ModelViewSet):
-    """
-    API endpoint for managing support tickets.
-    """
-    queryset = SupportTicket.objects.all().order_by('-created_at')
-    serializer_class = SupportTicketSerializer
-    permission_classes = [permissions.AllowAny] # Allow guest submissions, handle user assignment in perform_create
-
-    def perform_create(self, serializer):
-        user = self.request.user if self.request.user.is_authenticated else None
-        ticket = serializer.save(user=user)
-        
-        # Send email notification to admin
-        try:
-            settings_obj = GlobalSettings.objects.first()
-            admin_email = settings_obj.admin_email_for_alerts if settings_obj else "admin@example.com"
-            
-            email_config = EmailConfiguration.objects.filter(is_active=True).first()
-            if email_config:
-                from django.core.mail import get_connection, EmailMessage
-                connection = get_connection(
-                    host=email_config.email_host,
-                    port=email_config.email_port,
-                    username=email_config.email_username,
-                    password=email_config.email_password,
-                    use_tls=email_config.use_tls,
-                    use_ssl=email_config.use_ssl
-                )
-                
-                subject = f"New Support Ticket: {ticket.subject}"
-                body = f"New support ticket received from {ticket.name} ({ticket.email}).\n\nTopic: {ticket.get_topic_display()}\nSubject: {ticket.subject}\n\nMessage:\n{ticket.message}\n\nView in admin portal for details."
-                
-                email = EmailMessage(
-                    subject,
-                    body,
-                    f"{email_config.email_from_name} <{email_config.email_from_address}>",
-                    [admin_email],
-                    connection=connection
-                )
-                email.send()
+            subject = f"New Support Ticket: {ticket.subject}"
+            html_content = f"""
+            <div style="font-family:sans-serif;max-width:600px;margin:auto;padding:32px;">
+              <h2 style="font-size:20px;font-weight:900;">New Support Ticket</h2>
+              <p><strong>From:</strong> {ticket.name} ({ticket.email})</p>
+              <p><strong>Topic:</strong> {ticket.get_topic_display()}</p>
+              <p><strong>Subject:</strong> {ticket.subject}</p>
+              <hr style="border:none;border-top:1px solid #eee;margin:16px 0;">
+              <p style="white-space:pre-wrap;">{ticket.message}</p>
+              <p style="color:#888;font-size:12px;margin-top:24px;">View in admin portal for details.</p>
+            </div>
+            """
+            send_email_dynamic(
+                subject=subject,
+                recipient_email=admin_email,
+                html_content=html_content,
+            )
         except Exception as e:
             print(f"Error sending support ticket notification: {e}")

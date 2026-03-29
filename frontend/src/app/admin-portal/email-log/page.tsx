@@ -77,7 +77,7 @@ export default function EmailLogPage() {
               </thead>
               <tbody className="divide-y divide-primary/5">
                 {logs.map((log: any) => (
-                  <tr key={log.id} className="hover:bg-primary/5 transition-colors">
+                  <tr key={log.id} className="hover:bg-primary/10 transition-colors">
                     <td className="px-6 py-4">
                       {log.status === 'sent' ? (
                         <span className="flex items-center gap-1.5 text-emerald-500 font-black text-[10px] uppercase"><CheckCircle2 className="w-3.5 h-3.5" /> Sent</span>

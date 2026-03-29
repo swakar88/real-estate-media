@@ -22,6 +22,7 @@ export default function BookingsPage() {
   const [loading, setLoading] = useState(true);
   const [shoots, setShoots] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
 
   useEffect(() => {
     const queryParams = new URLSearchParams(window.location.search);
@@ -101,6 +102,9 @@ export default function BookingsPage() {
     return { label: shoot.status, color: 'bg-slate-500/10 text-slate-500 ring-slate-500/20', icon: Clock };
   };
 
+  // Close menu when clicking outside
+  const handlePageClick = () => setOpenMenuId(null);
+
   if (loading) {
     return (
       <div className="space-y-8 animate-in fade-in transition-all duration-700">
@@ -116,7 +120,7 @@ export default function BookingsPage() {
   }
 
   return (
-    <div className="space-y-10 max-w-[1200px] mx-auto">
+    <div className="space-y-10 max-w-[1200px] mx-auto" onClick={handlePageClick}>
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div className="space-y-1">
@@ -169,14 +173,44 @@ export default function BookingsPage() {
                   <div className="space-y-2">
                     <div className="flex items-start justify-between gap-4">
                       <h3 className="text-xl font-black tracking-tight line-clamp-2 leading-tight group-hover:text-primary transition-colors">{shoot.property_address}</h3>
-                      <button className="p-2 -mr-2 text-muted-foreground hover:bg-muted rounded-xl transition-colors shrink-0">
-                        <MoreVertical className="h-5 w-5" />
-                      </button>
+                      <div className="relative shrink-0">
+                        <button
+                          className="p-2 -mr-2 text-muted-foreground hover:bg-muted rounded-xl transition-colors"
+                          onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === shoot.id ? null : shoot.id); }}
+                        >
+                          <MoreVertical className="h-5 w-5" />
+                        </button>
+                        {openMenuId === shoot.id && (
+                          <div className="absolute right-0 top-8 z-30 w-48 bg-card border border-border/50 rounded-xl shadow-xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                            <Link
+                              href={`/shoot/${shoot.id}${shoot.payment_status === 'paid' ? '' : '?view=watermarked'}`}
+                              className="flex items-center gap-2 px-4 py-3 text-sm hover:bg-muted transition-colors"
+                              onClick={() => setOpenMenuId(null)}
+                            >
+                              <ExternalLink className="h-4 w-4" /> View Details
+                            </Link>
+                            <a
+                              href="mailto:info@kcrealestatemedia.com?subject=Reschedule Request"
+                              className="flex items-center gap-2 px-4 py-3 text-sm hover:bg-muted transition-colors"
+                              onClick={() => setOpenMenuId(null)}
+                            >
+                              <Calendar className="h-4 w-4" /> Request Reschedule
+                            </a>
+                            <a
+                              href="mailto:info@kcrealestatemedia.com?subject=Cancellation Request"
+                              className="flex items-center gap-2 px-4 py-3 text-sm text-destructive hover:bg-destructive/10 transition-colors"
+                              onClick={() => setOpenMenuId(null)}
+                            >
+                              <AlertCircle className="h-4 w-4" /> Request Cancellation
+                            </a>
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center gap-3 text-muted-foreground">
                       <div className="flex items-center gap-1.5 font-bold text-[10px] uppercase tracking-wider">
                          <Calendar className="h-3.5 w-3.5" />
-                         {new Date(shoot.shoot_date).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
+                         {new Date(shoot.shoot_date.includes('T') ? shoot.shoot_date : shoot.shoot_date + 'T00:00:00').toLocaleDateString('en-US', { timeZone: typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'America/Chicago', month: 'long', day: 'numeric', year: 'numeric' })}
                       </div>
                     </div>
                   </div>

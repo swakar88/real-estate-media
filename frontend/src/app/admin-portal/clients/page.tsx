@@ -155,7 +155,7 @@ export default function AdminClients() {
                     <tr 
                       key={client.id} 
                       onClick={() => setSelectedClient(client)}
-                      className="hover:bg-muted/20 transition-colors group cursor-pointer"
+                      className="hover:bg-muted/40 transition-colors group cursor-pointer"
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">

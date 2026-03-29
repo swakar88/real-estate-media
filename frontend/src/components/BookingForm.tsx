@@ -10,6 +10,7 @@ export default function BookingForm({ packages }: { packages: any[] }) {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
+  const [duplicateWarning, setDuplicateWarning] = useState(false);
   const [availableSlots, setAvailableSlots] = useState<Record<string, string[]>>({});
   const [fetchingSlots, setFetchingSlots] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -91,17 +92,25 @@ export default function BookingForm({ packages }: { packages: any[] }) {
     setFormData({ ...formData, [e.target.id]: e.target.value });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const submitBooking = async (force = false) => {
     setLoading(true);
     setError("");
+    setDuplicateWarning(false);
+
+    if (!/^[\d\s\-\(\)\+]{7,20}$/.test(formData.phone)) {
+      setError("Please enter a valid phone number (digits, spaces, dashes, parentheses).");
+      setLoading(false);
+      return;
+    }
+
+    const token = localStorage.getItem("access_token");
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
 
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/bookings/`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify({
           first_name: formData.firstName,
           last_name: formData.lastName,
@@ -113,7 +122,8 @@ export default function BookingForm({ packages }: { packages: any[] }) {
           referral_code_used: formData.referralCode.trim().toUpperCase() || null,
           shoot_date: formData.shootDate || null,
           time_slot: formData.timeSlot || null,
-          status: "pending"
+          status: "pending",
+          ...(force ? { force: true } : {}),
         })
       });
 
@@ -121,7 +131,11 @@ export default function BookingForm({ packages }: { packages: any[] }) {
         setSuccess(true);
       } else {
         const data = await res.json();
-        setError(data.detail || "Failed to submit booking request. Please try again.");
+        if (data.duplicate_warning) {
+          setDuplicateWarning(true);
+        } else {
+          setError(data.detail || "Failed to submit booking request. Please try again.");
+        }
       }
     } catch (err) {
       setError("Network error. Please try again.");
@@ -129,6 +143,11 @@ export default function BookingForm({ packages }: { packages: any[] }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await submitBooking(false);
   };
 
   if (success) {
@@ -144,11 +163,11 @@ export default function BookingForm({ packages }: { packages: any[] }) {
         
         <div className="bg-card border border-border/50 rounded-xl p-6 shadow-sm border-dashed mb-6">
           <p className="text-sm text-muted-foreground mb-4">
-            Login to your account to cancel or reschedule :)
+            {isAuthenticated ? "View your booking status and download media from your dashboard." : "Log in to your account to track this booking, cancel, or reschedule."}
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
              <Link href={isAuthenticated ? "/dashboard" : "/login"} className="px-8 py-3 bg-primary text-primary-foreground font-black text-xs uppercase tracking-widest rounded-2xl shadow-gold hover:shadow-gold-heavy hover:scale-[1.02] active:scale-95 transition-all">
-               Manage Booking
+               {isAuthenticated ? "Go to Dashboard" : "Login to Your Account"}
              </Link>
              <button onClick={() => setSuccess(false)} className="px-8 py-3 border border-primary/20 bg-card hover:bg-muted text-foreground font-black text-xs uppercase tracking-widest rounded-2xl transition-all">
                Book Another
@@ -235,6 +254,20 @@ export default function BookingForm({ packages }: { packages: any[] }) {
              {error && (
                 <div className="p-4 bg-destructive/10 text-destructive border border-destructive/20 rounded-md text-sm font-medium text-center">
                   {error}
+                </div>
+             )}
+             {duplicateWarning && (
+                <div className="p-4 bg-warning/10 border border-warning/30 rounded-xl text-sm font-medium">
+                  <p className="font-bold text-warning mb-2">You already have an active booking for this address.</p>
+                  <p className="text-muted-foreground mb-3">Would you like to book another shoot for the same property?</p>
+                  <div className="flex gap-3">
+                    <button type="button" onClick={() => submitBooking(true)} disabled={loading} className="px-5 py-2 bg-primary text-primary-foreground rounded-xl text-xs font-black uppercase tracking-widest hover:scale-[1.02] transition-all">
+                      Yes, Book Again
+                    </button>
+                    <button type="button" onClick={() => setDuplicateWarning(false)} className="px-5 py-2 bg-muted text-foreground rounded-xl text-xs font-black uppercase tracking-widest hover:bg-muted/80 transition-all">
+                      Cancel
+                    </button>
+                  </div>
                 </div>
              )}
 
