@@ -219,7 +219,7 @@ export default function AdminDashboard() {
                     </div>
                     <div>
                       <p className="text-sm font-semibold truncate max-w-[200px]">{shoot.property_address}</p>
-                      <p className="text-xs text-muted-foreground">{new Date(shoot.shoot_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</p>
+                      <p className="text-xs text-muted-foreground">{new Date(shoot.shoot_date.includes('T') ? shoot.shoot_date : shoot.shoot_date + 'T00:00:00').toLocaleDateString('en-US', { timeZone: typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'America/Chicago', weekday: 'short', month: 'short', day: 'numeric' })}</p>
                     </div>
                   </div>
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${shoot.payment_status === 'paid' ? 'bg-green-500/10 text-green-500' : 'bg-destructive/10 text-destructive'}`}>
