@@ -680,7 +680,7 @@ export default function AdminPhotographers() {
                             return (
                                <div key={i} 
                                     onClick={() => dayObj.dateStr && setDate(dayObj.dateStr)}
-                                    className={`min-h-[100px] p-3 bg-card group relative transition-all cursor-pointer hover:bg-primary/5
+                                    className={`min-h-[100px] p-3 bg-card group relative transition-all cursor-pointer hover:bg-primary/10
                                        ${!dayObj.current ? 'opacity-10 pointer-events-none' : ''}
                                        ${date === dayObj.dateStr ? 'bg-primary/10 ring-2 ring-primary inset-0 z-10' : ''}
                                     `}>
@@ -877,7 +877,7 @@ export default function AdminPhotographers() {
                             const photoAmt = parseFloat(p.amount);
                             const ourCut = photoPct > 0 ? (photoAmt / photoPct) * (1 - photoPct) : 0;
                             return (
-                              <tr key={p.id} className="hover:bg-primary/5 transition-colors group/row">
+                              <tr key={p.id} className="hover:bg-primary/10 transition-colors group/row">
                                 <td className="px-4 py-4 font-bold whitespace-nowrap">
                                   {(() => { const [y, m, d] = p.payment_date.split('-'); return new Date(parseInt(y), parseInt(m)-1, parseInt(d)).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }); })()}
                                 </td>
@@ -1015,7 +1015,7 @@ export default function AdminPhotographers() {
                                         </thead>
                                         <tbody className="divide-y divide-primary/5">
                                             {payments.map((p: any) => (
-                                                <tr key={p.id} className="hover:bg-primary/5 transition-colors group/row">
+                                                <tr key={p.id} className="hover:bg-primary/10 transition-colors group/row">
                                                     <td className="px-4 py-3 font-bold whitespace-nowrap">
                                                         {(() => {
                                                             const [y, m, d] = p.payment_date.split('-');

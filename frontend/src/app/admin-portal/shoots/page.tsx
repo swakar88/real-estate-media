@@ -248,7 +248,7 @@ export default function AdminShoots() {
                  </thead>
                  <tbody className="divide-y divide-border/40">
                     {filteredShoots.map(shoot => (
-                       <tr key={shoot.id} className="hover:bg-muted/20 transition-colors group">
+                       <tr key={shoot.id} className="hover:bg-muted/40 transition-colors group">
                           <td className="px-6 py-4">
                              <div className="font-bold text-base truncate max-w-[280px]" title={shoot.property_address}>{shoot.property_address}</div>
                              <div className="flex items-center flex-wrap gap-2 mt-1">

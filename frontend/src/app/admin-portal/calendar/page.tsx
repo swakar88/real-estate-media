@@ -149,7 +149,7 @@ export default function AdminCalendar() {
                                 year === new Date().getFullYear();
 
                 return (
-                  <div key={i} className={`min-h-[120px] border-r border-b border-border/30 p-2 transition-colors relative overflow-hidden ${day ? 'hover:bg-primary/5' : 'bg-muted/10 opacity-50'}`}>
+                  <div key={i} className={`min-h-[120px] border-r border-b border-border/30 p-2 transition-colors relative overflow-hidden ${day ? 'hover:bg-primary/10' : 'bg-muted/10 opacity-50'}`}>
                     {day && (
                       <>
                         <span className={`text-xs font-bold w-6 h-6 flex items-center justify-center rounded-lg mb-2 ${isToday ? 'bg-primary text-primary-foreground shadow-gold animate-pulse' : 'text-muted-foreground'}`}>

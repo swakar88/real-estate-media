@@ -301,7 +301,7 @@ export default function ReferralsPage() {
                   <div className="bg-card rounded-[2rem] border border-primary/10 p-6 shadow-sm hover:shadow-gold transition-all duration-500 group">
                     <div className="flex items-start justify-between mb-6">
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center text-muted-foreground/40 font-black text-lg group-hover:bg-primary/5 group-hover:text-primary transition-colors">
+                        <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center text-muted-foreground/40 font-black text-lg group-hover:bg-primary/15 group-hover:text-primary transition-colors">
                           {ref.referee_name[0]}
                         </div>
                         <div>
