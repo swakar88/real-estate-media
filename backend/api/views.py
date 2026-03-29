@@ -1298,10 +1298,18 @@ def get_availability(request):
         is_booked=False,
         photographer__is_active=True
     ).values('date', 'time_slot').distinct().order_by('date', 'time_slot')
+
+    # For today, filter out time slots that have already passed
+    today = timezone.now().date()
+    current_time = timezone.now().time()
     
     availability = {}
     for slot in slots:
-        date_str = slot['date'].strftime('%Y-%m-%d')
+        slot_date = slot['date']
+        # Skip past time slots for today
+        if slot_date == today and slot['time_slot'] <= current_time:
+            continue
+        date_str = slot_date.strftime('%Y-%m-%d')
         if date_str not in availability:
             availability[date_str] = []
         availability[date_str].append(slot['time_slot'])
