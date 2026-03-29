@@ -104,34 +104,44 @@ export default function AdminDashboard() {
     );
   }
 
-  const StatRow = ({ label, value, icon: Icon, color = "text-primary", format = "number" }: { label: string; value: number; icon: any; color?: string; format?: "number" | "currency" }) => (
-    <div className="flex items-center justify-between py-3 border-b border-primary/5 last:border-0">
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <Icon className={`w-3.5 h-3.5 ${color}`} />
-        <span className="font-bold uppercase tracking-widest text-[10px]">{label}</span>
+  const fmt = (value: number, format: "number" | "currency") =>
+    format === "currency"
+      ? `$${value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+      : value.toLocaleString();
+
+  const KpiCard = ({ label, value, icon: Icon, color, bg, border, glow, format = "number" }: {
+    label: string; value: number; icon: any;
+    color: string; bg: string; border: string; glow: string;
+    format?: "number" | "currency";
+  }) => (
+    <div className={`bg-card ${border} rounded-[2rem] p-5 flex flex-col gap-4 ${glow} hover:scale-[1.03] hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden`}>
+      <div className={`absolute inset-0 ${bg} opacity-30 rounded-[2rem] pointer-events-none`} />
+      <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${bg} relative z-10`}>
+        <Icon className={`w-5 h-5 ${color}`} />
       </div>
-      <span className={`font-black text-sm ${color}`}>
-        {format === "currency" ? `$${value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : value.toLocaleString()}
-      </span>
+      <div className="relative z-10">
+        <p className={`text-2xl font-black tracking-tight ${color}`}>{fmt(value, format)}</p>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mt-1 leading-tight">{label}</p>
+      </div>
     </div>
   );
 
-  const PanelCard = ({ title, data, accent }: { title: string; data: StatPanel; accent: string }) => (
-    <div className={`bg-card/80 backdrop-blur-sm border ${accent} rounded-[2.5rem] p-8 shadow-gold flex flex-col h-full`}>
-      <div className="flex items-center gap-3 mb-6">
-        <div className={`p-2.5 rounded-xl bg-primary/10`}>
-          <TrendingUp className="w-5 h-5 text-primary" />
+  const KpiSection = ({ title, data, icon: Icon }: { title: string; data: StatPanel; icon: any }) => (
+    <div className="space-y-5">
+      <div className="flex items-center gap-3">
+        <div className="p-2 rounded-xl bg-primary/10">
+          <Icon className="w-4 h-4 text-primary" />
         </div>
-        <h2 className="text-xl font-black italic tracking-tight">{title}</h2>
+        <h2 className="text-lg font-black tracking-tight">{title}</h2>
       </div>
-      <div className="flex-1 space-y-0">
-        <StatRow label="Active Shoots" value={data.active} icon={Activity} color="text-sky-400" />
-        <StatRow label="Completed Shoots" value={data.completed} icon={CheckCircle2} color="text-emerald-400" />
-        <StatRow label="Total Shoots" value={data.shoots} icon={Camera} color="text-primary" />
-        <StatRow label="Gross Revenue" value={data.dollarValue} icon={DollarSign} color="text-emerald-400" format="currency" />
-        <StatRow label="Our Share" value={data.ourShare} icon={DollarSign} color="text-primary" format="currency" />
-        <StatRow label="Active Photographers" value={data.photographers} icon={Users} color="text-amber-400" />
-        <StatRow label="Photographer Payouts" value={data.photographerShare} icon={DollarSign} color="text-rose-400" format="currency" />
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4">
+        <KpiCard label="Active Shoots"        value={data.active}            icon={Activity}     color="text-sky-400"     bg="bg-sky-500/10"     border="border border-sky-500/20"     glow="shadow-[0_0_20px_rgba(56,189,248,0.15)]" />
+        <KpiCard label="Completed Shoots"     value={data.completed}         icon={CheckCircle2} color="text-emerald-400" bg="bg-emerald-500/10"  border="border border-emerald-500/20" glow="shadow-[0_0_20px_rgba(52,211,153,0.15)]" />
+        <KpiCard label="Total Shoots"         value={data.shoots}            icon={Camera}       color="text-primary"     bg="bg-primary/10"     border="border border-primary/20"     glow="shadow-gold" />
+        <KpiCard label="Gross Revenue"        value={data.dollarValue}       icon={DollarSign}   color="text-emerald-400" bg="bg-emerald-500/10"  border="border border-emerald-500/20" glow="shadow-[0_0_20px_rgba(52,211,153,0.15)]" format="currency" />
+        <KpiCard label="Our Share"            value={data.ourShare}          icon={TrendingUp}   color="text-primary"     bg="bg-primary/10"     border="border border-primary/20"     glow="shadow-gold" format="currency" />
+        <KpiCard label="Photographers"        value={data.photographers}     icon={Users}        color="text-amber-400"   bg="bg-amber-500/10"   border="border border-amber-500/20"   glow="shadow-[0_0_20px_rgba(251,191,36,0.15)]" />
+        <KpiCard label="Photographer Payouts" value={data.photographerShare} icon={DollarSign}   color="text-rose-400"    bg="bg-rose-500/10"    border="border border-rose-500/20"    glow="shadow-[0_0_20px_rgba(251,113,133,0.15)]" format="currency" />
       </div>
     </div>
   );
@@ -156,15 +166,16 @@ export default function AdminDashboard() {
         </div>
       </ScrollReveal>
 
-      {/* CY vs All Time Stats */}
-      <StaggerContainer className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <StaggerItem>
-          <PanelCard title={`Current Year (${new Date().getFullYear()})`} data={cy} accent="border-primary/20" />
-        </StaggerItem>
-        <StaggerItem>
-          <PanelCard title="All Time" data={allTime} accent="border-primary/10" />
-        </StaggerItem>
-      </StaggerContainer>
+      {/* KPI Stats */}
+      <div className="space-y-8">
+        <ScrollReveal>
+          <KpiSection title={`Current Year — ${new Date().getFullYear()}`} data={cy} icon={TrendingUp} />
+        </ScrollReveal>
+        <div className="border-t border-border/30" />
+        <ScrollReveal delay={0.1}>
+          <KpiSection title="All Time" data={allTime} icon={Activity} />
+        </ScrollReveal>
+      </div>
 
       {/* Activity Lists */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
