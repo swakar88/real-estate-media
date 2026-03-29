@@ -1842,6 +1842,7 @@ class AdminViewSet(viewsets.ModelViewSet):
 
 from django.core.mail import get_connection, EmailMessage
 import traceback
+import smtplib
 
 
 class EmailConfigurationViewSet(viewsets.ModelViewSet):
@@ -1888,6 +1889,12 @@ class EmailConfigurationViewSet(viewsets.ModelViewSet):
         from_email = data.get('email_from_address')
         from_name = data.get('email_from_name', 'Test Sender')
 
+        # If password not provided (field cleared after save), fall back to stored password
+        if not password:
+            saved = EmailConfiguration.objects.filter(id=1).first()
+            if saved and saved.email_password:
+                password = saved.email_password
+
         if not all([host, port, username, password, from_email]):
             return Response({"error": "Missing required fields for testing connection."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1916,6 +1923,29 @@ class EmailConfigurationViewSet(viewsets.ModelViewSet):
             email.send()
             
             return Response({"message": "Test connection successful! Check your inbox."}, status=status.HTTP_200_OK)
+        except smtplib.SMTPAuthenticationError as e:
+            print(f"SMTP Test Failed: {str(e)}")
+            traceback.print_exc()
+            hint = ""
+            if "BadCredentials" in str(e) or "535" in str(e) or "Username and Password not accepted" in str(e):
+                hint = (
+                    " Gmail requires an App Password — your regular Gmail password will not work. "
+                    "Go to Google Account → Security → 2-Step Verification → App Passwords, "
+                    "generate one for 'Mail', and use that here."
+                )
+            return Response(
+                {"error": f"Authentication failed: incorrect username or password.{hint}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except smtplib.SMTPConnectError as e:
+            print(f"SMTP Test Failed: {str(e)}")
+            return Response(
+                {"error": f"Could not connect to {host}:{port}. Check the host and port settings."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except smtplib.SMTPException as e:
+            print(f"SMTP Test Failed: {str(e)}")
+            return Response({"error": f"SMTP error: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             print(f"SMTP Test Failed: {str(e)}")
             traceback.print_exc()

@@ -352,6 +352,10 @@ class EmailConfiguration(models.Model):
     is_active = models.BooleanField(default=True, help_text="If active, this configuration will be used for all system emails.")
     default_cc = models.EmailField(blank=True, null=True, help_text="Default CC address for all automated emails")
     default_bcc = models.EmailField(blank=True, null=True, help_text="Default BCC address for all automated emails (e.g. admin backup)")
+    test_mode = models.BooleanField(default=False, help_text="If enabled, all emails are redirected to test addresses instead of real recipients")
+    test_email_admin = models.EmailField(blank=True, null=True, help_text="Test recipient for admin emails")
+    test_email_client = models.EmailField(blank=True, null=True, help_text="Test recipient for client emails")
+    test_email_photographer = models.EmailField(blank=True, null=True, help_text="Test recipient for photographer emails")
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):

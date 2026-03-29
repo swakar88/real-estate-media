@@ -18,6 +18,8 @@ export default function EmailConfigPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [testError, setTestError] = useState<string | null>(null);
+  const [testSuccess, setTestSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [config, setConfig] = useState({
     title: "Primary SMTP",
@@ -31,7 +33,11 @@ export default function EmailConfigPage() {
     use_ssl: false,
     is_active: true,
     default_cc: "",
-    default_bcc: ""
+    default_bcc: "",
+    test_mode: false,
+    test_email_admin: "",
+    test_email_client: "",
+    test_email_photographer: ""
   });
 
   useEffect(() => {
@@ -109,6 +115,8 @@ export default function EmailConfigPage() {
     }
 
     setTesting(true);
+    setTestError(null);
+    setTestSuccess(false);
     try {
       const token = localStorage.getItem("access_token");
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/email-configuration/test-connection/`, {
@@ -122,12 +130,13 @@ export default function EmailConfigPage() {
 
       const data = await res.json();
       if (res.ok) {
+        setTestSuccess(true);
         toast.success(data.message || "Test email sent successfully!");
       } else {
-        toast.error(data.error || "Connection test failed");
+        setTestError(data.error || "Connection test failed");
       }
     } catch (err) {
-      toast.error("An error occurred during testing");
+      setTestError("An error occurred during testing. Check your network connection.");
     } finally {
       setTesting(false);
     }
@@ -320,6 +329,52 @@ export default function EmailConfigPage() {
                 </label>
               </div>
             </div>
+
+            {/* Test Mode */}
+            <div className="p-6 border-t border-border/50 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold">Test Mode</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">When enabled, all outgoing emails are redirected to the addresses below instead of real recipients.</p>
+                </div>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <div className={`w-10 h-5 rounded-full transition-colors relative ${config.test_mode ? 'bg-yellow-500' : 'bg-muted'}`}>
+                    <input type="checkbox" className="hidden" checked={config.test_mode} onChange={e => setConfig({...config, test_mode: e.target.checked})} />
+                    <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-transform ${config.test_mode ? 'left-6' : 'left-1'}`} />
+                  </div>
+                  <span className="text-sm font-medium">{config.test_mode ? 'On' : 'Off'}</span>
+                </label>
+              </div>
+              {config.test_mode && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-yellow-500/5 border border-yellow-500/20 rounded-xl">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-yellow-400">Admin emails →</label>
+                    <input type="email" value={config.test_email_admin || ""} onChange={e => setConfig({...config, test_email_admin: e.target.value})}
+                      className="w-full px-3 py-2 bg-black/40 border border-yellow-500/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500/20 text-sm font-mono"
+                      placeholder="admin@test.com" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-yellow-400">Client emails →</label>
+                    <input type="email" value={config.test_email_client || ""} onChange={e => setConfig({...config, test_email_client: e.target.value})}
+                      className="w-full px-3 py-2 bg-black/40 border border-yellow-500/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500/20 text-sm font-mono"
+                      placeholder="client@test.com" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-yellow-400">Photographer emails →</label>
+                    <input type="email" value={config.test_email_photographer || ""} onChange={e => setConfig({...config, test_email_photographer: e.target.value})}
+                      className="w-full px-3 py-2 bg-black/40 border border-yellow-500/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500/20 text-sm font-mono"
+                      placeholder="photographer@test.com" />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {(testError || testSuccess) && (
+              <div className={`mx-6 mb-0 mt-4 p-4 rounded-xl border text-sm flex gap-3 ${testError ? "bg-red-500/10 border-red-500/30 text-red-400" : "bg-green-500/10 border-green-500/30 text-green-400"}`}>
+                {testError ? <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" /> : <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" />}
+                <span>{testError || "Test email sent successfully! Check your inbox."}</span>
+              </div>
+            )}
 
             <div className="p-6 bg-muted/30 border-t border-border/50 flex flex-wrap gap-3 justify-end">
               <button

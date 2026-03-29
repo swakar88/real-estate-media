@@ -86,7 +86,18 @@ def _get_email_template(title, content_html, button_text=None, button_url=None):
     </html>
     """
 
-def send_email_with_attachment(subject, recipient_email, html_content, attachment_bytes, attachment_filename, attachment_mime=('text', 'calendar'), from_email=None, from_name=None, cc=None, bcc=None):
+def _resolve_test_recipient(config, recipient_email, recipient_type):
+    """If test_mode is on, return the appropriate test address; otherwise return recipient_email."""
+    if not (config and config.test_mode):
+        return recipient_email
+    if recipient_type == 'admin':
+        return config.test_email_admin or recipient_email
+    if recipient_type == 'photographer':
+        return config.test_email_photographer or recipient_email
+    return config.test_email_client or recipient_email  # default: client
+
+
+def send_email_with_attachment(subject, recipient_email, html_content, attachment_bytes, attachment_filename, attachment_mime=('text', 'calendar'), from_email=None, from_name=None, cc=None, bcc=None, recipient_type='client'):
     """
     Sends an HTML email with a single binary attachment via SMTP.
     Falls back to send_email_dynamic (no attachment) if SMTP is unavailable.
@@ -99,7 +110,9 @@ def send_email_with_attachment(subject, recipient_email, html_content, attachmen
     connection, config = get_email_connection()
     if not connection:
         # No SMTP — send without attachment via fallback
-        return send_email_dynamic(subject, recipient_email, html_content, from_email, from_name, cc, bcc)
+        return send_email_dynamic(subject, recipient_email, html_content, from_email, from_name, cc, bcc, recipient_type=recipient_type)
+
+    actual_recipient = _resolve_test_recipient(config, recipient_email, recipient_type)
 
     cc_list = [cc] if cc and isinstance(cc, str) else (cc or [])
     bcc_list = [bcc] if bcc and isinstance(bcc, str) else (bcc or [])
@@ -115,7 +128,7 @@ def send_email_with_attachment(subject, recipient_email, html_content, attachmen
             subject,
             html_content,
             email_from,
-            [recipient_email],
+            [actual_recipient],
             cc=cc_list,
             bcc=bcc_list,
             connection=connection,
@@ -130,12 +143,12 @@ def send_email_with_attachment(subject, recipient_email, html_content, attachmen
         msg.attach(part)
 
         msg.send()
-        print(f"Email '{subject}' with attachment sent to {recipient_email}.")
-        _log_email(recipient_email, subject, cc=cc_list, bcc=bcc_list, status='sent')
+        print(f"Email '{subject}' with attachment sent to {actual_recipient}.")
+        _log_email(actual_recipient, subject, cc=cc_list, bcc=bcc_list, status='sent')
         return True
     except Exception as e:
         print(f"Failed to send email with attachment: {e}")
-        _log_email(recipient_email, subject, cc=cc_list, bcc=bcc_list, status='failed', error_message=str(e))
+        _log_email(actual_recipient, subject, cc=cc_list, bcc=bcc_list, status='failed', error_message=str(e))
         return False
 
 
@@ -204,6 +217,7 @@ def send_booking_calendar_invite(booking, client_email, photographer_email=None,
         attachment_bytes=ical_bytes,
         attachment_filename='invite.ics',
         attachment_mime=('text', 'calendar'),
+        recipient_type='client',
     )
 
     # Photographer invite
@@ -234,15 +248,19 @@ def send_booking_calendar_invite(booking, client_email, photographer_email=None,
             attachment_bytes=phot_ical_bytes,
             attachment_filename='invite.ics',
             attachment_mime=('text', 'calendar'),
+            recipient_type='photographer',
         )
 
 
-def send_email_dynamic(subject, recipient_email, html_content, from_email=None, from_name=None, cc=None, bcc=None):
+def send_email_dynamic(subject, recipient_email, html_content, from_email=None, from_name=None, cc=None, bcc=None, recipient_type='client'):
     """
     Sends an email using either the configured SMTP backend or Resend as a fallback.
+    recipient_type: 'admin' | 'client' | 'photographer' — used for test mode redirection.
     """
     connection, config = get_email_connection()
-    
+
+    actual_recipient = _resolve_test_recipient(config, recipient_email, recipient_type)
+
     # Process cc and bcc to ensure they are lists
     cc_list = [cc] if cc and isinstance(cc, str) else (cc or [])
     bcc_list = [bcc] if bcc and isinstance(bcc, str) else (bcc or [])
@@ -263,19 +281,19 @@ def send_email_dynamic(subject, recipient_email, html_content, from_email=None, 
                 subject,
                 html_content,
                 email_from,
-                [recipient_email],
+                [actual_recipient],
                 cc=cc_list,
                 bcc=bcc_list,
                 connection=connection
             )
             email.content_subtype = "html"
             email.send()
-            print(f"Email '{subject}' sent successfully to {recipient_email} via SMTP.")
-            _log_email(recipient_email, subject, cc=cc_list, bcc=bcc_list, status='sent')
+            print(f"Email '{subject}' sent successfully to {actual_recipient} via SMTP.")
+            _log_email(actual_recipient, subject, cc=cc_list, bcc=bcc_list, status='sent')
             return True
         except Exception as e:
             print(f"Failed to send email via SMTP: {e}. Falling back to Resend...")
-            _log_email(recipient_email, subject, cc=cc_list, bcc=bcc_list, status='failed', error_message=str(e))
+            _log_email(actual_recipient, subject, cc=cc_list, bcc=bcc_list, status='failed', error_message=str(e))
 
     # Fallback to Resend
     resend.api_key = os.environ.get('RESEND_API_KEY')
@@ -287,18 +305,18 @@ def send_email_dynamic(subject, recipient_email, html_content, from_email=None, 
     try:
         response = resend.Emails.send({
             "from": resend_from,
-            "to": recipient_email,
+            "to": actual_recipient,
             "cc": cc_list,
             "bcc": bcc_list,
             "subject": subject,
             "html": html_content
         })
-        print(f"Email '{subject}' sent successfully to {recipient_email} via Resend. Resend ID: {response.get('id')}")
-        _log_email(recipient_email, subject, cc=cc_list, bcc=bcc_list, status='sent')
+        print(f"Email '{subject}' sent successfully to {actual_recipient} via Resend. Resend ID: {response.get('id')}")
+        _log_email(actual_recipient, subject, cc=cc_list, bcc=bcc_list, status='sent')
         return True
     except Exception as e:
         print(f"Failed to send email via Resend: {e}")
-        _log_email(recipient_email, subject, cc=cc_list, bcc=bcc_list, status='failed', error_message=str(e))
+        _log_email(actual_recipient, subject, cc=cc_list, bcc=bcc_list, status='failed', error_message=str(e))
         return False
 
 def _render_template(body, context):
@@ -359,11 +377,9 @@ As an administrator, you will have access to manage bookings, services, media, a
     html_content = _get_email_template("Admin Invitation", content_html, "Accept Invitation & Activate Account", invite_link)
     return send_email_dynamic(subject, email, html_content, cc=t_cc, bcc=t_bcc)
 
-def _send_mocked_email(subject, html_content, to_email=None, cc=None, bcc=None):
-    # Use provided recipient or fallback to a default admin contact
-    # In production, this would use configurations from the database.
-    recipient = to_email or "swakar88@gmail.com" 
-    return send_email_dynamic(subject, recipient, html_content, cc=cc, bcc=bcc)
+def _send_mocked_email(subject, html_content, to_email=None, cc=None, bcc=None, recipient_type='client'):
+    recipient = to_email or "swakar88@gmail.com"
+    return send_email_dynamic(subject, recipient, html_content, cc=cc, bcc=bcc, recipient_type=recipient_type)
 
 def send_booking_created_emails(booking, customer_email, photographer_email, photographer_name):
     context = {
@@ -394,7 +410,8 @@ Assigned: {photographer_name}""",
         html_content=_get_email_template("New Booking Alert", admin_content),
         to_email=settings.DEFAULT_FROM_EMAIL if hasattr(settings, 'DEFAULT_FROM_EMAIL') else "admin@example.com",
         cc=a_cc,
-        bcc=a_bcc
+        bcc=a_bcc,
+        recipient_type='admin',
     )
 
     # Customer Confirmation
@@ -413,7 +430,8 @@ Our photographer {photographer_name}. We look forward to capturing your property
         html_content=_get_email_template("Booking Confirmed", cust_content),
         to_email=customer_email,
         cc=c_cc,
-        bcc=c_bcc
+        bcc=c_bcc,
+        recipient_type='client',
     )
 
     # Photographer Notification
@@ -429,7 +447,8 @@ Please log in to your portal to view more details and upload media once the shoo
         _send_mocked_email(
             subject=f"New Shoot Assigned - {booking.shoot_date}",
             html_content=_get_email_template("New Shoot Assigned", photog_content),
-            to_email=photographer_email
+            to_email=photographer_email,
+            recipient_type='photographer',
         )
 
     # Calendar invites — attach .ics to both parties
@@ -494,6 +513,7 @@ def send_clientshoot_calendar_invite(shoot, method='REQUEST', sequence=0):
         html_content=_get_email_template(f"Shoot {action_label}", client_body),
         attachment_bytes=ical_bytes, attachment_filename='invite.ics',
         attachment_mime=('text', 'calendar'),
+        recipient_type='client',
     )
 
     # Photographer invite
@@ -517,6 +537,7 @@ def send_clientshoot_calendar_invite(shoot, method='REQUEST', sequence=0):
                 html_content=_get_email_template(f"Shoot {action_label}", phot_body),
                 attachment_bytes=phot_ical_bytes, attachment_filename='invite.ics',
                 attachment_mime=('text', 'calendar'),
+                recipient_type='photographer',
             )
     except Exception as e:
         print(f"Photographer calendar invite failed: {e}")
@@ -527,7 +548,8 @@ def send_content_uploaded_emails(shoot_address, to_email=None):
     _send_mocked_email(
         subject=f"Shoot Media Uploaded - {shoot_address[:50]}",
         html_content=_get_email_template("Media Uploaded", admin_content),
-        to_email=settings.DEFAULT_FROM_EMAIL if hasattr(settings, 'DEFAULT_FROM_EMAIL') else "admin@example.com"
+        to_email=settings.DEFAULT_FROM_EMAIL if hasattr(settings, 'DEFAULT_FROM_EMAIL') else "admin@example.com",
+        recipient_type='admin',
     )
 
     # Customer notification
@@ -544,7 +566,8 @@ You will receive an invoice shortly. Once paid, your download links will be auto
         html_content=_get_email_template("Processing Complete", content_html),
         to_email=to_email,
         cc=m_cc,
-        bcc=m_bcc
+        bcc=m_bcc,
+        recipient_type='client',
     )
 
 def send_invoice_generated_email(shoot_address, payment_link, to_email=None):
@@ -561,7 +584,8 @@ Please click the button below to complete your payment securely via Stripe. Your
         html_content=_get_email_template("Invoice Ready", content_html, "Pay Securely via Stripe", payment_link),
         to_email=to_email,
         cc=i_cc,
-        bcc=i_bcc
+        bcc=i_bcc,
+        recipient_type='client',
     )
 
 def send_payment_confirmed_emails(shoot_address, dashboard_link):
@@ -569,7 +593,8 @@ def send_payment_confirmed_emails(shoot_address, dashboard_link):
     _send_mocked_email(
         subject=f"Payment Received - {shoot_address[:50]}",
         html_content=_get_email_template("Payment Captured", admin_content),
-        to_email=settings.DEFAULT_FROM_EMAIL if hasattr(settings, 'DEFAULT_FROM_EMAIL') else "admin@example.com"
+        to_email=settings.DEFAULT_FROM_EMAIL if hasattr(settings, 'DEFAULT_FROM_EMAIL') else "admin@example.com",
+        recipient_type='admin',
     )
 
     # Customer notification
@@ -584,9 +609,10 @@ Payment for {property_address} has been confirmed. You can now access and downlo
     _send_mocked_email(
         subject=subject,
         html_content=_get_email_template("Payment Successful", content_html, "Go to Dashboard", dashboard_link),
-        to_email=None, # Mocked
+        to_email=None,
         cc=p_cc,
-        bcc=p_bcc
+        bcc=p_bcc,
+        recipient_type='client',
     )
 
 def send_referral_received_email(referral):
@@ -617,7 +643,7 @@ We provide premium real estate media services to help your listings stand out. C
         "Create Account & Get Started", 
         f"{context['site_url']}/login?register=true&email={referral.referee_email}"
     )
-    return _send_mocked_email(subject, html_content, to_email=referral.referee_email, cc=r_cc, bcc=r_bcc)
+    return _send_mocked_email(subject, html_content, to_email=referral.referee_email, cc=r_cc, bcc=r_bcc, recipient_type='client')
 
 def send_referral_reward_earned_email(user, amount):
     context = {
@@ -641,7 +667,7 @@ This credit will be automatically applied to your next invoice. Thank you for be
     )
     
     html_content = _get_email_template("Referral Reward Earned", content_html, "View Dashboard", context["dashboard_url"])
-    return _send_mocked_email(subject, html_content, to_email=user.email, cc=re_cc, bcc=re_bcc)
+    return _send_mocked_email(subject, html_content, to_email=user.email, cc=re_cc, bcc=re_bcc, recipient_type='client')
 
 def send_thank_you_payment_email(shoot_address, to_email, photographer_id):
     """
@@ -676,4 +702,4 @@ We're always looking to improve our service. Would you mind taking a moment to r
         rating_link
     )
     
-    return _send_mocked_email(subject, html_content, to_email=to_email, cc=t_cc, bcc=t_bcc)
+    return _send_mocked_email(subject, html_content, to_email=to_email, cc=t_cc, bcc=t_bcc, recipient_type='client')
