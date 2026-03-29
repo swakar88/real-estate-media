@@ -39,7 +39,7 @@ export default async function Services() {
         </section>
 
         {/* Real Estate Editing Services */}
-        <section className="py-20">
+        <section id="editing" className="py-20">
           <div className="container mx-auto px-4 md:px-8">
             <div className="mb-12">
               <h2 className="text-3xl font-bold mb-4">Individual Enhancements</h2>
@@ -151,7 +151,7 @@ export default async function Services() {
         </section>
 
         {/* Drone & Video Block */}
-        <section className="py-20 bg-background border-t border-border/40">
+        <section id="drone" className="py-20 bg-background border-t border-border/40">
            <div className="container mx-auto px-4 md:px-8">
              <div className="flex flex-col md:flex-row gap-12 items-center overflow-hidden">
                <ScrollReveal direction="left" className="flex-1 space-y-6">
