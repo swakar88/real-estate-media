@@ -140,14 +140,38 @@ class BookingRequestViewSet(viewsets.ModelViewSet):
         else:
             email = serializer.validated_data.get('email')
             if email:
-                client_user, _ = User.objects.get_or_create(
-                    email=email,
-                    defaults={
-                        'username': email.split('@')[0],
-                        'first_name': serializer.validated_data.get('first_name', ''),
-                        'last_name': serializer.validated_data.get('last_name', ''),
-                    }
-                )
+                # Look up by email first; use full email as username (app convention)
+                existing = User.objects.filter(email__iexact=email).first()
+                if existing:
+                    client_user = existing
+                else:
+                    # Ensure username is unique — use full email, fall back to email+id
+                    base_username = email
+                    username = base_username
+                    suffix = 1
+                    while User.objects.filter(username=username).exists():
+                        username = f"{base_username}_{suffix}"
+                        suffix += 1
+                    client_user = User.objects.create_user(
+                        username=username,
+                        email=email,
+                        first_name=serializer.validated_data.get('first_name', ''),
+                        last_name=serializer.validated_data.get('last_name', ''),
+                    )
+
+        # Warn on duplicate address booking for authenticated users (unless force=true)
+        if self.request.user.is_authenticated and not self.request.data.get('force'):
+            property_details = serializer.validated_data.get('property_details', '')
+            duplicate = ClientShoot.objects.filter(
+                client=self.request.user,
+                property_address__iexact=property_details[:300],
+            ).exclude(status='archived').first()
+            if duplicate:
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError({
+                    'duplicate_warning': True,
+                    'detail': f'You already have an active booking for this address (#{duplicate.id}). Pass force=true to book anyway.'
+                })
 
         # Auto-assign an available photographer if requested
         instance = serializer.save()
