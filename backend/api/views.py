@@ -1255,23 +1255,84 @@ def register_admin(request):
 @permission_classes([AllowAny])
 def request_password_reset(request):
     """
-    Mocked endpoint for password reset requests.
+    Generate a signed password reset token and email a reset link.
     """
-    email = request.data.get('email')
+    from django.core import signing
+    from .utils.email_utils import send_email_dynamic
+    from django.conf import settings as django_settings
+
+    email = request.data.get('email', '').strip().lower()
     if not email:
         return Response({'detail': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
-        
-    # In a real app, we would verify the user exists and send a real tokenized link.
-    # For now, we mock the behavior.
-    print(f"PASSWORD RESET REQUEST FOR: {email}")
-    
-    # Simulate sending email
-    from .utils.email_utils import send_email_dynamic
-    subject = "Password Reset Request - KC Real Estate Media"
-    body = f"Hello,\n\nWe received a request to reset your password. Please click the link below to set a new password:\n\nReset Password Link: #\n\nIf you didn't request this, please ignore this email."
-    
-    # Mocking successful "send"
+
+    try:
+        user = User.objects.get(email__iexact=email)
+    except User.DoesNotExist:
+        # Return same response to avoid user enumeration
+        return Response({'detail': 'If an account exists with that email, a reset link has been sent.'}, status=status.HTTP_200_OK)
+
+    # Create a signed token valid for 1 hour
+    token = signing.dumps({'user_id': user.pk, 'email': user.email}, salt='password-reset')
+    frontend_url = getattr(django_settings, 'FRONTEND_URL', 'http://localhost:3000')
+    reset_url = f"{frontend_url}/reset-password?token={token}"
+
+    html_content = f"""
+    <div style="font-family:sans-serif;max-width:600px;margin:auto;padding:32px;">
+      <h2 style="font-size:24px;font-weight:900;">Reset Your Password</h2>
+      <p>We received a request to reset the password for your account (<strong>{user.email}</strong>).</p>
+      <p>Click the button below to set a new password. This link expires in <strong>1 hour</strong>.</p>
+      <p style="margin:32px 0;">
+        <a href="{reset_url}" style="background:#c9a84c;color:#000;padding:14px 32px;border-radius:12px;font-weight:900;text-decoration:none;font-size:14px;letter-spacing:0.05em;text-transform:uppercase;">
+          Reset Password
+        </a>
+      </p>
+      <p style="color:#888;font-size:12px;">If you didn't request this, you can safely ignore this email. Your password will not change.</p>
+    </div>
+    """
+    try:
+        send_email_dynamic(
+            subject="Reset Your Password",
+            recipient_email=user.email,
+            html_content=html_content,
+        )
+    except Exception as e:
+        print(f"Password reset email failed: {e}")
+
     return Response({'detail': 'If an account exists with that email, a reset link has been sent.'}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def confirm_password_reset(request):
+    """
+    Verify signed reset token and set new password.
+    """
+    from django.core import signing
+
+    token = request.data.get('token', '')
+    new_password = request.data.get('new_password', '')
+
+    if not token or not new_password:
+        return Response({'detail': 'Token and new password are required.'}, status=status.HTTP_400_BAD_REQUEST)
+    if len(new_password) < 8:
+        return Response({'detail': 'Password must be at least 8 characters.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        # Token valid for 3600 seconds (1 hour)
+        data = signing.loads(token, salt='password-reset', max_age=3600)
+    except signing.SignatureExpired:
+        return Response({'detail': 'Reset link has expired. Please request a new one.'}, status=status.HTTP_400_BAD_REQUEST)
+    except signing.BadSignature:
+        return Response({'detail': 'Invalid reset link.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        user = User.objects.get(pk=data['user_id'], email=data['email'])
+    except User.DoesNotExist:
+        return Response({'detail': 'Invalid reset link.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    user.set_password(new_password)
+    user.save()
+    return Response({'detail': 'Password updated successfully. You can now log in.'}, status=status.HTTP_200_OK)
 
 @api_view(['GET'])
 @permission_classes([AllowAny])

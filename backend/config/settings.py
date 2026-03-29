@@ -157,6 +157,8 @@ if not DEBUG:
     if not CORS_ALLOWED_ORIGINS:
         CORS_ALLOWED_ORIGINS = ['http://localhost:3000', 'http://127.0.0.1:3000']
 
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
+
 # Media Files Configuration
 # Media Files Configuration
 import os
