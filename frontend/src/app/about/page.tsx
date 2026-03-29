@@ -51,15 +51,21 @@ export default function About() {
                  A partnership consisting of a current real estate professional, marketing consultant, and general contractor, KC Real Estate Media aims to enhance the real estate marketing structure by introducing 360 virtual reality and videography concepts.
                </p>
                <div className="flex items-center gap-4 pt-4">
-                 <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center text-xs">Logo</div>
-                 <div>
-                   <h4 className="font-semibold text-primary">Google Trusted Photographer</h4>
-                   <p className="text-sm text-muted-foreground">Certified Virtual Walk-throughs</p>
+                 <div className="flex items-center gap-3 bg-white border border-border/40 rounded-2xl px-4 py-3 shadow-sm">
+                   <img
+                     src="https://www.gstatic.com/images/branding/product/1x/google_maps_48dp.png"
+                     alt="Google Maps"
+                     className="h-8 w-8 object-contain"
+                   />
+                   <div>
+                     <h4 className="font-semibold text-sm text-foreground leading-tight">Google Trusted Photographer</h4>
+                     <p className="text-xs text-muted-foreground">Certified Virtual Walk-throughs</p>
+                   </div>
                  </div>
                </div>
              </ScrollReveal>
              <ScrollReveal direction="right" delay={0.2} className="relative">
-                <div className="aspect-square bg-muted rounded-2xl border border-border/50 rotate-3 transition-transform hover:rotate-0 duration-500 overflow-hidden shadow-2xl relative">
+                <div className="aspect-square bg-muted rounded-2xl border border-border/50 rotate-3 hover:rotate-0 [transition:transform_500ms_ease] overflow-hidden shadow-2xl relative">
                    <Image src={media.about_agency_photo || "/team/agency.png"} alt="KC Real Estate Media Team" fill className="object-cover" />
                 </div>
              </ScrollReveal>
@@ -95,7 +101,7 @@ export default function About() {
                           <Users className="w-20 h-20 text-muted-foreground/30 opacity-50 group-hover:scale-110 transition-transform duration-500" />
                         )}
                       </div>
-                      <h3 className="font-bold text-lg">{member.user_name || member.first_name || `Team Member #${member.id}`}</h3>
+                      <h3 className="font-bold text-lg">{(member.user_name || member.first_name || `Team Member #${member.id}`).split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')}</h3>
                       <p className="text-sm text-primary">{member.role || 'Photographer'}</p>
                     </StaggerItem>
                   );
