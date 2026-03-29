@@ -97,6 +97,12 @@ export default function BookingForm({ packages }: { packages: any[] }) {
     setError("");
     setDuplicateWarning(false);
 
+    if (!/^[\d\s\-\(\)\+]{7,20}$/.test(formData.phone)) {
+      setError("Please enter a valid phone number (digits, spaces, dashes, parentheses).");
+      setLoading(false);
+      return;
+    }
+
     const token = localStorage.getItem("access_token");
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (token) headers["Authorization"] = `Bearer ${token}`;
