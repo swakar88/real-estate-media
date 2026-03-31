@@ -32,6 +32,15 @@ ALLOWED_HOSTS = [h.strip() for h in _allowed.split(',') if h.strip()]
 if '.azurecontainerapps.io' not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append('.azurecontainerapps.io')
 
+# CSRF trusted origins — required for Django admin behind a proxy/CDN
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.azurecontainerapps.io',
+    'https://*.vercel.app',
+]
+_frontend_url = os.environ.get('FRONTEND_URL', '').strip()
+if _frontend_url and _frontend_url not in CSRF_TRUSTED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS.append(_frontend_url)
+
 
 # Application definition
 
