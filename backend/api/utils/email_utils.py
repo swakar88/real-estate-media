@@ -23,21 +23,36 @@ def _log_email(recipient, subject, cc=None, bcc=None, template_slug=None, trigge
         print(f"EmailLog write failed (non-critical): {e}")
 
 
+def _smtp_reachable(host, port, timeout=3):
+    """Quick socket probe to check if SMTP port is reachable before attempting a full connection."""
+    import socket
+    try:
+        sock = socket.create_connection((host, int(port)), timeout=timeout)
+        sock.close()
+        return True
+    except (OSError, socket.timeout):
+        return False
+
+
 def get_email_connection():
     """
-    Returns a configured SMTP connection if an active EmailConfiguration exists.
-    Otherwise returns None.
+    Returns a configured SMTP connection if an active EmailConfiguration exists
+    and the SMTP host is reachable. Otherwise returns None so callers fall back to Resend.
     """
     try:
         config = EmailConfiguration.objects.filter(is_active=True).first()
         if config:
+            if not _smtp_reachable(config.email_host, config.email_port):
+                print(f"SMTP {config.email_host}:{config.email_port} unreachable — skipping SMTP, will use Resend.")
+                return None, config
             return get_connection(
                 host=config.email_host,
                 port=config.email_port,
                 username=config.email_username,
                 password=config.email_password,
                 use_tls=config.use_tls,
-                use_ssl=config.use_ssl
+                use_ssl=config.use_ssl,
+                timeout=10,
             ), config
     except Exception as e:
         print(f"Error fetching email configuration: {e}")
