@@ -1946,6 +1946,34 @@ class EmailConfigurationViewSet(viewsets.ModelViewSet):
         except smtplib.SMTPException as e:
             print(f"SMTP Test Failed: {str(e)}")
             return Response({"error": f"SMTP error: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+        except OSError as e:
+            # SMTP port blocked by host (e.g. Render free tier) — fall back to Resend
+            print(f"SMTP network unreachable: {str(e)}. Trying Resend fallback...")
+            import resend as resend_sdk
+            resend_api_key = os.environ.get('RESEND_API_KEY')
+            if not resend_api_key:
+                return Response(
+                    {"error": "SMTP is blocked on this server and no Resend API key is configured."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            try:
+                resend_sdk.api_key = resend_api_key
+                resend_from = os.environ.get('RESEND_FROM_EMAIL', 'onboarding@resend.dev')
+                response = resend_sdk.Emails.send({
+                    "from": resend_from,
+                    "to": [from_email],
+                    "subject": "SMTP Test (via Resend fallback) - KC Real Estate Media",
+                    "html": f"<p>This is a test email sent via Resend (SMTP is blocked on the current host).</p><p>Sent from: {from_name} &lt;{from_email}&gt;</p>"
+                })
+                return Response(
+                    {"message": "SMTP is blocked on this server, but Resend fallback is working. Test email sent via Resend — check your inbox."},
+                    status=status.HTTP_200_OK
+                )
+            except Exception as resend_err:
+                return Response(
+                    {"error": f"SMTP blocked and Resend also failed: {str(resend_err)}"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
         except Exception as e:
             print(f"SMTP Test Failed: {str(e)}")
             traceback.print_exc()
