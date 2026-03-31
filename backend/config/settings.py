@@ -26,9 +26,11 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-^l4kw%bg4+z2))wbu2(c)
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
-# Azure Container Apps domain — always allowed
-ALLOWED_HOSTS += ['*.azurecontainerapps.io']
+_allowed = os.environ.get('ALLOWED_HOSTS', '127.0.0.1,localhost')
+ALLOWED_HOSTS = [h.strip() for h in _allowed.split(',') if h.strip()]
+# Azure Container Apps — leading dot matches all subdomains
+if '.azurecontainerapps.io' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append('.azurecontainerapps.io')
 
 
 # Application definition
