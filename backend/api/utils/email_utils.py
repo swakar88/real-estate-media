@@ -303,15 +303,19 @@ def send_email_dynamic(subject, recipient_email, html_content, from_email=None, 
 
     resend_from = os.environ.get('RESEND_FROM_EMAIL', 'onboarding@resend.dev')
     try:
-        response = resend.Emails.send({
+        params: dict = {
             "from": resend_from,
-            "to": actual_recipient,
-            "cc": cc_list,
-            "bcc": bcc_list,
+            "to": [actual_recipient] if isinstance(actual_recipient, str) else actual_recipient,
             "subject": subject,
-            "html": html_content
-        })
-        print(f"Email '{subject}' sent successfully to {actual_recipient} via Resend. Resend ID: {response.get('id')}")
+            "html": html_content,
+        }
+        if cc_list:
+            params["cc"] = cc_list
+        if bcc_list:
+            params["bcc"] = bcc_list
+        response = resend.Emails.send(params)
+        resend_id = response.id if hasattr(response, 'id') else response.get('id', 'unknown')
+        print(f"Email '{subject}' sent successfully to {actual_recipient} via Resend. Resend ID: {resend_id}")
         _log_email(actual_recipient, subject, cc=cc_list, bcc=bcc_list, status='sent')
         return True
     except Exception as e:
