@@ -1057,8 +1057,8 @@ class PhotographerViewSet(viewsets.ModelViewSet):
             
             # 2. Get onboarding link
             # For local dev, NextJS is usually on 3000
-            frontend_url = 'http://localhost:3000' if settings.DEBUG else 'https://kcmedia-frontend.vercel.app'
-            
+            frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+
             # Since this is a single page app portal, we return to the portal tab
             return_url = f"{frontend_url}/photographer-portal?tab=profile&stripe=success"
             refresh_url = f"{frontend_url}/photographer-portal?tab=profile&stripe=refresh"
@@ -1110,7 +1110,7 @@ class PhotographerViewSet(viewsets.ModelViewSet):
             token = signer.sign_object({'user_id': user.id})
 
             # Determine frontend URL
-            frontend_url = 'http://localhost:3000' if settings.DEBUG else settings.CORS_ALLOWED_ORIGINS[0] if getattr(settings, 'CORS_ALLOWED_ORIGINS', None) else 'http://localhost:3000'
+            frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
             invite_link = f"{frontend_url}/photographer-signup?token={token}"
 
             # Send Email (non-blocking — failure doesn't roll back the invite)
@@ -1762,7 +1762,7 @@ class AdminViewSet(viewsets.ModelViewSet):
         try:
             signer = TimestampSigner()
             token = signer.sign_object({'user_id': user.id})
-            frontend_url = 'http://localhost:3000' if settings.DEBUG else 'https://kcmedia-frontend.vercel.app'
+            frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
             invite_link = f"{frontend_url}/admin-signup?token={token}"
             send_admin_invite_email(email=email, name=first_name, invite_link=invite_link)
         except Exception as e:
