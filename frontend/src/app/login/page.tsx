@@ -179,14 +179,16 @@ function LoginContent() {
               )}
 
               <div className="space-y-2">
-                <label htmlFor="email" className="text-sm font-medium">Email / Username</label>
-                <input 
-                  type="text" 
-                  id="email" 
+                <label htmlFor="email" className="text-sm font-medium">
+                  {isRegistering ? "Email Address" : "Email / Username"}
+                </label>
+                <input
+                  type={isRegistering ? "email" : "text"}
+                  id="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-background border border-border/60 rounded-md px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow" 
-                  placeholder="name@agency.com or username" 
+                  className="w-full bg-background border border-border/60 rounded-md px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow"
+                  placeholder={isRegistering ? "name@agency.com" : "name@agency.com or username"}
                   required
                 />
               </div>
