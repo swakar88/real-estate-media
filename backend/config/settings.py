@@ -20,7 +20,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-^l4kw%bg4+z2))wbu2(c)=x*gjh1jm*z8^*ubc4g8d*7liw*nk'
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-^l4kw%bg4+z2))wbu2(c)=x*gjh1jm*z8^*ubc4g8d*7liw*nk')
 
 import os
 import dj_database_url
@@ -32,6 +32,8 @@ load_dotenv()
 DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
+# Azure Container Apps domain — always allowed
+ALLOWED_HOSTS += ['*.azurecontainerapps.io']
 
 
 # Application definition
@@ -104,10 +106,12 @@ AUTHENTICATION_BACKENDS = [
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+_db_url = os.environ.get('DATABASE_URL', f"sqlite:///{BASE_DIR / 'db.sqlite3'}")
 DATABASES = {
     'default': dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
-        conn_max_age=600
+        default=_db_url,
+        conn_max_age=600,
+        ssl_require=_db_url.startswith('postgres'),
     )
 }
 
