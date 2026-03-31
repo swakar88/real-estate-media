@@ -500,6 +500,7 @@ class EmailLog(models.Model):
     cc = models.TextField(blank=True, null=True)
     bcc = models.TextField(blank=True, null=True)
     subject = models.CharField(max_length=500)
+    body = models.TextField(blank=True, null=True)
     template_slug = models.CharField(max_length=100, blank=True, null=True)
     trigger_event = models.CharField(max_length=100, blank=True, null=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='sent')
