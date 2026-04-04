@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { Plus, Trash2, Edit, Loader2, Upload, AlertCircle, CheckCircle2, X } from "lucide-react";
+import { toast } from "sonner";
 import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/ScrollReveal";
 
 export default function AdminGallery() {
@@ -106,10 +107,11 @@ export default function AdminGallery() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
+    const isAdding = showModal === "add";
     try {
       const token = localStorage.getItem("access_token");
-      const method = showModal === "add" ? "POST" : "PATCH";
-      const url = showModal === "add" 
+      const method = isAdding ? "POST" : "PATCH";
+      const url = isAdding
         ? `${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/gallery/`
         : `${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/gallery/${editingImage.id}/`;
 
@@ -126,11 +128,14 @@ export default function AdminGallery() {
         setShowModal(null);
         setFormData({ title: "", category: "interior", image_url: "", featured: false });
         fetchGallery();
+        toast.success(isAdding ? "Image added to gallery" : "Image updated");
       } else {
-        alert("Failed to save image.");
+        const errorData = await res.json().catch(() => ({}));
+        toast.error(errorData.detail || "Failed to save image.");
       }
     } catch (err) {
       console.error("Failed to submit", err);
+      toast.error("Failed to save image. Please try again.");
     } finally {
       setSubmitting(false);
     }

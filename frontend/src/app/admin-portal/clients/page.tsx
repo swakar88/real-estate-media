@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Users, UserPlus, Search, Mail, Calendar, Clock, ChevronLeft, ChevronRight, UserCircle, X, Phone, Shield, Archive, Trash2, Eye, Plus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/ScrollReveal";
 import CustomModal from "@/components/CustomModal";
 
@@ -18,6 +19,7 @@ interface Client {
 }
 
 export default function AdminClients() {
+  const router = useRouter();
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -340,13 +342,16 @@ export default function AdminClients() {
               </div>
 
               <div className="pt-8 space-y-3">
-                <Link 
-                  href={`/dashboard?impersonate_id=${selectedClient.id}`}
+                <button
+                  onClick={() => {
+                    sessionStorage.setItem('impersonating_as', String(selectedClient.id));
+                    router.push('/dashboard');
+                  }}
                   className="w-full py-3 px-4 rounded-xl bg-primary text-primary-foreground font-black text-xs uppercase tracking-widest hover:opacity-90 transition-all flex items-center justify-center gap-2 shadow-gold group"
                 >
                   <Eye className="h-4 w-4 transition-transform group-hover:scale-110" />
                   View Dashboard as Client
-                </Link>
+                </button>
                 <button className="w-full py-3 px-4 rounded-xl border border-primary/20 font-bold text-sm hover:bg-primary/10 transition-colors flex items-center justify-center gap-2">
                   <Mail className="h-4 w-4" />
                   Email Client

@@ -6,6 +6,15 @@ import { toast } from "sonner";
 import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/ScrollReveal";
 import CustomModal from "@/components/CustomModal";
 
+const formatTime = (time: string) => {
+  if (!time) return time;
+  const [hours, minutes] = time.split(':');
+  const h = parseInt(hours, 10);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  return `${h12}:${minutes} ${ampm}`;
+};
+
 export default function AdminBookings() {
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -271,7 +280,7 @@ export default function AdminBookings() {
                       {booking.shoot_date && (
                         <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium bg-muted/50 px-2.5 py-1 rounded-full">
                           <CalendarCheck className="w-3.5 h-3.5" />
-                          {new Date(booking.shoot_date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })} at {booking.time_slot}
+                          {new Date(booking.shoot_date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })} at {formatTime(booking.time_slot)}
                         </div>
                       )}
                     </div>

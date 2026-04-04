@@ -65,7 +65,7 @@ export default function DashboardPage() {
   const fetchData = async () => {
     const token = localStorage.getItem("access_token");
     const queryParams = new URLSearchParams(window.location.search);
-    const impId = queryParams.get('impersonate_id');
+    const impId = queryParams.get('impersonate_id') || sessionStorage.getItem('impersonating_as');
     const role = queryParams.get('role');
 
     try {

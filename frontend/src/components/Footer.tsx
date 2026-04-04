@@ -14,9 +14,9 @@ export default function Footer() {
           <div className="space-y-4">
             <h4 className="font-semibold">Services</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link href="/services#editing" className="hover:text-primary transition-colors">Real Estate Photo & Video</Link></li>
-              <li><Link href="/services#editing" className="hover:text-primary transition-colors">Business Marketing</Link></li>
-              <li><Link href="/services#drone" className="hover:text-primary transition-colors">Drone Photography</Link></li>
+              <li><a href="/services#editing" className="hover:text-primary transition-colors">Real Estate Photo & Video</a></li>
+              <li><a href="/services#editing" className="hover:text-primary transition-colors">Business Marketing</a></li>
+              <li><a href="/services#drone" className="hover:text-primary transition-colors">Drone Photography</a></li>
             </ul>
           </div>
           <div className="space-y-4">

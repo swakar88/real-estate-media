@@ -46,13 +46,16 @@ export default function BookingForm({ packages }: { packages: any[] }) {
 
     // Fetch Slots
     fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/availability/`)
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error(`Availability API returned ${res.status}`);
+        return res.json();
+      })
       .then(data => {
         setAvailableSlots(data);
         setFetchingSlots(false);
       })
       .catch(err => {
-        console.error("Failed to fetch slots", err);
+        console.error("Failed to fetch availability slots:", err);
         setFetchingSlots(false);
       });
   // eslint-disable-next-line react-hooks/exhaustive-deps

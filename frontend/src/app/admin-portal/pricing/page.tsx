@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Save, Package as PackageIcon, DollarSign, Plus, Trash2, Loader2, CheckCircle2, AlertCircle, Layout, List } from "lucide-react";
+import { Save, Package as PackageIcon, DollarSign, Plus, Trash2, Loader2, CheckCircle2, AlertCircle, Layout, List, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
 import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/ScrollReveal";
 
 interface Service {
@@ -32,17 +33,19 @@ export default function PricingManagementPage() {
     const [showAddModal, setShowAddModal] = useState(false);
     const [addForm, setAddForm] = useState({ name: '', price: '', description: '', features: '', is_popular: false, order: 0 });
     const [addSubmitting, setAddSubmitting] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
 
     useEffect(() => {
         fetchData();
     }, []);
 
-    const fetchData = async () => {
+    const fetchData = async (isManualRefresh = false) => {
+        if (isManualRefresh) setRefreshing(true);
         try {
             console.log("Fetching pricing data from:", process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000");
             const [servicesRes, packagesRes] = await Promise.all([
-                fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/services/`),
-                fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/packages/`)
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/services/`, { cache: 'no-store' }),
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/packages/`, { cache: 'no-store' })
             ]);
             
             console.log("Services status:", servicesRes.status);
@@ -61,13 +64,17 @@ export default function PricingManagementPage() {
                 
                 setServices(svcs);
                 setPackages(pkgs);
+                if (isManualRefresh) toast.success("Data refreshed");
             } else {
                 console.error("Failed to fetch. Services OK:", servicesRes.ok, "Packages OK:", packagesRes.ok);
+                if (isManualRefresh) toast.error("Failed to refresh data");
             }
         } catch (err) {
             console.error("Error fetching pricing data:", err);
+            if (isManualRefresh) toast.error("Failed to refresh data");
         } finally {
             setLoading(false);
+            setRefreshing(false);
         }
     };
 
@@ -202,10 +209,11 @@ export default function PricingManagementPage() {
                     )}
                     <button
                         type="button"
-                        onClick={fetchData}
-                        className="px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-white transition-all flex items-center gap-2"
+                        onClick={() => fetchData(true)}
+                        disabled={refreshing}
+                        className="px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-white transition-all flex items-center gap-2 disabled:opacity-50"
                     >
-                        <Plus className="w-3 h-3 rotate-45" /> Refresh Data
+                        <RefreshCw className={`w-3 h-3 ${refreshing ? 'animate-spin' : ''}`} /> {refreshing ? 'Refreshing...' : 'Refresh Data'}
                     </button>
                 </div>
             </div>

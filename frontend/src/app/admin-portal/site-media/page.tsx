@@ -395,8 +395,8 @@ export default function SiteMediaAdminPage() {
                 <input type="text" placeholder="Used on the homepage hero section" value={addForm.description} onChange={e => setAddForm({...addForm, description: e.target.value})} className="w-full rounded-xl border border-primary/10 bg-black/40 px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all" />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">URL (optional)</label>
-                <input type="url" placeholder="https://..." value={addForm.url} onChange={e => setAddForm({...addForm, url: e.target.value})} className="w-full rounded-xl border border-primary/10 bg-black/40 px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all font-mono" />
+                <label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">URL <span className="text-destructive">*</span></label>
+                <input type="url" placeholder="https://..." value={addForm.url} onChange={e => setAddForm({...addForm, url: e.target.value})} required className="w-full rounded-xl border border-primary/10 bg-black/40 px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all font-mono" />
               </div>
               <div className="flex justify-end gap-3 pt-2">
                 <button type="button" onClick={() => setShowAddModal(false)} className="px-6 py-3 text-sm font-bold bg-muted text-muted-foreground rounded-xl hover:bg-muted/80 transition-all active:scale-95">Cancel</button>

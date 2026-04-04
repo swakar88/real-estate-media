@@ -13,7 +13,7 @@ export default function ImpersonationBanner({ userName, role }: ImpersonationBan
   const router = useRouter();
 
   const handleExit = () => {
-    // Clear impersonation from URL and redirect to admin portal
+    sessionStorage.removeItem('impersonating_as');
     router.push('/admin-portal');
   };
 
@@ -26,13 +26,13 @@ export default function ImpersonationBanner({ userName, role }: ImpersonationBan
         </span>
       </div>
       <div className="flex items-center gap-3">
-        <Link 
-          href="/admin-portal"
+        <button
+          onClick={handleExit}
           className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all border border-white/20"
         >
           <ArrowLeft className="w-3 h-3" />
           <span className="hidden sm:inline">Admin Portal</span>
-        </Link>
+        </button>
         <button 
           onClick={handleExit}
           className="flex items-center gap-1.5 px-3 py-1.5 bg-black/20 hover:bg-black/40 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all"

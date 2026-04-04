@@ -85,7 +85,12 @@ function LoginContent() {
         body: JSON.stringify(payload),
       });
 
-      const data = await res.json();
+      let data: any = {};
+      try {
+        data = await res.json();
+      } catch {
+        // Non-JSON response (e.g. 500 HTML error page)
+      }
 
       if (res.ok) {
         localStorage.setItem("access_token", data.access);
@@ -113,7 +118,18 @@ function LoginContent() {
           router.push("/dashboard");
         }
       } else {
-        setError(data.detail || "Authentication failed. Please check your credentials.");
+        const raw = (data?.detail || "").toLowerCase();
+        if (raw.includes("no active account") || raw.includes("invalid credentials") || raw.includes("wrong credentials")) {
+          setError("Incorrect email or password. Please try again.");
+        } else if (raw.includes("not active") || raw.includes("inactive")) {
+          setError("Your account is not active. Please check your email for an activation link.");
+        } else if (data?.detail) {
+          setError(data.detail);
+        } else if (data?.email || data?.password || data?.non_field_errors) {
+          setError(Object.values(data).flat().join(" "));
+        } else {
+          setError("Authentication failed. Please check your credentials.");
+        }
       }
     } catch (err) {
       console.error("Login Error:", err);

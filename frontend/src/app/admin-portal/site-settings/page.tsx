@@ -6,6 +6,7 @@ import { ScrollReveal } from "@/components/ScrollReveal";
 import CustomModal from "@/components/CustomModal";
 
 export default function SiteSettings() {
+  const [logoVersion, setLogoVersion] = useState(Date.now());
   const [settings, setSettings] = useState({
     site_name: "KC Real Estate Media",
     site_logo_url: "",
@@ -86,6 +87,7 @@ export default function SiteSettings() {
       if (res.ok) {
         const updated = await res.json();
         setSettings(updated);
+        setLogoVersion(Date.now());
         setModalConfig({
           isOpen: true,
           title: "Asset Updated",
@@ -158,7 +160,7 @@ export default function SiteSettings() {
                     <div className="flex flex-col items-center gap-6 text-center">
                         <div className="h-32 w-full rounded-[2rem] bg-black/40 border-2 border-dashed border-primary/30 flex items-center justify-center overflow-hidden relative group">
                             {settings.site_logo_url ? (
-                                <img src={settings.site_logo_url} alt="Site Logo" className="w-full h-full object-contain p-4" />
+                                <img src={`${settings.site_logo_url}?v=${logoVersion}`} alt="Site Logo" className="w-full h-full object-contain p-4" />
                             ) : (
                                 <ImageIcon className="w-8 h-8 text-primary/20" />
                             )}
@@ -181,7 +183,7 @@ export default function SiteSettings() {
                     <div className="flex flex-col items-center gap-6 text-center">
                         <div className="h-32 w-full rounded-[2rem] bg-black/40 border-2 border-dashed border-primary/30 flex items-center justify-center overflow-hidden relative group">
                             {settings.sidebar_logo_url ? (
-                                <img src={settings.sidebar_logo_url} alt="Sidebar Logo" className="w-full h-full object-contain p-4" />
+                                <img src={`${settings.sidebar_logo_url}?v=${logoVersion}`} alt="Sidebar Logo" className="w-full h-full object-contain p-4" />
                             ) : (
                                 <Layout className="w-8 h-8 text-primary/20" />
                             )}
@@ -204,7 +206,7 @@ export default function SiteSettings() {
                     <div className="flex flex-col items-center gap-6 text-center">
                         <div className="h-32 w-full rounded-[2rem] bg-black/40 border-2 border-dashed border-primary/30 flex items-center justify-center overflow-hidden relative group">
                             {settings.invoice_logo_url ? (
-                                <img src={settings.invoice_logo_url} alt="Invoice Logo" className="w-full h-full object-contain p-4" />
+                                <img src={`${settings.invoice_logo_url}?v=${logoVersion}`} alt="Invoice Logo" className="w-full h-full object-contain p-4" />
                             ) : (
                                 <Receipt className="w-8 h-8 text-primary/20" />
                             )}
@@ -227,7 +229,7 @@ export default function SiteSettings() {
                     <div className="flex flex-col items-center gap-6 text-center">
                         <div className="h-32 w-full rounded-[2rem] bg-black/40 border-2 border-dashed border-primary/30 flex items-center justify-center overflow-hidden relative group">
                             {settings.favicon_url ? (
-                                <img src={settings.favicon_url} alt="Favicon" className="w-full h-full object-contain p-8" />
+                                <img src={`${settings.favicon_url}?v=${logoVersion}`} alt="Favicon" className="w-full h-full object-contain p-8" />
                             ) : (
                                 <MousePointer2 className="w-8 h-8 text-primary/20" />
                             )}

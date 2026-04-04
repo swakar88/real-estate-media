@@ -36,8 +36,9 @@ export default function ProfilePage() {
   useEffect(() => {
     const fetchProfile = async () => {
       const token = localStorage.getItem("access_token");
+      const impId = sessionStorage.getItem('impersonating_as');
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/me/`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/me/${impId ? `?impersonate_id=${impId}` : ''}`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (res.ok) {

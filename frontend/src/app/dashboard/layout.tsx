@@ -19,6 +19,8 @@ import {
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useGlobalSettings } from "@/context/GlobalSettingsContext";
+import ImpersonationBanner from "@/components/ImpersonationBanner";
+import Footer from "@/components/Footer";
 
 export default function DashboardLayout({
   children,
@@ -30,6 +32,7 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [impersonatedUser, setImpersonatedUser] = useState<any>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
@@ -41,7 +44,9 @@ export default function DashboardLayout({
       }
 
       const queryParams = new URLSearchParams(window.location.search);
-      const impId = queryParams.get('impersonate_id');
+      const urlImpId = queryParams.get('impersonate_id');
+      if (urlImpId) sessionStorage.setItem('impersonating_as', urlImpId);
+      const impId = urlImpId || sessionStorage.getItem('impersonating_as');
       const url = `${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/me/${impId ? `?impersonate_id=${impId}` : ''}`;
 
       try {
@@ -53,6 +58,7 @@ export default function DashboardLayout({
 
         if (res.ok) {
           const userData = await res.json();
+          if (impId) setImpersonatedUser(userData);
           setUser(userData);
           setIsAuthorized(true);
         } else {
@@ -199,10 +205,17 @@ export default function DashboardLayout({
           </button>
         </header>
 
+        {impersonatedUser && (
+          <ImpersonationBanner
+            userName={impersonatedUser.full_name || impersonatedUser.first_name || impersonatedUser.username}
+            role={impersonatedUser.is_photographer ? "Photographer" : "Client"}
+          />
+        )}
         <div className="flex-1 overflow-y-auto custom-scrollbar">
-           <div className="max-w-[1400px] mx-auto p-6 md:p-10 lg:p-12">
+           <div className={`max-w-[1400px] mx-auto p-6 md:p-10 lg:p-12 ${impersonatedUser ? 'pt-16' : ''}`}>
               {children}
            </div>
+           <Footer />
         </div>
       </main>
 

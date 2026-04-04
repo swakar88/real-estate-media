@@ -1429,7 +1429,7 @@ def get_availability(request):
         date_str = slot_date.strftime('%Y-%m-%d')
         if date_str not in availability:
             availability[date_str] = []
-        availability[date_str].append(slot['time_slot'])
+        availability[date_str].append(slot['time_slot'].strftime('%H:%M'))
         
     return Response(availability)
 
