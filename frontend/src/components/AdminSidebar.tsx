@@ -9,8 +9,8 @@ export default function AdminSidebar() {
 
   const navItems = [
     { name: "Overview", href: "/admin-portal", icon: LayoutDashboard },
-    { name: "Bookings", href: "/admin-portal/bookings", icon: Calendar },
-    { name: "Shoots & Deliveries", href: "/admin-portal/shoots", icon: Camera },
+    { name: "Booking Requests", href: "/admin-portal/bookings", icon: Calendar },
+    { name: "Shoot Tracker", href: "/admin-portal/shoots", icon: Camera },
     { name: "Photographers", href: "/admin-portal/photographers", icon: Users },
     { name: "Clients", href: "/admin-portal/clients", icon: UserCog },
     { name: "Admin Hub", href: "/admin-portal/admin-hub", icon: Settings2 },

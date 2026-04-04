@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Users, UserPlus, Search, Mail, Calendar, Clock, ChevronLeft, ChevronRight, UserCircle, X, Phone, Shield, Archive, Trash2, Eye, AlertCircle } from "lucide-react";
+import { Users, UserPlus, Search, Mail, Calendar, Clock, ChevronLeft, ChevronRight, UserCircle, X, Phone, Shield, Archive, Trash2, Eye, Plus, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import Link from "next/link";
 import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/ScrollReveal";
 import CustomModal from "@/components/CustomModal";
@@ -22,6 +23,9 @@ export default function AdminClients() {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [newClientModal, setNewClientModal] = useState(false);
+  const [newClientForm, setNewClientForm] = useState({ first_name: "", last_name: "", email: "" });
+  const [newClientLoading, setNewClientLoading] = useState(false);
   interface ModalConfig {
     isOpen: boolean;
     title: string;
@@ -45,6 +49,32 @@ export default function AdminClients() {
   useEffect(() => {
     fetchClients();
   }, []);
+
+  const createClient = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setNewClientLoading(true);
+    try {
+      const token = localStorage.getItem("access_token");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/clients/`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify(newClientForm),
+      });
+      if (res.ok) {
+        toast.success(`Invite sent to ${newClientForm.email}`);
+        setNewClientModal(false);
+        setNewClientForm({ first_name: "", last_name: "", email: "" });
+        fetchClients();
+      } else {
+        const err = await res.json();
+        toast.error(err.detail || "Failed to create client.");
+      }
+    } catch {
+      toast.error("Network error.");
+    } finally {
+      setNewClientLoading(false);
+    }
+  };
 
   const fetchClients = async () => {
     try {
@@ -91,18 +121,23 @@ export default function AdminClients() {
             <p className="text-muted-foreground">Manage and track your customer base.</p>
           </div>
           
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <input 
-              type="text"
-              placeholder="Search by name or email..."
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="pl-10 pr-4 py-2.5 border border-primary/20 rounded-xl bg-card focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm w-full md:w-80 transition-all shadow-gold"
-            />
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search by name or email..."
+                value={searchTerm}
+                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                className="pl-10 pr-4 py-2.5 border border-primary/20 rounded-xl bg-card focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm w-full md:w-72 transition-all shadow-gold"
+              />
+            </div>
+            <button
+              onClick={() => setNewClientModal(true)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground font-black text-xs uppercase tracking-widest rounded-xl shadow-gold hover:shadow-gold-heavy hover:scale-[1.02] active:scale-95 transition-all whitespace-nowrap"
+            >
+              <Plus className="w-4 h-4" /> New Client
+            </button>
           </div>
         </div>
       </ScrollReveal>
@@ -373,7 +408,7 @@ export default function AdminClients() {
         </div>
       )}
 
-      <CustomModal 
+      <CustomModal
         isOpen={modalConfig.isOpen}
         onClose={() => setModalConfig((prev) => ({ ...prev, isOpen: false }))}
         title={modalConfig.title}
@@ -382,6 +417,65 @@ export default function AdminClients() {
         onConfirm={modalConfig.onConfirm}
         showCancel={modalConfig.showCancel}
       />
+
+      {/* New Client Modal */}
+      {newClientModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setNewClientModal(false)}>
+          <div className="bg-card w-full max-w-md rounded-[2.5rem] shadow-2xl border border-primary/20 p-10 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h2 className="text-2xl font-black">New Client</h2>
+                <p className="text-sm text-muted-foreground mt-1">An invite email will be sent to set their password.</p>
+              </div>
+              <button onClick={() => setNewClientModal(false)} className="p-2 hover:bg-primary/10 rounded-xl transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={createClient} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-black uppercase tracking-widest text-muted-foreground">First Name</label>
+                  <input
+                    type="text" required
+                    value={newClientForm.first_name}
+                    onChange={e => setNewClientForm(p => ({ ...p, first_name: e.target.value }))}
+                    className="w-full bg-background border border-border/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    placeholder="Jane"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Last Name</label>
+                  <input
+                    type="text" required
+                    value={newClientForm.last_name}
+                    onChange={e => setNewClientForm(p => ({ ...p, last_name: e.target.value }))}
+                    className="w-full bg-background border border-border/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    placeholder="Doe"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Email Address</label>
+                <input
+                  type="email" required
+                  value={newClientForm.email}
+                  onChange={e => setNewClientForm(p => ({ ...p, email: e.target.value }))}
+                  className="w-full bg-background border border-border/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  placeholder="jane@agency.com"
+                />
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button type="button" onClick={() => setNewClientModal(false)} className="flex-1 py-3 bg-muted text-muted-foreground font-black text-xs uppercase tracking-widest rounded-2xl hover:bg-muted/80 transition-all">
+                  Cancel
+                </button>
+                <button type="submit" disabled={newClientLoading} className="flex-1 py-3 bg-primary text-primary-foreground font-black text-xs uppercase tracking-widest rounded-2xl shadow-gold hover:shadow-gold-heavy transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+                  {newClientLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Send Invite"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

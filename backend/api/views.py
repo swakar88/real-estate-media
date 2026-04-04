@@ -926,17 +926,22 @@ class ReferralViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         from .models import GlobalSettings
-        # Get default reward amount from global settings
-        settings = GlobalSettings.objects.first()
-        
-        # If fixed, store it now. If percentage, we'll store a placeholder (or the % itself?)
-        # For simplicity, if it's percentage, we'll just store the percentage value in reward_amount
-        # and re-calculate/update it in verify_payment when the shoot is paid.
-        reward = settings.referral_reward_amount if settings else 25.00
-        
-        referral = serializer.save(referrer=self.request.user, reward_amount=reward)
+        from django.contrib.auth.models import User
 
-        # Trigger referral email — wrapped so a failed email never blocks the referral being saved
+        settings_obj = GlobalSettings.objects.first()
+        reward = settings_obj.referral_reward_amount if settings_obj else 25.00
+
+        # Staff may specify a referrer_id to create the referral on behalf of a client
+        referrer = self.request.user
+        referrer_id = self.request.data.get('referrer_id')
+        if self.request.user.is_staff and referrer_id:
+            try:
+                referrer = User.objects.get(pk=referrer_id)
+            except User.DoesNotExist:
+                pass
+
+        referral = serializer.save(referrer=referrer, reward_amount=reward)
+
         try:
             from .utils.email_utils import send_referral_received_email
             send_referral_received_email(referral)
@@ -1705,21 +1710,81 @@ class SiteMediaViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("Only admins can modify site media")
         instance.delete()
 
-class ClientViewSet(viewsets.ReadOnlyModelViewSet):
+class ClientViewSet(viewsets.ModelViewSet):
     """
-    API endpoint for viewing client users.
+    API endpoint for viewing and creating client users.
     """
     serializer_class = ClientSerializer
     permission_classes = [IsAuthenticated]
+    http_method_names = ['get', 'post', 'head', 'options']
 
     def get_queryset(self):
         if not self.request.user.is_staff:
             return User.objects.none()
-        
+
         from django.db.models import Count
         return User.objects.filter(is_staff=False, photographer_profile__isnull=True).annotate(
             booking_count=Count('shoots')
         ).order_by('-date_joined')
+
+    def create(self, request, *args, **kwargs):
+        from django.contrib.auth.models import User
+        from django.core.signing import TimestampSigner
+        from django.conf import settings as django_settings
+        from .utils.email_utils import send_email_dynamic, _get_email_template
+        from rest_framework.exceptions import ValidationError, PermissionDenied
+
+        if not request.user.is_staff:
+            raise PermissionDenied("Only admins can create clients.")
+
+        email = request.data.get('email', '').strip()
+        first_name = request.data.get('first_name', '').strip()
+        last_name = request.data.get('last_name', '').strip()
+
+        if not email:
+            raise ValidationError({"detail": "Email is required."})
+        if User.objects.filter(email__iexact=email).exists():
+            raise ValidationError({"detail": "A user with this email already exists."})
+
+        user = User.objects.create_user(
+            username=email,
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            is_active=False,
+            is_staff=False,
+        )
+        user.set_unusable_password()
+        user.save()
+
+        try:
+            signer = TimestampSigner()
+            token = signer.sign_object({'user_id': user.id})
+            frontend_url = getattr(django_settings, 'FRONTEND_URL', 'http://localhost:3000')
+            invite_link = f"{frontend_url}/reset-password?token={token}"
+            name = first_name or email
+            body_html = _get_email_template(
+                title="Welcome — Set Up Your Account",
+                content_html=(
+                    f"Hi {name},<br><br>"
+                    f"An account has been created for you at KC Real Estate Media.<br>"
+                    f"Click the button below to set your password and access your client portal."
+                ),
+                button_text="Set My Password",
+                button_url=invite_link,
+            )
+            send_email_dynamic(
+                subject="You're invited — Set up your KC Real Estate Media account",
+                recipient_email=email,
+                html_content=body_html,
+                trigger_event='client_invite',
+            )
+        except Exception as e:
+            print(f"Error sending client invite email: {e}")
+
+        from django.db.models import Count
+        user_with_count = User.objects.filter(pk=user.pk).annotate(booking_count=Count('shoots')).first()
+        return Response(ClientSerializer(user_with_count).data, status=status.HTTP_201_CREATED)
 
 class AdminViewSet(viewsets.ModelViewSet):
     """

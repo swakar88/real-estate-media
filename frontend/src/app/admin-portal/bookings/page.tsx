@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle2, Clock, XCircle, Search, CalendarCheck, MapPin, Mail, Phone, AlertCircle, User as UserIcon, MessageSquare, RefreshCw } from "lucide-react";
+import { CheckCircle2, Clock, XCircle, Search, CalendarCheck, MapPin, Mail, Phone, AlertCircle, User as UserIcon, MessageSquare, RefreshCw, Plus, X, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/ScrollReveal";
 import CustomModal from "@/components/CustomModal";
 
@@ -14,6 +15,64 @@ export default function AdminBookings() {
   
   const [modalConfig, setModalConfig] = useState({ isOpen: false, title: "", message: "", type: "info" as any });
   const [completionModal, setCompletionModal] = useState({ isOpen: false, bookingId: null as number | null, notes: "" });
+  const [newBookingModal, setNewBookingModal] = useState(false);
+  const [newBookingLoading, setNewBookingLoading] = useState(false);
+  const [packages, setPackages] = useState<any[]>([]);
+  const [photographers, setPhotographers] = useState<any[]>([]);
+  const [newBookingForm, setNewBookingForm] = useState({
+    first_name: "", last_name: "", email: "", phone: "",
+    package_interest: "", property_details: "",
+    shoot_date: "", time_slot: "", assigned_photographer: "", sqft: "",
+  });
+
+  const fetchDropdowns = async () => {
+    const token = localStorage.getItem("access_token");
+    const [pkgRes, photoRes] = await Promise.all([
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/packages/`, { headers: { Authorization: `Bearer ${token}` } }),
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/photographers/`, { headers: { Authorization: `Bearer ${token}` } }),
+    ]);
+    if (pkgRes.ok) setPackages(await pkgRes.json());
+    if (photoRes.ok) setPhotographers(await photoRes.json());
+  };
+
+  const submitNewBooking = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setNewBookingLoading(true);
+    try {
+      const token = localStorage.getItem("access_token");
+      const body: any = {
+        first_name: newBookingForm.first_name,
+        last_name: newBookingForm.last_name,
+        email: newBookingForm.email,
+        phone: newBookingForm.phone,
+        property_details: newBookingForm.property_details,
+      };
+      if (newBookingForm.package_interest) body.package_interest = parseInt(newBookingForm.package_interest);
+      if (newBookingForm.shoot_date) body.shoot_date = newBookingForm.shoot_date;
+      if (newBookingForm.time_slot) body.time_slot = newBookingForm.time_slot;
+      if (newBookingForm.assigned_photographer) body.assigned_photographer = parseInt(newBookingForm.assigned_photographer);
+      if (newBookingForm.sqft) body.sqft = parseInt(newBookingForm.sqft);
+
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/bookings/`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        toast.success("Booking created successfully");
+        setNewBookingModal(false);
+        setNewBookingForm({ first_name: "", last_name: "", email: "", phone: "", package_interest: "", property_details: "", shoot_date: "", time_slot: "", assigned_photographer: "", sqft: "" });
+        fetchBookings();
+      } else {
+        const err = await res.json();
+        toast.error(err.detail || Object.values(err).flat().join(", ") || "Failed to create booking.");
+      }
+    } catch {
+      toast.error("Network error.");
+    } finally {
+      setNewBookingLoading(false);
+    }
+  };
 
   const fetchBookings = async () => {
     try {
@@ -40,6 +99,7 @@ export default function AdminBookings() {
 
   useEffect(() => {
     fetchBookings();
+    fetchDropdowns();
   }, []);
 
   const updateStatus = async (id: number, newStatus: string, notes: string = "") => {
@@ -118,7 +178,7 @@ export default function AdminBookings() {
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <input 
+              <input
                 type="text"
                 placeholder="Search requests..."
                 value={searchTerm}
@@ -126,6 +186,12 @@ export default function AdminBookings() {
                 className="pl-10 pr-4 py-2 border border-primary/20 rounded-xl bg-card focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm w-full sm:w-64 transition-all shadow-gold"
               />
             </div>
+            <button
+              onClick={() => setNewBookingModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground font-black text-xs uppercase tracking-widest rounded-xl shadow-gold hover:shadow-gold-heavy hover:scale-[1.02] active:scale-95 transition-all whitespace-nowrap"
+            >
+              <Plus className="w-4 h-4" /> New Booking
+            </button>
             
             <div className="flex bg-muted p-1 rounded-lg">
               <button 
@@ -336,7 +402,7 @@ export default function AdminBookings() {
       )}
 
       {/* Global Alerts */}
-      <CustomModal 
+      <CustomModal
         isOpen={modalConfig.isOpen}
         onClose={() => setModalConfig({ ...modalConfig, isOpen: false })}
         title={modalConfig.title}
@@ -345,6 +411,85 @@ export default function AdminBookings() {
         showCancel={false}
         confirmText="Acknowledged"
       />
+
+      {/* New Booking Modal */}
+      {newBookingModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setNewBookingModal(false)}>
+          <div className="bg-card w-full max-w-lg rounded-[2.5rem] shadow-2xl border border-primary/20 p-10 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h2 className="text-2xl font-black">New Booking</h2>
+                <p className="text-sm text-muted-foreground mt-1">Create a booking request on behalf of a client.</p>
+              </div>
+              <button onClick={() => setNewBookingModal(false)} className="p-2 hover:bg-primary/10 rounded-xl transition-colors flex-shrink-0">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={submitNewBooking} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-black uppercase tracking-widest text-muted-foreground">First Name</label>
+                  <input type="text" required value={newBookingForm.first_name} onChange={e => setNewBookingForm(p => ({ ...p, first_name: e.target.value }))} className="w-full bg-background border border-border/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" placeholder="Jane" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Last Name</label>
+                  <input type="text" required value={newBookingForm.last_name} onChange={e => setNewBookingForm(p => ({ ...p, last_name: e.target.value }))} className="w-full bg-background border border-border/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" placeholder="Doe" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Email</label>
+                  <input type="email" required value={newBookingForm.email} onChange={e => setNewBookingForm(p => ({ ...p, email: e.target.value }))} className="w-full bg-background border border-border/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" placeholder="jane@agency.com" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Phone</label>
+                  <input type="tel" required value={newBookingForm.phone} onChange={e => setNewBookingForm(p => ({ ...p, phone: e.target.value }))} className="w-full bg-background border border-border/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" placeholder="+1 (555) 000-0000" />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Package</label>
+                <select value={newBookingForm.package_interest} onChange={e => setNewBookingForm(p => ({ ...p, package_interest: e.target.value }))} className="w-full bg-background border border-border/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
+                  <option value="">— Select a package —</option>
+                  {packages.map((pkg: any) => <option key={pkg.id} value={pkg.id}>{pkg.name}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Property Address</label>
+                <textarea required rows={2} value={newBookingForm.property_details} onChange={e => setNewBookingForm(p => ({ ...p, property_details: e.target.value }))} className="w-full bg-background border border-border/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none" placeholder="123 Main St, Dallas, TX 75201" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Shoot Date <span className="normal-case font-medium opacity-50">(optional)</span></label>
+                  <input type="date" value={newBookingForm.shoot_date} onChange={e => setNewBookingForm(p => ({ ...p, shoot_date: e.target.value }))} className="w-full bg-background border border-border/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Time Slot <span className="normal-case font-medium opacity-50">(optional)</span></label>
+                  <input type="text" value={newBookingForm.time_slot} onChange={e => setNewBookingForm(p => ({ ...p, time_slot: e.target.value }))} className="w-full bg-background border border-border/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" placeholder="09:00 AM" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Photographer <span className="normal-case font-medium opacity-50">(optional)</span></label>
+                  <select value={newBookingForm.assigned_photographer} onChange={e => setNewBookingForm(p => ({ ...p, assigned_photographer: e.target.value }))} className="w-full bg-background border border-border/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
+                    <option value="">— Unassigned —</option>
+                    {photographers.map((ph: any) => <option key={ph.id} value={ph.id}>{ph.user_name || ph.id}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Sq Ft <span className="normal-case font-medium opacity-50">(optional)</span></label>
+                  <input type="number" value={newBookingForm.sqft} onChange={e => setNewBookingForm(p => ({ ...p, sqft: e.target.value }))} className="w-full bg-background border border-border/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" placeholder="2500" />
+                </div>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setNewBookingModal(false)} className="flex-1 py-3 bg-muted text-muted-foreground font-black text-xs uppercase tracking-widest rounded-2xl hover:bg-muted/80 transition-all">Cancel</button>
+                <button type="submit" disabled={newBookingLoading} className="flex-1 py-3 bg-primary text-primary-foreground font-black text-xs uppercase tracking-widest rounded-2xl shadow-gold hover:shadow-gold-heavy transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+                  {newBookingLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create Booking"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

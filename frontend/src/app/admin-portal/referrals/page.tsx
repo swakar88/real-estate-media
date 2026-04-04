@@ -1,21 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { 
-  Users, 
-  CheckCircle2, 
-  Clock, 
-  CreditCard,
+import {
+  Users,
+  CheckCircle2,
+  Clock,
   Gift,
   Search,
-  Filter,
   MoreVertical,
   Mail,
   Phone,
   Calendar,
-  ChevronRight,
-  User,
-  ExternalLink
+  Plus,
+  X,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ScrollReveal } from "@/components/ScrollReveal";
@@ -25,6 +23,16 @@ export default function AdminReferralsPage() {
   const [referrals, setReferrals] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [clients, setClients] = useState<any[]>([]);
+  const [newReferralModal, setNewReferralModal] = useState(false);
+  const [newReferralLoading, setNewReferralLoading] = useState(false);
+  const [newReferralForm, setNewReferralForm] = useState({
+    referrer_id: "" as string | "self",
+    referee_name: "",
+    referee_email: "",
+    referee_phone: "",
+    notes: "",
+  });
 
   const fetchReferrals = async () => {
     const token = localStorage.getItem("access_token");
@@ -44,8 +52,55 @@ export default function AdminReferralsPage() {
     }
   };
 
+  const fetchClients = async () => {
+    try {
+      const token = localStorage.getItem("access_token");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/clients/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) setClients(await res.json());
+    } catch { /* non-critical */ }
+  };
+
+  const createReferral = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setNewReferralLoading(true);
+    try {
+      const token = localStorage.getItem("access_token");
+      const body: any = {
+        referee_name: newReferralForm.referee_name,
+        referee_email: newReferralForm.referee_email,
+        referee_phone: newReferralForm.referee_phone || undefined,
+        notes: newReferralForm.notes || undefined,
+        status: "pending",
+      };
+      if (newReferralForm.referrer_id && newReferralForm.referrer_id !== "self") {
+        body.referrer_id = parseInt(newReferralForm.referrer_id);
+      }
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/referrals/`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        toast.success("Referral created successfully");
+        setNewReferralModal(false);
+        setNewReferralForm({ referrer_id: "", referee_name: "", referee_email: "", referee_phone: "", notes: "" });
+        fetchReferrals();
+      } else {
+        const err = await res.json();
+        toast.error(err.detail || "Failed to create referral.");
+      }
+    } catch {
+      toast.error("Network error.");
+    } finally {
+      setNewReferralLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchReferrals();
+    fetchClients();
   }, []);
 
   const updateStatus = async (id: number, newStatus: string) => {
@@ -116,9 +171,9 @@ export default function AdminReferralsPage() {
         <div className="flex flex-wrap items-center gap-4">
           <div className="relative group">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground transition-colors group-focus-within:text-primary" />
-            <input 
-              type="text" 
-              placeholder="Search referrals..." 
+            <input
+              type="text"
+              placeholder="Search referrals..."
               className="pl-11 pr-6 py-3 bg-card border border-primary/10 rounded-2xl w-full md:w-64 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all shadow-sm"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -131,8 +186,8 @@ export default function AdminReferralsPage() {
                 key={status}
                 onClick={() => setStatusFilter(status)}
                 className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                  statusFilter === status 
-                    ? "bg-primary text-primary-foreground shadow-gold" 
+                  statusFilter === status
+                    ? "bg-primary text-primary-foreground shadow-gold"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
@@ -140,6 +195,13 @@ export default function AdminReferralsPage() {
               </button>
             ))}
           </div>
+
+          <button
+            onClick={() => setNewReferralModal(true)}
+            className="flex items-center gap-2 px-5 py-3 bg-primary text-primary-foreground font-black text-xs uppercase tracking-widest rounded-2xl shadow-gold hover:shadow-gold-heavy hover:scale-[1.02] active:scale-95 transition-all whitespace-nowrap"
+          >
+            <Plus className="w-4 h-4" /> New Referral
+          </button>
         </div>
       </div>
 
@@ -240,6 +302,85 @@ export default function AdminReferralsPage() {
           </table>
         </div>
       </div>
+      {/* New Referral Modal */}
+      {newReferralModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setNewReferralModal(false)}>
+          <div className="bg-card w-full max-w-md rounded-[2.5rem] shadow-2xl border border-primary/20 p-10 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h2 className="text-2xl font-black">New Referral</h2>
+                <p className="text-sm text-muted-foreground mt-1">Log a referral on behalf of a client or yourself.</p>
+              </div>
+              <button onClick={() => setNewReferralModal(false)} className="p-2 hover:bg-primary/10 rounded-xl transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={createReferral} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Referred By</label>
+                <select
+                  value={newReferralForm.referrer_id}
+                  onChange={e => setNewReferralForm(p => ({ ...p, referrer_id: e.target.value }))}
+                  className="w-full bg-background border border-border/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                >
+                  <option value="self">Admin (myself)</option>
+                  {clients.map((c: any) => (
+                    <option key={c.id} value={c.id}>{c.full_name || c.email} — {c.email}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Referee Name</label>
+                <input
+                  type="text" required
+                  value={newReferralForm.referee_name}
+                  onChange={e => setNewReferralForm(p => ({ ...p, referee_name: e.target.value }))}
+                  className="w-full bg-background border border-border/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  placeholder="John Smith"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Referee Email</label>
+                <input
+                  type="email" required
+                  value={newReferralForm.referee_email}
+                  onChange={e => setNewReferralForm(p => ({ ...p, referee_email: e.target.value }))}
+                  className="w-full bg-background border border-border/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  placeholder="john@example.com"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Referee Phone <span className="normal-case font-medium opacity-50">(optional)</span></label>
+                <input
+                  type="tel"
+                  value={newReferralForm.referee_phone}
+                  onChange={e => setNewReferralForm(p => ({ ...p, referee_phone: e.target.value }))}
+                  className="w-full bg-background border border-border/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  placeholder="+1 (555) 000-0000"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Notes <span className="normal-case font-medium opacity-50">(optional)</span></label>
+                <textarea
+                  rows={2}
+                  value={newReferralForm.notes}
+                  onChange={e => setNewReferralForm(p => ({ ...p, notes: e.target.value }))}
+                  className="w-full bg-background border border-border/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+                  placeholder="Any context about this referral..."
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setNewReferralModal(false)} className="flex-1 py-3 bg-muted text-muted-foreground font-black text-xs uppercase tracking-widest rounded-2xl hover:bg-muted/80 transition-all">
+                  Cancel
+                </button>
+                <button type="submit" disabled={newReferralLoading} className="flex-1 py-3 bg-primary text-primary-foreground font-black text-xs uppercase tracking-widest rounded-2xl shadow-gold hover:shadow-gold-heavy transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+                  {newReferralLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create Referral"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

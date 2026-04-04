@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Image as ImageIcon, DollarSign, Mail, FileText, Settings, FolderGit2, ArrowUpRight, BookMarked } from "lucide-react";
+import { Image as ImageIcon, DollarSign, Mail, FileText, Settings, FolderGit2, ArrowUpRight, BookMarked, Shield } from "lucide-react";
 import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/ScrollReveal";
 
 const hubTiles = [
@@ -67,6 +67,15 @@ const hubTiles = [
     color: "text-cyan-400",
     bg: "bg-cyan-400/10",
     border: "border-cyan-400/20",
+  },
+  {
+    title: "Manage Admins",
+    description: "Invite and manage admin accounts with access to this portal.",
+    href: "/admin-portal/admins",
+    icon: Shield,
+    color: "text-violet-400",
+    bg: "bg-violet-400/10",
+    border: "border-violet-400/20",
   },
 ];
 

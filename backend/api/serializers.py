@@ -31,6 +31,7 @@ class GlobalSettingsSerializer(serializers.ModelSerializer):
 
 class ReferralSerializer(serializers.ModelSerializer):
     referrer_name = serializers.CharField(source='referrer.get_full_name', read_only=True)
+    referrer_id = serializers.IntegerField(write_only=True, required=False)
     class Meta:
         model = Referral
         fields = '__all__'
