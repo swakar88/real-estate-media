@@ -83,13 +83,12 @@ export default function AdminLayout({
 
   const navLinks = [
     { name: "Dashboard", href: "/admin-portal", icon: LayoutDashboard },
-    { name: "Bookings", href: "/admin-portal/bookings", icon: CalendarCheck },
+    { name: "Booking Requests", href: "/admin-portal/bookings", icon: CalendarCheck },
     { name: "Calendar", href: "/admin-portal/calendar", icon: CalendarCheck },
-    { name: "Client Shoots", href: "/admin-portal/shoots", icon: Camera },
+    { name: "Shoot Tracker", href: "/admin-portal/shoots", icon: Camera },
     { name: "Photographers", href: "/admin-portal/photographers", icon: Users },
     { name: "Clients", href: "/admin-portal/clients", icon: UserCircle },
     { name: "Referrals", href: "/admin-portal/referrals", icon: Users },
-    { name: "Admins", href: "/admin-portal/admins", icon: Users },
     { name: "Admin Hub", href: "/admin-portal/admin-hub", icon: Settings2 },
   ];
 

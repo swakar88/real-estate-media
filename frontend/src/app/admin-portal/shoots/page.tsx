@@ -184,8 +184,8 @@ export default function AdminShoots() {
       <ScrollReveal>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Client Shoots</h1>
-            <p className="text-muted-foreground">Manage deliveries and track payment status.</p>
+            <h1 className="text-3xl font-bold tracking-tight">Shoot Tracker</h1>
+            <p className="text-muted-foreground">Track confirmed shoots, status, and payment.</p>
           </div>
           
           <div className="flex flex-wrap gap-4 items-center">
