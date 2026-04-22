@@ -53,7 +53,7 @@ export default function Navbar() {
 
   // Admins and Photographers are "staff", Clients are not.
   const isStaff = isAdmin || isPhotographer;
-  const showPublicLinks = !isStaff;
+  const showPublicLinks = !isLoggedIn || isStaff;
 
   const getDashboardLink = () => {
     if (isAdmin) return '/admin-portal';

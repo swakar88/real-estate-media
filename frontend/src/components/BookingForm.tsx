@@ -206,7 +206,7 @@ export default function BookingForm({ packages }: { packages: any[] }) {
         <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-20 md:mb-32">
           {packages.map((pkg: any) => (
             <StaggerItem key={pkg.id}>
-              <div className={`flex flex-col rounded-3xl bg-card p-8 shadow-gold transition-all h-full relative group ${pkg.is_popular ? 'border-2 border-primary shadow-gold-heavy transform md:-translate-y-4' : 'border border-primary/10'}`}>
+              <div className={`flex flex-col rounded-3xl bg-card p-8 shadow-gold transition-all h-full relative group cursor-pointer ${pkg.is_popular ? 'border-2 border-primary shadow-gold-heavy transform md:-translate-y-4' : 'border border-primary/10'}`}>
                 {pkg.is_popular && (
                   <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-primary text-primary-foreground px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider whitespace-nowrap">
                     Most Popular
@@ -228,7 +228,7 @@ export default function BookingForm({ packages }: { packages: any[] }) {
                 <button 
                   type="button"
                   onClick={() => handlePackageSelect(pkg.id.toString())}
-                  className={`w-full py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${pkg.is_popular ? 'bg-primary text-primary-foreground shadow-gold hover:shadow-gold-heavy' : 'bg-muted text-foreground hover:bg-muted/80'} active:scale-95`}
+                  className={`w-full py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all cursor-pointer ${pkg.is_popular ? 'bg-primary text-primary-foreground shadow-gold hover:shadow-gold-heavy' : 'bg-muted text-foreground hover:bg-muted/80'} active:scale-95`}
                 >
                   {formData.packageId === pkg.id.toString() ? "Selected ✓" : "Select Package"}
                 </button>
