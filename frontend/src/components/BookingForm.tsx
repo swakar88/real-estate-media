@@ -23,6 +23,12 @@ export default function BookingForm({ packages }: { packages: any[] }) {
       setFormData(prev => ({ ...prev, referralCode: refCode.toUpperCase() }));
     }
 
+    // Pre-select a package from ?package=<id> URL param (e.g. deep-linked from /pricing)
+    const packageParam = searchParams.get("package");
+    if (packageParam) {
+      setFormData(prev => ({ ...prev, packageId: packageParam }));
+    }
+
     // Check authentication and prefill data
     const token = localStorage.getItem("access_token");
     if (token) {

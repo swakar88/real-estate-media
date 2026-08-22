@@ -38,7 +38,7 @@ export default async function Home() {
                 />
              ) : (
                 <Image 
-                   src={media.home_hero_bg || "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80"} 
+                   src={media.home_hero_bg || "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80"}
                    alt="Luxury Real Estate Background" 
                    fill 
                    className="object-cover opacity-40 mix-blend-luminosity brightness-50" 
@@ -50,15 +50,15 @@ export default async function Home() {
           
           <div className="relative z-10 container mx-auto px-4 md:px-8 text-center flex flex-col items-center">
             <ScrollReveal delay={0.1}>
-              <div className="inline-block py-1 px-3 mb-6 rounded-full bg-primary/20 text-primary border border-primary/30 text-sm font-medium tracking-wide">
+              <div className="inline-block py-1 px-3 mb-6 rounded-full bg-primary/20 text-gradient-text border border-primary/30 text-sm font-medium tracking-wide">
                 ELEVATE YOUR LISTINGS
               </div>
             </ScrollReveal>
             <ScrollReveal delay={0.2}>
               <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold tracking-tight mb-6 max-w-4xl drop-shadow-sm">
-                Immersive Virtual Media <br/>
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-primary">
-                  For Real Estate & Business
+                Professional Real Estate <br/>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-gradient-text to-gradient-text">
+                  Photography & Media in Kansas City
                 </span>
               </h1>
             </ScrollReveal>

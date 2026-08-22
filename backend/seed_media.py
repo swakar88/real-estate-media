@@ -10,7 +10,7 @@ media_items = [
     {
         "key": "home_hero_bg",
         "title": "Home Page Hero Background",
-        "url": "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80",
+        "url": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80",
         "media_type": "image",
         "description": "The main background image on the landing page header."
     },

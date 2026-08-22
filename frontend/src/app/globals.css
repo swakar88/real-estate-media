@@ -14,6 +14,7 @@
   --popover-foreground: 0.15 0 0;
   --primary: 0.82 0.08 86; /* Soft Champagne Gold #E8C88A approx */
   --primary-foreground: 0.15 0 0;
+  --gradient-text: 0.55 0.12 86; /* Darker Bronze Gold — readable on ivory background */
   --secondary: 0.95 0.02 90;
   --secondary-foreground: 0.15 0 0;
   --muted: 0.95 0.02 90;
@@ -44,6 +45,7 @@
   --popover-foreground: 0.98 0 0;
   --primary: 0.88 0.11 86; /* Metallic Champagne Gold #F5D67A */
   --primary-foreground: 0 0 0; /* Black text on Gold */
+  --gradient-text: 0.88 0.11 86; /* Same as primary — proven readable on black */
   --secondary: 0.22 0 0;
   --secondary-foreground: 0.98 0 0;
   --muted: 0.22 0 0;
@@ -72,6 +74,7 @@
   --color-popover-foreground: oklch(var(--popover-foreground));
   --color-primary: oklch(var(--primary));
   --color-primary-foreground: oklch(var(--primary-foreground));
+  --color-gradient-text: oklch(var(--gradient-text));
   --color-secondary: oklch(var(--secondary));
   --color-secondary-foreground: oklch(var(--secondary-foreground));
   --color-muted: oklch(var(--muted));
