@@ -3,13 +3,13 @@
     "model": "api.package",
     "pk": 1,
     "fields": {
-      "name": "Essential",
-      "price": "250.00",
-      "description": "Starter package",
+      "name": "Tour",
+      "price": "220.00",
+      "description": "Great for standard listings that need clean, reliable photos fast.",
       "is_popular": false,
       "features": [
         "Up to 25 HDR Photos",
-        "Same-day Photo Delivery",
+        "Same-Day Photo Delivery",
         "Blue Sky Guarantee"
       ],
       "order": 1
@@ -19,14 +19,14 @@
     "model": "api.package",
     "pk": 2,
     "fields": {
-      "name": "Premier Listing",
-      "price": "425.00",
-      "description": "The most popular choice",
-      "is_popular": true,
+      "name": "Premier",
+      "price": "280.00",
+      "description": "Our most complete photo package for listings that need to stand out.",
+      "is_popular": false,
       "features": [
         "Up to 40 HDR Photos",
-        "3D Virtual Tour",
-        "Drone Photography (5 aerials)",
+        "Same-Day Photo Delivery",
+        "Blue Sky Guarantee",
         "Floor Plan with Dimensions"
       ],
       "order": 2
@@ -36,9 +36,26 @@
     "model": "api.package",
     "pk": 3,
     "fields": {
-      "name": "Cinematic Video",
-      "price": "600.00",
-      "description": "High-end video package",
+      "name": "Liftoff",
+      "price": "340.00",
+      "description": "Photos plus aerial and 3D coverage for listings that need to sell the lifestyle.",
+      "is_popular": true,
+      "features": [
+        "Up to 40 HDR Photos",
+        "3D Virtual Tour",
+        "Drone Photography (5 Aerials)",
+        "Floor Plan with Dimensions"
+      ],
+      "order": 3
+    }
+  },
+  {
+    "model": "api.package",
+    "pk": 4,
+    "fields": {
+      "name": "Viral",
+      "price": "480.00",
+      "description": "Full video production built for social — the complete marketing package.",
       "is_popular": false,
       "features": [
         "4K Interior & Exterior Video",
@@ -46,6 +63,39 @@
         "Social Media Reel Cut",
         "Licensed Music Track"
       ],
+      "order": 4
+    }
+  },
+  {
+    "model": "api.addon",
+    "pk": 1,
+    "fields": {
+      "name": "Twilight Conversion",
+      "price": "10.00",
+      "description": "Convert a daytime exterior photo into a stunning twilight shot.",
+      "turnaround": "24 Hours",
+      "order": 1
+    }
+  },
+  {
+    "model": "api.addon",
+    "pk": 2,
+    "fields": {
+      "name": "Virtual De-clutter",
+      "price": "10.00",
+      "description": "Digitally remove clutter or unwanted objects from a photo.",
+      "turnaround": "24 Hours",
+      "order": 2
+    }
+  },
+  {
+    "model": "api.addon",
+    "pk": 3,
+    "fields": {
+      "name": "Lush Grass Edit",
+      "price": "10.00",
+      "description": "Enhance dull or patchy grass to a vibrant green.",
+      "turnaround": "24 Hours",
       "order": 3
     }
   },

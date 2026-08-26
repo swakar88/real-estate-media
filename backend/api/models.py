@@ -93,6 +93,20 @@ class Package(models.Model):
         return f"{self.name} (${self.price})"
 
 
+class AddOn(models.Model):
+    name = models.CharField(max_length=100)
+    price = models.DecimalField(max_digits=8, decimal_places=2)
+    description = models.TextField(blank=True)
+    turnaround = models.CharField(max_length=50, blank=True, help_text="e.g. '24 Hours'")
+    order = models.IntegerField(default=0, help_text="Display order")
+
+    class Meta:
+        ordering = ['order']
+
+    def __str__(self):
+        return f"{self.name} (${self.price})"
+
+
 class Photographer(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='photographer_profile')
     phone = models.CharField(max_length=20, blank=True)
@@ -176,6 +190,7 @@ class BookingRequest(models.Model):
     email = models.EmailField()
     phone = models.CharField(max_length=20)
     package_interest = models.ForeignKey(Package, on_delete=models.SET_NULL, null=True, blank=True)
+    selected_addons = models.ManyToManyField(AddOn, blank=True, related_name='booking_requests')
     property_details = models.TextField()
     
     # New scheduling fields
@@ -229,6 +244,7 @@ class ClientShoot(models.Model):
     property_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, help_text="Listing price of the property")
     
     referral_code_used = models.CharField(max_length=10, blank=True, null=True, help_text="Referral code that was applied to this shoot")
+    selected_addons = models.ManyToManyField(AddOn, blank=True, related_name='client_shoots')
 
     # Invoicing / Stripe Fields
     amount_due = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, help_text="Total amount for the shoot")

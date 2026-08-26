@@ -112,7 +112,7 @@ export default function AdminLayout({
       `}>
         <div className="h-full flex flex-col">
           <div className="flex items-center justify-between px-6 py-6 border-b border-border/50">
-            <img src={settings?.sidebar_logo_url || "/logo.png"} alt={settings?.site_name || "KC Real Estate Media"} className="h-8 w-auto object-contain" />
+            <img src={settings?.sidebar_logo_url || "/logo.png"} alt={settings?.site_name || "KC Real Estate Media"} className="h-10 w-auto object-contain" />
             <button className="md:hidden text-muted-foreground hover:text-foreground" onClick={() => setSidebarOpen(false)}>
               <X className="h-5 w-5" />
             </button>

@@ -190,14 +190,14 @@ export default function BookingsPage() {
                               <ExternalLink className="h-4 w-4" /> View Details
                             </Link>
                             <a
-                              href="mailto:info@kcrealestatemedia.com?subject=Reschedule Request"
+                              href="mailto:info@kcreals.com?subject=Reschedule Request"
                               className="flex items-center gap-2 px-4 py-3 text-sm hover:bg-muted transition-colors"
                               onClick={() => setOpenMenuId(null)}
                             >
                               <Calendar className="h-4 w-4" /> Request Reschedule
                             </a>
                             <a
-                              href="mailto:info@kcrealestatemedia.com?subject=Cancellation Request"
+                              href="mailto:info@kcreals.com?subject=Cancellation Request"
                               className="flex items-center gap-2 px-4 py-3 text-sm text-destructive hover:bg-destructive/10 transition-colors"
                               onClick={() => setOpenMenuId(null)}
                             >

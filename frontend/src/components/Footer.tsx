@@ -32,10 +32,10 @@ export default function Footer() {
           <div className="space-y-4">
             <h4 className="font-semibold">Connect With Us</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li>14702 W 90th Ter</li>
-              <li>Lenexa, KS 66215</li>
-              <li><a href="mailto:info@kcrealestatemedia.com" className="hover:text-primary transition-colors">info@kcrealestatemedia.com</a></li>
-              <li><a href="tel:9136095811" className="hover:text-primary transition-colors">Tel: 913-609-5811</a></li>
+              <li>8034 W 151st St</li>
+              <li>Kansas City, KS</li>
+              <li><a href="mailto:info@kcreals.com" className="hover:text-primary transition-colors">info@kcreals.com</a></li>
+              <li><a href="tel:+16013013579" className="hover:text-primary transition-colors">Tel: +1 (601) 301-3579</a></li>
             </ul>
           </div>
         </div>

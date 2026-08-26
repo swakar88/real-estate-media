@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import (
-    Service, GalleryImage, Package, BookingRequest,
+    Service, GalleryImage, Package, AddOn, BookingRequest,
     ClientShoot, Photographer, PhotographerSlot,
     SiteMedia, EmailConfiguration, EmailTemplate, MediaItem,
     Referral, ReferralCredit, GlobalSettings, PhotographerPayment, SupportTicket, PhotographerRating,
@@ -45,6 +45,11 @@ class GalleryImageSerializer(serializers.ModelSerializer):
 class PackageSerializer(serializers.ModelSerializer):
     class Meta:
         model = Package
+        fields = '__all__'
+
+class AddOnSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AddOn
         fields = '__all__'
 
 class BookingRequestSerializer(serializers.ModelSerializer):

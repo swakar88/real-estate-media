@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import (
-    Service, GalleryImage, Package, BookingRequest, ClientShoot, 
+    Service, GalleryImage, Package, AddOn, BookingRequest, ClientShoot,
     Photographer, PhotographerSlot, Referral, ReferralCredit, GlobalSettings
 )
 
@@ -36,6 +36,11 @@ class GalleryImageAdmin(admin.ModelAdmin):
 class PackageAdmin(admin.ModelAdmin):
     list_display = ('name', 'price', 'is_popular', 'order')
     list_editable = ('price', 'is_popular', 'order')
+
+@admin.register(AddOn)
+class AddOnAdmin(admin.ModelAdmin):
+    list_display = ('name', 'price', 'turnaround', 'order')
+    list_editable = ('price', 'turnaround', 'order')
 
 @admin.register(BookingRequest)
 class BookingRequestAdmin(admin.ModelAdmin):

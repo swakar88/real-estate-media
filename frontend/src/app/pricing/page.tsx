@@ -17,8 +17,19 @@ async function getPackages() {
   }
 }
 
+async function getAddons() {
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/addons/`, { cache: 'no-store' });
+    if (!res.ok) return [];
+    return res.json();
+  } catch (error) {
+    console.error("Failed to fetch add-ons:", error);
+    return [];
+  }
+}
+
 export default async function Pricing() {
-  const packages = await getPackages();
+  const [packages, addons] = await Promise.all([getPackages(), getAddons()]);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -80,6 +91,27 @@ export default async function Pricing() {
               <div className="text-center py-10 bg-muted/30 rounded-2xl border border-border/50">
                 <p className="text-muted-foreground">Packages are being updated — check back shortly, or contact us directly for a custom quote.</p>
               </div>
+            )}
+
+            {addons && addons.length > 0 && (
+              <ScrollReveal delay={0.2}>
+                <div className="mt-16 rounded-[2.5rem] border border-primary/20 bg-card p-8 md:p-12 shadow-gold">
+                  <h2 className="text-2xl font-bold mb-1 text-center">Add-Ins</h2>
+                  <p className="text-sm text-muted-foreground mb-8 text-center">Available inside any package during booking.</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                    {addons.map((addon: any) => (
+                      <div key={addon.id} className="rounded-2xl border border-border/50 bg-background p-5">
+                        <h3 className="font-semibold mb-1">{addon.name}</h3>
+                        <p className="text-xs text-muted-foreground mb-3">{addon.description}</p>
+                        <div className="flex items-center justify-between">
+                          <span className="text-lg font-extrabold">+${parseFloat(addon.price).toFixed(0)}</span>
+                          {addon.turnaround && <span className="text-xs text-muted-foreground">{addon.turnaround}</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </ScrollReveal>
             )}
 
             <ScrollReveal delay={0.3}>

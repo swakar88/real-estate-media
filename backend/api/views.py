@@ -18,7 +18,7 @@ import io
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 from .models import (
-    Service, GalleryImage, Package, BookingRequest,
+    Service, GalleryImage, Package, AddOn, BookingRequest,
     ClientShoot, Photographer, PhotographerSlot, PhotographerPayment,
     SiteMedia, EmailConfiguration, EmailTemplate, MediaItem,
     Referral, ReferralCredit, GlobalSettings, SupportTicket, PhotographerRating,
@@ -28,6 +28,7 @@ from .serializers import (
     ServiceSerializer,
     GalleryImageSerializer,
     PackageSerializer,
+    AddOnSerializer,
     BookingRequestSerializer,
     ClientShootSerializer,
     PhotographerSerializer,
@@ -118,6 +119,18 @@ class PackageViewSet(viewsets.ModelViewSet):
             return [AllowAny()]
         return [IsAuthenticated()]
 
+class AddOnViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for selectable booking add-ins (e.g. Twilight Conversion, Virtual De-clutter).
+    """
+    queryset = AddOn.objects.all().order_by('order')
+    serializer_class = AddOnSerializer
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [AllowAny()]
+        return [IsAuthenticated()]
+
 class BookingRequestViewSet(viewsets.ModelViewSet):
     """
     API endpoint for submitting booking requests.
@@ -135,6 +148,7 @@ class BookingRequestViewSet(viewsets.ModelViewSet):
         
         # Determine client user based on authenticated session or create one
         client_user = None
+        client_user_created = False
         if self.request.user.is_authenticated:
             client_user = self.request.user
         else:
@@ -158,12 +172,14 @@ class BookingRequestViewSet(viewsets.ModelViewSet):
                         first_name=serializer.validated_data.get('first_name', ''),
                         last_name=serializer.validated_data.get('last_name', ''),
                     )
+                    client_user_created = True
 
-        # Warn on duplicate address booking for authenticated users (unless force=true)
-        if self.request.user.is_authenticated and not self.request.data.get('force'):
+        # Warn on duplicate address booking (unless force=true) — checked for both
+        # authenticated users and guests (looked up via the resolved client_user).
+        if client_user and not self.request.data.get('force'):
             property_details = serializer.validated_data.get('property_details', '')
             duplicate = ClientShoot.objects.filter(
-                client=self.request.user,
+                client=client_user,
                 property_address__iexact=property_details[:300],
             ).exclude(status='archived').first()
             if duplicate:
@@ -172,6 +188,15 @@ class BookingRequestViewSet(viewsets.ModelViewSet):
                     'duplicate_warning': True,
                     'detail': f'You already have an active booking for this address (#{duplicate.id}). Pass force=true to book anyway.'
                 })
+
+        # Newly-created guest accounts get an email so they can set a password
+        # and track this booking later.
+        if client_user_created and not self.request.user.is_authenticated:
+            from .utils.email_utils import send_guest_account_setup_email
+            try:
+                send_guest_account_setup_email(client_user)
+            except Exception as e:
+                print(f"Guest account setup email failed: {e}")
 
         # Auto-assign an available photographer if requested
         instance = serializer.save()
@@ -204,20 +229,25 @@ class BookingRequestViewSet(viewsets.ModelViewSet):
                 
                 # Automatically generate the ClientShoot
                 if client_user:
-                    ClientShoot.objects.create(
+                    addon_total = sum((a.price for a in instance.selected_addons.all()), Decimal('0'))
+                    computed_amount_due = None
+                    if instance.package_interest or addon_total:
+                        computed_amount_due = (instance.package_interest.price if instance.package_interest else Decimal('0')) + addon_total
+                    new_shoot = ClientShoot.objects.create(
                         client=client_user,
                         property_address=instance.property_details[:300],
                         shoot_date=instance.shoot_date,
                         photographer=instance.assigned_photographer,
                         status='scheduled',
                         payment_status='unpaid',
-                        amount_due=instance.package_interest.price if instance.package_interest else None,
+                        amount_due=computed_amount_due,
                         notes=f"Auto-generated from Booking #{instance.id}\nPackage: {instance.package_interest}\nContact: {instance.phone}",
                         contact_name=f"{instance.first_name} {instance.last_name}",
                         contact_phone=instance.phone,
                         contact_email=instance.email,
                         referral_code_used=instance.referral_code_used or None,
                     )
+                    new_shoot.selected_addons.set(instance.selected_addons.all())
 
                 # SEND MOCKED EMAILS
                 from .utils.email_utils import send_booking_created_emails
@@ -301,24 +331,34 @@ class BookingRequestViewSet(viewsets.ModelViewSet):
             if created:
                 client_user.set_unusable_password()
                 client_user.save()
-            
+                from .utils.email_utils import send_guest_account_setup_email
+                try:
+                    send_guest_account_setup_email(client_user)
+                except Exception as e:
+                    print(f"Guest account setup email failed: {e}")
+
             # Extract date from property details or use a placeholder
             from django.utils import timezone
             
             # Create the ClientShoot
-            ClientShoot.objects.create(
+            addon_total = sum((a.price for a in instance.selected_addons.all()), Decimal('0'))
+            computed_amount_due = None
+            if instance.package_interest or addon_total:
+                computed_amount_due = (instance.package_interest.price if instance.package_interest else Decimal('0')) + addon_total
+            new_shoot = ClientShoot.objects.create(
                 client=client_user,
                 property_address=instance.property_details[:300],
                 shoot_date=instance.shoot_date or timezone.now().date(),
                 photographer=instance.assigned_photographer,
                 status='scheduled',
-                amount_due=instance.package_interest.price if instance.package_interest else None,
+                amount_due=computed_amount_due,
                 notes=f"Auto-generated from Booking #{instance.id}\nPackage: {instance.package_interest}\nContact: {instance.phone}\nPhotographer: {instance.assigned_photographer}",
                 contact_name=f"{instance.first_name} {instance.last_name}",
                 contact_phone=instance.phone,
                 contact_email=instance.email,
                 referral_code_used=instance.referral_code_used or None,
             )
+            new_shoot.selected_addons.set(instance.selected_addons.all())
 
             # SEND MOCKED EMAILS
             from .utils.email_utils import send_booking_created_emails

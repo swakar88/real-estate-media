@@ -122,7 +122,7 @@ export default function DashboardLayout({
         <div className="h-full flex flex-col pt-8">
           <div className="px-8 mb-10">
             <div className="flex items-center gap-3 mb-2">
-              <img src={settings?.sidebar_logo_url || "/logo.png"} alt={settings?.site_name || "KC Real Estate Media"} className="h-8 w-auto object-contain" />
+              <img src={settings?.sidebar_logo_url || "/logo.png"} alt={settings?.site_name || "KC Real Estate Media"} className="h-10 w-auto object-contain" />
             </div>
             <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-muted-foreground/60">{settings?.site_name || "KC Real Estate Media"}</p>
           </div>

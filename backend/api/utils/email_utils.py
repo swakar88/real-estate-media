@@ -397,6 +397,37 @@ As an administrator, you will have access to manage bookings, services, media, a
     html_content = _get_email_template("Admin Invitation", content_html, "Accept Invitation & Activate Account", invite_link)
     return send_email_dynamic(subject, email, html_content, cc=t_cc, bcc=t_bcc)
 
+def send_guest_account_setup_email(user):
+    """
+    Sent when a guest (not logged in) submits a booking and a dormant account
+    is created for them behind the scenes. Reuses the same signed-token scheme
+    as the password-reset flow (django.core.signing, salt='password-reset') so
+    the link lands on the existing /reset-password page and posts to the
+    existing confirm_password_reset endpoint — no new auth machinery needed.
+    """
+    from django.core import signing
+    from django.conf import settings as django_settings
+
+    token = signing.dumps({'user_id': user.pk, 'email': user.email}, salt='password-reset')
+    frontend_url = getattr(django_settings, 'FRONTEND_URL', 'http://localhost:3000')
+    setup_link = f"{frontend_url}/reset-password?token={token}"
+
+    name = user.first_name or user.email
+    default_body = """Hi {name},
+
+Thanks for booking with KC Real Estate Media! We've set up an account for you so you can track this booking, message us, and download your media once it's ready.
+
+Click the button below to set your password and access your client portal. This link expires in 1 hour.
+    """
+    subject, content_html, t_cc, t_bcc = get_template_content(
+        "guest-account-setup",
+        "Set your password to track your booking",
+        default_body,
+        {"name": name}
+    )
+    html_content = _get_email_template("Set Up Your Account", content_html, "Set My Password", setup_link)
+    return send_email_dynamic(subject, user.email, html_content, cc=t_cc, bcc=t_bcc)
+
 def _send_mocked_email(subject, html_content, to_email=None, cc=None, bcc=None, recipient_type='client'):
     recipient = to_email or "swakar88@gmail.com"
     return send_email_dynamic(subject, recipient, html_content, cc=cc, bcc=bcc, recipient_type=recipient_type)

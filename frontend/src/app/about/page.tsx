@@ -45,10 +45,10 @@ export default function About() {
              <ScrollReveal direction="left" className="space-y-6">
                <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-2">About KC Real Estate Media</h1>
                <p className="text-lg text-muted-foreground leading-relaxed">
-                 KC Real Estate Media is a digital marketing agency specializing in virtual media solutions for real estate professionals and small business owners in Kansas City.
+                 KC Real Estate Media helps Kansas City agents and property managers sell listings faster with photography, video, and virtual tours built for how buyers actually shop online today.
                </p>
                <p className="text-muted-foreground leading-relaxed">
-                 A partnership consisting of a current real estate professional, marketing consultant, and general contractor, KC Real Estate Media aims to enhance the real estate marketing structure by introducing 360 virtual reality and videography concepts.
+                 We built our process around speed and consistency — same-day scheduling, next-day delivery, and MLS-ready files every time — so you can spend less time managing vendors and more time closing deals.
                </p>
                <div className="flex items-center gap-4 pt-4">
                  <div className="flex items-center gap-3 bg-white border border-border/40 rounded-2xl px-4 py-3 shadow-sm">

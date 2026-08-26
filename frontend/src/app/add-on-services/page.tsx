@@ -12,59 +12,62 @@ interface SiteMedia {
     [key: string]: any;
 }
 
+// Display-only metadata (which before/after media pair and marketing category
+// go with each add-on) — matched to the live /api/addons/ data by name, since
+// the API is the source of truth for name/description/price/turnaround.
+const DISPLAY_META: Record<string, { mediaKey: string; category: string; description: string }> = {
+    'Twilight Conversion': {
+        mediaKey: 'services_dusk',
+        category: 'Architectural',
+        description: 'Transform standard daytime exterior photos into stunning, high-end twilight imagery. Guaranteed to capture attention instantly on premium listings.',
+    },
+    'Virtual De-clutter': {
+        mediaKey: 'services_staging',
+        category: 'Interior Optimization',
+        description: 'Digitally remove unwanted furniture, vehicles, or personal items. We present a pristine, showroom-quality space that invites potential buyers in.',
+    },
+    'Lush Grass Edit': {
+        mediaKey: 'services_grass',
+        category: 'Curb Appeal',
+        description: 'Enhance patchy or dormant lawns to a vibrant, lush green. Perfect for maximizing first impressions and property value throughout the year.',
+    },
+};
+
 export default function AddOnServices() {
     const [media, setMedia] = useState<SiteMedia>({});
+    const [addons, setAddons] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        async function fetchMedia() {
+        async function fetchData() {
             try {
-                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/site-media/?view=dict`, { cache: 'no-store' });
-                if (res.ok) {
-                    const data = await res.json();
-                    setMedia(data);
-                }
+                const [mediaRes, addonsRes] = await Promise.all([
+                    fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/site-media/?view=dict`, { cache: 'no-store' }),
+                    fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/addons/`, { cache: 'no-store' }),
+                ]);
+                if (mediaRes.ok) setMedia(await mediaRes.json());
+                if (addonsRes.ok) setAddons(await addonsRes.json());
             } catch (err) {
-                console.error("Error fetching media:", err);
+                console.error("Error fetching add-on services data:", err);
             } finally {
                 setLoading(false);
             }
         }
-        fetchMedia();
+        fetchData();
     }, []);
 
-    const services = [
-        {
-            id: 'dusk',
-            key: 'services_dusk',
-            title: 'Twilight Conversion',
-            description: 'Transform standard daytime exterior photos into stunning, high-end twilight imagery. Guaranteed to capture attention instantly on premium listings.',
-            category: 'Architectural',
-            icon: 'Twilight',
-            price: '10.00',
-            turnaround: '24 Hours'
-        },
-        {
-            id: 'staging',
-            key: 'services_staging',
-            title: 'Virtual De-clutter',
-            description: 'Digitally remove unwanted furniture, vehicles, or personal items. We present a pristine, showroom-quality space that invites potential buyers in.',
-            category: 'Interior Optimization',
-            icon: 'Interior',
-            price: '10.00',
-            turnaround: '24 Hours'
-        },
-        {
-            id: 'grass',
-            key: 'services_grass',
-            title: 'Lush Grass Edit',
-            description: 'Enhance patchy or dormant lawns to a vibrant, lush green. Perfect for maximizing first impressions and property value throughout the year.',
-            category: 'Curb Appeal',
-            icon: 'Lawn',
-            price: '10.00',
-            turnaround: '24 Hours'
-        }
-    ];
+    const services = addons.map((addon: any) => {
+        const meta = DISPLAY_META[addon.name] || { mediaKey: '', category: 'Enhancement', description: addon.description };
+        return {
+            id: addon.id,
+            key: meta.mediaKey,
+            title: addon.name,
+            description: addon.description || meta.description,
+            category: meta.category,
+            price: addon.price,
+            turnaround: addon.turnaround,
+        };
+    });
 
     return (
         <div className="flex min-h-screen flex-col bg-black">
@@ -93,6 +96,11 @@ export default function AddOnServices() {
                 {/* Vertical Services List */}
                 <section className="py-20">
                     <div className="container mx-auto px-4 md:px-8 max-w-6xl">
+                        {loading ? (
+                            <div className="py-20 flex justify-center">
+                                <span className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></span>
+                            </div>
+                        ) : (
                         <div className="space-y-32">
                             {services.map((service, index) => (
                                 <ScrollReveal key={service.id} direction={index % 2 === 0 ? 'left' : 'right'}>
@@ -129,12 +137,12 @@ export default function AddOnServices() {
                                             <div className="flex flex-wrap gap-4">
                                                 <div className="bg-white/5 border border-white/10 px-6 py-4 rounded-3xl backdrop-blur-xl">
                                                     <span className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Service Rate</span>
-                                                    <span className="text-2xl font-black text-primary italic">$10.00</span>
+                                                    <span className="text-2xl font-black text-primary italic">${parseFloat(service.price).toFixed(2)}</span>
                                                     <span className="text-[10px] text-muted-foreground ml-2">/ image</span>
                                                 </div>
                                                 <div className="bg-white/5 border border-white/10 px-6 py-4 rounded-3xl backdrop-blur-xl">
                                                     <span className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Turnaround</span>
-                                                    <span className="text-2xl font-black text-white italic">24 Hours</span>
+                                                    <span className="text-2xl font-black text-white italic">{service.turnaround}</span>
                                                 </div>
                                             </div>
 
@@ -153,6 +161,7 @@ export default function AddOnServices() {
                                 </ScrollReveal>
                             ))}
                         </div>
+                        )}
                     </div>
                 </section>
 

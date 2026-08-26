@@ -14,6 +14,8 @@ export default function BookingForm({ packages }: { packages: any[] }) {
   const [availableSlots, setAvailableSlots] = useState<Record<string, string[]>>({});
   const [fetchingSlots, setFetchingSlots] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [addons, setAddons] = useState<any[]>([]);
+  const [selectedAddonIds, setSelectedAddonIds] = useState<number[]>([]);
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -49,6 +51,12 @@ export default function BookingForm({ packages }: { packages: any[] }) {
     } else {
       setIsAuthenticated(false);
     }
+
+    // Fetch selectable add-ins
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/addons/`)
+      .then(res => res.ok ? res.json() : [])
+      .then(data => setAddons(data))
+      .catch(() => setAddons([]));
 
     // Fetch Slots
     fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/availability/`)
@@ -97,6 +105,18 @@ export default function BookingForm({ packages }: { packages: any[] }) {
     }
   };
 
+  const toggleAddon = (addonId: number) => {
+    setSelectedAddonIds(prev =>
+      prev.includes(addonId) ? prev.filter(id => id !== addonId) : [...prev, addonId]
+    );
+  };
+
+  const selectedPackage = packages.find((pkg: any) => pkg.id.toString() === formData.packageId);
+  const addonsTotal = addons
+    .filter((a: any) => selectedAddonIds.includes(a.id))
+    .reduce((sum: number, a: any) => sum + parseFloat(a.price), 0);
+  const bookingTotal = (selectedPackage ? parseFloat(selectedPackage.price) : 0) + addonsTotal;
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.id]: e.target.value });
   };
@@ -126,6 +146,7 @@ export default function BookingForm({ packages }: { packages: any[] }) {
           email: formData.email,
           phone: formData.phone,
           package_interest: formData.packageId === "custom" || !formData.packageId ? null : parseInt(formData.packageId, 10),
+          selected_addons: selectedAddonIds,
           property_details: formData.propertyDetails,
           sqft: formData.sqft ? parseInt(formData.sqft, 10) : null,
           referral_code_used: formData.referralCode.trim().toUpperCase() || null,
@@ -172,12 +193,16 @@ export default function BookingForm({ packages }: { packages: any[] }) {
         
         <div className="bg-card border border-border/50 rounded-xl p-6 shadow-sm border-dashed mb-6">
           <p className="text-sm text-muted-foreground mb-4">
-            {isAuthenticated ? "View your booking status and download media from your dashboard." : "Log in to your account to track this booking, cancel, or reschedule."}
+            {isAuthenticated
+              ? "View your booking status and download media from your dashboard."
+              : "Check your email — we've sent a link to set up your account and track this booking, cancel, or reschedule."}
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-             <Link href={isAuthenticated ? "/dashboard" : "/login"} className="px-8 py-3 bg-primary text-primary-foreground font-black text-xs uppercase tracking-widest rounded-2xl shadow-gold hover:shadow-gold-heavy hover:scale-[1.02] active:scale-95 transition-all">
-               {isAuthenticated ? "Go to Dashboard" : "Login to Your Account"}
-             </Link>
+             {isAuthenticated && (
+               <Link href="/dashboard" className="px-8 py-3 bg-primary text-primary-foreground font-black text-xs uppercase tracking-widest rounded-2xl shadow-gold hover:shadow-gold-heavy hover:scale-[1.02] active:scale-95 transition-all">
+                 Go to Dashboard
+               </Link>
+             )}
              <button onClick={() => setSuccess(false)} className="px-8 py-3 border border-primary/20 bg-card hover:bg-muted text-foreground font-black text-xs uppercase tracking-widest rounded-2xl transition-all">
                Book Another
              </button>
@@ -187,26 +212,13 @@ export default function BookingForm({ packages }: { packages: any[] }) {
     );
   }
 
-  if (isAuthenticated === false) {
-    return (
-      <div className="text-center py-12 max-w-xl mx-auto">
-        <div className="bg-muted/40 border border-border/50 rounded-2xl p-8 shadow-sm">
-          <h3 className="text-2xl font-bold mb-4">Account Required</h3>
-          <p className="text-muted-foreground mb-8">
-            Please create an account or log in to schedule a shoot. This allows you to easily track the status of your booking, process invoices, and securely download your high-res media when it's ready.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/login" className="px-10 py-4 bg-primary text-primary-foreground font-black text-xs uppercase tracking-widest rounded-2xl shadow-gold hover:shadow-gold-heavy hover:scale-[1.02] active:scale-95 transition-all">
-              Create Account / Login
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="w-full max-w-5xl mx-auto">
+      {isAuthenticated === false && (
+        <p className="text-center text-sm text-muted-foreground mb-8">
+          Already have an account? <Link href="/login" className="text-primary font-medium hover:underline">Log in</Link> to prefill your details.
+        </p>
+      )}
       {/* Packages Grid */}
       {packages && packages.length > 0 ? (
         <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-20 md:mb-32">
@@ -245,6 +257,40 @@ export default function BookingForm({ packages }: { packages: any[] }) {
       ) : (
         <div className="text-center py-10 mb-20 bg-muted/30 rounded-2xl border border-border/50">
             <p className="text-muted-foreground">Loading packages...</p>
+        </div>
+      )}
+
+      {/* Add-Ins */}
+      {selectedPackage && addons.length > 0 && (
+        <div className="mb-20 md:mb-32 rounded-[2.5rem] border border-primary/20 bg-card p-8 md:p-10 shadow-gold">
+          <h3 className="text-xl font-bold mb-1">Add-Ins</h3>
+          <p className="text-sm text-muted-foreground mb-6">Optional extras for your {selectedPackage.name} package.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            {addons.map((addon: any) => {
+              const isSelected = selectedAddonIds.includes(addon.id);
+              return (
+                <button
+                  type="button"
+                  key={addon.id}
+                  onClick={() => toggleAddon(addon.id)}
+                  className={`text-left rounded-2xl border p-4 transition-all cursor-pointer ${isSelected ? 'border-primary bg-primary/10' : 'border-border/50 bg-background hover:border-primary/40'}`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-semibold text-sm">{addon.name}</span>
+                    <span className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 ${isSelected ? 'bg-primary border-primary text-primary-foreground' : 'border-border/60'}`}>
+                      {isSelected && <CheckCircle2 className="w-4 h-4" />}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-2">{addon.description}</p>
+                  <p className="text-sm font-bold">+${parseFloat(addon.price).toFixed(0)}</p>
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex items-center justify-between pt-4 border-t border-border/40">
+            <span className="text-sm text-muted-foreground">Total</span>
+            <span className="text-2xl font-extrabold">${bookingTotal.toFixed(2)}</span>
+          </div>
         </div>
       )}
 
