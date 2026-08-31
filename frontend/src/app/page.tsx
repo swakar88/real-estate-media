@@ -15,59 +15,49 @@ async function getSiteMedia() {
   }
 }
 
+async function getPackages() {
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/packages/`, { cache: 'no-store' });
+    if (!res.ok) return [];
+    return res.json();
+  } catch (err) {
+    return [];
+  }
+}
+
 export default async function Home() {
-  const media = await getSiteMedia();
-  
+  const [media, packages] = await Promise.all([getSiteMedia(), getPackages()]);
+  const startingPrice = packages && packages.length > 0
+    ? Math.min(...packages.map((p: any) => parseFloat(p.price)))
+    : null;
+
   return (
     <div className="flex min-h-screen flex-col">
       <Navbar />
-      
+
       <main className="flex-1">
         {/* HERO SECTION */}
-        <section className="relative h-[85vh] w-full flex items-center justify-center overflow-hidden">
-          {/* Background Element */}
-          <div className="absolute inset-0 bg-background z-0">
-             {media.home_hero_bg_type === 'video' ? (
-                <video 
-                   src={media.home_hero_bg} 
-                   autoPlay 
-                   muted 
-                   loop 
-                   playsInline 
-                   className="w-full h-full object-cover opacity-40 mix-blend-luminosity brightness-50"
-                />
-             ) : (
-                <Image 
-                   src={media.home_hero_bg || "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80"}
-                   alt="Luxury Real Estate Background" 
-                   fill 
-                   className="object-cover opacity-40 mix-blend-luminosity brightness-50" 
-                   priority 
-                />
-             )}
-             <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent"></div>
-          </div>
-          
-          <div className="relative z-10 container mx-auto px-4 md:px-8 text-center flex flex-col items-center">
-            <ScrollReveal delay={0.1}>
+        <section className="py-6 md:py-10 bg-background overflow-hidden relative">
+          <div className="absolute inset-0 bg-primary/5 pointer-events-none"></div>
+          <div className="container mx-auto px-4 md:px-8 grid md:grid-cols-2 gap-12 lg:gap-16 items-center relative">
+            <ScrollReveal direction="left">
               <div className="inline-block py-1 px-3 mb-6 rounded-full bg-primary/20 text-gradient-text border border-primary/30 text-sm font-medium tracking-wide">
                 ELEVATE YOUR LISTINGS
               </div>
-            </ScrollReveal>
-            <ScrollReveal delay={0.2}>
-              <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold tracking-tight mb-6 max-w-4xl drop-shadow-sm">
-                Professional Real Estate <br/>
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold tracking-tight mb-6">
+                Professional Real Estate{' '}
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-gradient-text to-gradient-text">
                   Photography & Media in Kansas City
                 </span>
               </h1>
-            </ScrollReveal>
-            <ScrollReveal delay={0.3}>
-              <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mb-10 leading-relaxed font-light">
+              <p className="text-lg text-muted-foreground mb-6 leading-relaxed font-light">
                 Premium 4K video, HDR photography, and 360-degree virtual tours designed to capture attention and drive conversions.
               </p>
-            </ScrollReveal>
-            <ScrollReveal delay={0.4}>
+              {startingPrice !== null && (
+                <Link href="/pricing" className="inline-flex items-center gap-1 text-gradient-text font-medium hover:underline mb-8">
+                  Packages from ${startingPrice} <span aria-hidden>→</span>
+                </Link>
+              )}
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link href="/book" className="inline-flex h-12 items-center justify-center rounded-md bg-primary px-8 font-medium text-primary-foreground shadow-gold hover:shadow-gold-heavy transition-all hover:bg-primary/90 hover:scale-105">
                   Book a Shoot Now
@@ -77,14 +67,36 @@ export default async function Home() {
                 </Link>
               </div>
             </ScrollReveal>
+            <ScrollReveal direction="right" delay={0.2} className="relative">
+              <div className="aspect-[16/9] bg-muted rounded-2xl border border-border/50 rotate-3 hover:rotate-0 [transition:transform_500ms_ease] overflow-hidden shadow-2xl relative">
+                {media.home_hero_bg_type === 'video' ? (
+                   <video
+                      src={media.home_hero_bg}
+                      autoPlay
+                      muted
+                      loop
+                      playsInline
+                      className="w-full h-full object-cover"
+                   />
+                ) : (
+                   <Image
+                      src={media.home_hero_bg || "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80"}
+                      alt="Real estate photography by KC Real Estate Media"
+                      fill
+                      className="object-cover"
+                      priority
+                   />
+                )}
+              </div>
+            </ScrollReveal>
           </div>
         </section>
 
         {/* SERVICES GRID */}
-        <section className="py-24 bg-card/50">
+        <section className="py-8 md:py-10 bg-card/50">
           <div className="container mx-auto px-4 md:px-8">
             <ScrollReveal>
-              <div className="text-center mb-16">
+              <div className="text-center mb-6">
                 <h2 className="text-3xl md:text-4xl font-bold mb-4 tracking-tight">What We Do</h2>
                 <p className="text-muted-foreground max-w-2xl mx-auto">Specialized virtual media solutions tailored for your industry.</p>
               </div>
