@@ -213,7 +213,7 @@ export default function BookingForm({ packages }: { packages: any[] }) {
   }
 
   return (
-    <div className="w-full max-w-5xl mx-auto">
+    <div className="w-full max-w-7xl mx-auto">
       {isAuthenticated === false && (
         <p className="text-center text-sm text-muted-foreground mb-8">
           Already have an account? <Link href="/login" className="text-primary font-medium hover:underline">Log in</Link> to prefill your details.
@@ -221,21 +221,21 @@ export default function BookingForm({ packages }: { packages: any[] }) {
       )}
       {/* Packages Grid */}
       {packages && packages.length > 0 ? (
-        <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-20 md:mb-32">
+        <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-20 md:mb-32">
           {packages.map((pkg: any) => (
             <StaggerItem key={pkg.id}>
-              <div className={`flex flex-col rounded-3xl bg-card p-8 shadow-gold transition-all h-full relative group cursor-pointer ${pkg.is_popular ? 'border-2 border-primary shadow-gold-heavy transform md:-translate-y-4' : 'border border-primary/10'}`}>
+              <div className={`flex flex-col rounded-3xl bg-card p-6 shadow-gold transition-all h-full relative group cursor-pointer ${pkg.is_popular ? 'border-2 border-primary shadow-gold-heavy transform lg:-translate-y-4' : 'border border-primary/10'}`}>
                 {pkg.is_popular && (
                   <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-primary text-primary-foreground px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider whitespace-nowrap">
                     Most Popular
                   </div>
                 )}
                 
-                <h3 className="text-2xl font-bold mb-2">{pkg.name}</h3>
-                <div className="mb-6">
-                  <span className="text-4xl font-extrabold">${pkg.price}</span>
+                <h3 className="text-xl font-bold mb-2">{pkg.name}</h3>
+                <div className="mb-4">
+                  <span className="text-3xl font-extrabold">${pkg.price}</span>
                 </div>
-                <ul className="space-y-3 mb-8 flex-1 text-sm text-muted-foreground">
+                <ul className="space-y-3 mb-6 flex-1 text-sm text-muted-foreground">
                   {pkg.features?.map((feature: string, i: number) => (
                     <li key={i} className="flex items-start gap-2">
                        <span className="text-primary shrink-0 mt-0.5">✓</span> 
@@ -262,7 +262,7 @@ export default function BookingForm({ packages }: { packages: any[] }) {
 
       {/* Add-Ins */}
       {selectedPackage && addons.length > 0 && (
-        <div className="mb-20 md:mb-32 rounded-[2.5rem] border border-primary/20 bg-card p-8 md:p-10 shadow-gold">
+        <div className="max-w-5xl mx-auto mb-20 md:mb-32 rounded-[2.5rem] border border-primary/20 bg-card p-8 md:p-10 shadow-gold">
           <h3 className="text-xl font-bold mb-1">Add-Ins</h3>
           <p className="text-sm text-muted-foreground mb-6">Optional extras for your {selectedPackage.name} package.</p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
@@ -297,7 +297,7 @@ export default function BookingForm({ packages }: { packages: any[] }) {
       {/* Booking Form Layout */}
       {/* Booking Form Layout */}
       <ScrollReveal delay={0.3}>
-        <div id="booking-form-section" className="rounded-[2.5rem] border border-primary/20 bg-card p-8 md:p-12 shadow-gold">
+        <div id="booking-form-section" className="max-w-5xl mx-auto rounded-[2.5rem] border border-primary/20 bg-card p-8 md:p-12 shadow-gold">
            <div className="text-center mb-10">
              <h2 className="text-3xl font-bold mb-4">Schedule Your Shoot</h2>
              <p className="text-muted-foreground max-w-xl mx-auto">

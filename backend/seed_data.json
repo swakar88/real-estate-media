@@ -1,6 +1,20 @@
 [
   {
     "model": "api.package",
+    "pk": 5,
+    "fields": {
+      "name": "Photos Only",
+      "price": "180.00",
+      "description": "Just the photos, no frills — perfect for a quick, budget-friendly listing.",
+      "is_popular": false,
+      "features": [
+        "Unlimited Photos"
+      ],
+      "order": 0
+    }
+  },
+  {
+    "model": "api.package",
     "pk": 1,
     "fields": {
       "name": "Tour",

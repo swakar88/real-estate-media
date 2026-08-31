@@ -52,7 +52,7 @@ export default async function Pricing() {
         <section className="py-16 bg-background">
           <div className="container mx-auto px-4 md:px-8 max-w-7xl">
             {packages && packages.length > 0 ? (
-              <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
                 {packages.map((pkg: any) => (
                   <StaggerItem key={pkg.id}>
                     <div className={`flex flex-col rounded-3xl bg-card p-6 shadow-gold transition-all h-full relative ${pkg.is_popular ? 'border-2 border-primary shadow-gold-heavy transform lg:-translate-y-4' : 'border border-primary/10'}`}>
