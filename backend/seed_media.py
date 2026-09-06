@@ -17,7 +17,7 @@ media_items = [
     {
         "key": "home_service_1",
         "title": "Home Page Service 1 (Real Estate)",
-        "url": "https://images.unsplash.com/photo-1600607687931-ceeb66d11362?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+        "url": "https://images.unsplash.com/photo-1613977257363-707ba9348227?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
         "media_type": "image",
         "description": "First service block image on the home page."
     },
@@ -59,14 +59,14 @@ media_items = [
     {
         "key": "services_grass",
         "title": "Services - Green Grass Edit",
-        "url": "https://images.unsplash.com/photo-1588880331179-bc9b93a8cb65?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+        "url": "https://images.unsplash.com/photo-1613977257363-707ba9348227?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
         "media_type": "image",
         "description": "Image demonstrating grass greening edits."
     },
     {
         "key": "services_drone",
         "title": "Services - Drone Aerial Video",
-        "url": "https://images.unsplash.com/photo-1628611225249-6c4c9258dcc0?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80",
+        "url": "https://images.unsplash.com/photo-1499310392581-322cec0355a6?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80",
         "media_type": "image",
         "description": "The large image/video thumbnail for the drone section."
     }
@@ -86,13 +86,13 @@ for item in media_items:
 # Gallery images — only created on first deploy; never overwritten
 gallery_items = [
     {"title": "Modern Living Room",   "category": "interior",  "featured": True,  "image_url": "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80"},
-    {"title": "Luxury Exterior",      "category": "exterior",  "featured": True,  "image_url": "https://images.unsplash.com/photo-1600607687931-ceeb66d11362?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80"},
+    {"title": "Luxury Exterior",      "category": "exterior",  "featured": True,  "image_url": "https://images.unsplash.com/photo-1613977257363-707ba9348227?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80"},
     {"title": "Minimalist Kitchen",   "category": "interior",  "featured": True,  "image_url": "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80"},
     {"title": "Twilight Pool",        "category": "twilight",  "featured": True,  "image_url": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80"},
     {"title": "Cozy Bedroom",         "category": "interior",  "featured": True,  "image_url": "https://images.unsplash.com/photo-1600607686527-6fb886090705?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80"},
     {"title": "Aerial Estate",        "category": "aerial",    "featured": True,  "image_url": "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80"},
     {"title": "Elegant Bathroom",     "category": "interior",  "featured": True,  "image_url": "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80"},
-    {"title": "Home Office Setup",    "category": "interior",  "featured": True,  "image_url": "https://images.unsplash.com/photo-1600607687931-ceeb66d11362?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80"},
+    {"title": "Home Office Setup",    "category": "interior",  "featured": True,  "image_url": "https://images.unsplash.com/photo-1493809842364-78817add7ffb?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80"},
     {"title": "Spacious Patio",       "category": "exterior",  "featured": True,  "image_url": "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80"},
 ]
 

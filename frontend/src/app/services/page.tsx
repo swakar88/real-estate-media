@@ -123,7 +123,7 @@ export default async function Services() {
                     ) : (
                       <>
                         <Image
-                          src={media.services_grass || "https://images.unsplash.com/photo-1595874249110-394f9e15967b?q=80&w=1471&auto=format&fit=crop"}
+                          src={media.services_grass || "https://images.unsplash.com/photo-1613977257363-707ba9348227?ixlib=rb-4.0.3&auto=format&fit=crop&w=1471&q=80"}
                           alt="Premium Curb Appeal Enhancement"
                           fill
                           className="object-cover transition-transform duration-1000 group-hover:scale-110"
@@ -189,7 +189,7 @@ export default async function Services() {
                       />
                     ) : (
                       <Image 
-                        src={media.services_drone || "https://images.unsplash.com/photo-1628611225249-6c4c9258dcc0?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80"} 
+                        src={media.services_drone || "https://images.unsplash.com/photo-1499310392581-322cec0355a6?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80"}
                         alt="Cinematic Drone Aerial" 
                         fill 
                         className="object-cover transition-transform duration-700 group-hover:scale-105" 

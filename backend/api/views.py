@@ -1463,14 +1463,19 @@ def get_availability(request):
     availability = {}
     for slot in slots:
         slot_date = slot['date']
+        slot_time_str = slot['time_slot']  # already an 'HH:MM' string (CharField), not a time object
+
         # Skip past time slots for today
-        if slot_date == today and slot['time_slot'] <= current_time:
-            continue
+        if slot_date == today:
+            slot_time_obj = datetime.datetime.strptime(slot_time_str, '%H:%M').time()
+            if slot_time_obj <= current_time:
+                continue
+
         date_str = slot_date.strftime('%Y-%m-%d')
         if date_str not in availability:
             availability[date_str] = []
-        availability[date_str].append(slot['time_slot'].strftime('%H:%M'))
-        
+        availability[date_str].append(slot_time_str)
+
     return Response(availability)
 
 

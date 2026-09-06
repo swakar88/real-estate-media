@@ -17,7 +17,7 @@ export default function About() {
       try {
         const [teamRes, mediaRes] = await Promise.all([
           fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/photographers/public/`),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/site-media/?format=dict`)
+          fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/site-media/?view=dict`)
         ]);
 
         if (teamRes.ok) {

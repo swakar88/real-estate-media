@@ -31,7 +31,7 @@ export default function AdminsPage() {
   const fetchCurrentUser = async () => {
     try {
       const token = localStorage.getItem("access_token");
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/auth/user/`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/me/`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {

@@ -107,7 +107,7 @@ export default async function Home() {
               <StaggerItem>
                 <div className="group relative overflow-hidden rounded-xl border border-border/50 bg-card p-1 hover:border-primary/50 transition-colors duration-300 h-full">
                   <div className="h-48 rounded-lg bg-muted flex items-center justify-center overflow-hidden relative">
-                     <Image src={media.home_service_1 || "https://images.unsplash.com/photo-1600607687931-ceeb66d11362?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"} alt="Real Estate Media" fill className="object-cover transition-transform duration-700 group-hover:scale-105" />
+                     <Image src={media.home_service_1 || "https://images.unsplash.com/photo-1613977257363-707ba9348227?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"} alt="Real Estate Media" fill className="object-cover transition-transform duration-700 group-hover:scale-105" />
                      <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent z-10 transition-opacity duration-300 group-hover:opacity-80"></div>
                      <h3 className="absolute bottom-4 left-4 z-20 text-xl font-bold">Real Estate Media</h3>
                   </div>
